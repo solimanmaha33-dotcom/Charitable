@@ -80,27 +80,27 @@ docs/                  design, data model, evaluation, and progress notes
 - `AppShell({ children }: { children: React.ReactNode })` provides the right-to-left page frame, navigation area, and responsive layout.
 - `Router` exposes `/login` and authenticated application routes; protected routes show a sign-in prompt when no session exists.
 
-- [ ] **Step 1: Write the failing shell test**
+- [x] **Step 1: Write the failing shell test**
 
 Test that the rendered page has `lang="ar"`, `dir="rtl"`, the Arabic product name, and navigation that remains usable at a 360 px viewport.
 
-- [ ] **Step 2: Run the test and confirm it fails**
+- [x] **Step 2: Run the test and confirm it fails**
 
 Run: `npm run test -- src/shared/AppShell.test.tsx`
 
 Expected: FAIL because the application shell does not exist.
 
-- [ ] **Step 3: Build the smallest shell that passes**
+- [x] **Step 3: Build the smallest shell that passes**
 
 Create the React and Vite entry points, Arabic RTL shell, and empty feature routes. Configure `test`, `test:worker`, `test:e2e`, `typecheck`, and `build` scripts; keep labels in simple Egyptian Arabic.
 
-- [ ] **Step 4: Verify the shell**
+- [x] **Step 4: Verify the shell**
 
 Run: `npm run test -- src/shared/AppShell.test.tsx && npm run typecheck && npm run build`
 
 Expected: all commands exit successfully; the page remains readable at phone width.
 
-- [ ] **Step 5: Update docs and commit**
+- [x] **Step 5: Update docs and commit**
 
 Record the shell, test result, and next task in `docs/progress.md`; add local run instructions to `README.md`.
 
