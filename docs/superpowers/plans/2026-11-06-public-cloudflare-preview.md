@@ -40,10 +40,10 @@
 - Consumes: the existing `wrangler.jsonc`, `package.json` build command, Pages Functions in `functions/`, and the owner's Supabase test project.
 - Produces: exact dashboard values and environment-variable scopes needed to deploy only the `preview` branch.
 
-- [ ] **Step 1: Write the preview setup checklist** covering Cloudflare Pages GitHub authorization, repository selection, `preview` branch, build command `npm run build`, output directory `dist`, and the existing Pages Functions and AI binding.
-- [ ] **Step 2: Add preview-only bindings** to the guide: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY`; identify the last value as a runtime secret.
-- [ ] **Step 3: Document Supabase setup** for the test project: confirm the project target, apply ordered migrations only after confirmation, set the Pages URL and branch-preview URL in Auth redirect settings, bootstrap the first general manager securely, and use synthetic data.
-- [ ] **Step 4: Link the setup guide** from `README.md` and check links and formatting with `git diff --check`.
+- [x] **Step 1: Write the preview setup checklist** covering Cloudflare Pages GitHub authorization, repository selection, `preview` branch, build command `npm run build`, output directory `dist`, and the existing Pages Functions and AI binding.
+- [x] **Step 2: Add preview-only bindings** to the guide: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY`; identify the last value as a runtime secret.
+- [x] **Step 3: Document Supabase setup** for the test project: confirm the project target, apply ordered migrations only after confirmation, set the Pages URL and branch-preview URL in Auth redirect settings, bootstrap the first general manager securely, and use synthetic data.
+- [x] **Step 4: Link the setup guide** from `README.md` and check links and formatting with `git diff --check`.
 
 ### Task 2: Create and Publish the Preview Branch
 
