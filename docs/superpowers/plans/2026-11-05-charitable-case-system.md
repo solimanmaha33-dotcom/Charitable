@@ -326,8 +326,8 @@ Document the selected provider, data flow, and permission behavior in `docs/arch
 
 **Files:**
 
-- Create: `wrangler.toml`, `.env.example`, `docs/architecture.md`, `docs/data-model.md`, `docs/deployment.md`
-- Modify: `README.md`, `docs/progress.md`
+- Create: `docs/deployment.md`
+- Modify: `wrangler.jsonc`, `.env.example`, `.dev.vars.example`, `README.md`, `docs/architecture.md`, `docs/data-model.md`, `docs/progress.md`
 - Test: `tests/e2e/login-and-case-flow.spec.ts`, `tests/e2e/ocr-flow.spec.ts`, `tests/e2e/donations-flow.spec.ts`
 
 - [ ] **Step 1: Write failing end-to-end smoke tests**
@@ -342,17 +342,17 @@ Expected: FAIL because the integrated workflows and deployment configuration are
 
 - [ ] **Step 3: Prepare Cloudflare and Supabase deployment files**
 
-Create deployment configuration and a `.env.example` with variable names only. Keep service-role and AI credentials server-side. Do not connect a real Supabase project or run a deployment command.
+Update the existing `wrangler.jsonc` configuration and provide example environment files with variable names only. Keep service-role and AI credentials server-side. Do not connect a real Supabase project or run a deployment command.
 
 - [ ] **Step 4: Document installation, startup, backups, and recovery**
 
-Write repeatable setup steps, environment variable names without values, database migration instructions, file backup/restore steps, and free-tier limits in the documentation.
+Write repeatable setup steps, environment variable names without values, database migration instructions, file backup/restore steps, and links to official free-tier limits. Quote numeric quotas only if verified from an official source; otherwise mark them as unverified and require an operator to check them before a pilot.
 
 - [ ] **Step 5: Run complete verification**
 
-Run: `npm run test && npm run test:worker && supabase test db && npm run test:e2e && npm run typecheck && npm run build`
+Run: `npm run test && npm run test:worker && npm run test:db && npm run test:e2e && npm run typecheck && npm run build && npm run build:functions`
 
-Expected: all local tests and build pass using synthetic data and test bindings. Record current free-tier limits and a testable backup/restore procedure. The app is deployment-ready but remains unpublished.
+Expected: all local tests and build pass using synthetic data and test bindings. Record official free-tier references and a testable backup/restore procedure. The app is prepared for a future deployment but remains unpublished.
 
 - [ ] **Step 6: Update docs and commit**
 
