@@ -1,5 +1,8 @@
+@import '@fontsource/noto-sans-arabic/arabic-400.css';
+@import '@fontsource/noto-sans-arabic/arabic-700.css';
+
 :root {
-  font-family: Tahoma, Arial, sans-serif;
+  font-family: 'Noto Sans Arabic', Tahoma, Arial, sans-serif;
   color: #213e35;
   background: #f4f7f4;
   font-synthesis: none;

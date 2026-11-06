@@ -17,6 +17,7 @@
     "build:functions": "wrangler pages functions build functions --outdir .wrangler/functions"
   },
   "dependencies": {
+    "@fontsource/noto-sans-arabic": "^5.3.0",
     "@supabase/supabase-js": "^2.119.0",
     "@tesseract.js-data/ara": "^1.0.0",
     "image-size": "^2.0.4",
