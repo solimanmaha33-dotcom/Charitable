@@ -54,9 +54,9 @@
 - Consumes: the approved local `work` commit and the existing origin `solimanmaha33-dotcom/Charitable`.
 - Produces: a GitHub `preview` branch containing the reviewed app, without changing the production branch.
 
-- [ ] **Step 1: Verify the current `work` tree is clean** and record the exact commit that will be used.
-- [ ] **Step 2: Create `preview` at that commit** and push it to the existing GitHub origin using configured authentication; never print credential values.
-- [ ] **Step 3: Verify the remote `preview` ref** matches the local commit and confirm the production ref was not changed.
+- [x] **Step 1: Verify the current `work` tree is clean** and record the exact commit that will be used.
+- [x] **Step 2: Create `preview` at that commit** and push it to the existing GitHub origin using configured authentication; never print credential values.
+- [x] **Step 3: Verify the remote `preview` ref** matches the local commit and confirm the production ref was not changed.
 
 ### Task 3: Connect Cloudflare Pages and Supabase Preview Settings
 
