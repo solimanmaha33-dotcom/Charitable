@@ -18,12 +18,14 @@
 - Each employee has a unique code and personal password. The code identifies the account and is not the password.
 - The general manager can create staff accounts and remove their access while retaining historical activity records. A manager can create employee accounts but cannot remove access or grant manager roles.
 - Employee permissions include reading and writing cases, reading and writing donations, and using the assistant. A read-only permission cannot save changes.
+- Recording ordinary donations uses donation permissions alone. Linking a sponsorship to a family also requires case-read permission; case-write permission is not required.
 - The assistant only receives records and files the current employee is allowed to read, and it cannot change records or decide who receives assistance.
 - Give every family an easy-to-read, easy-to-enter, stable, unique code such as `F-0001`; never derive it from personal information, change it, or reuse it.
 - Accept images and PDF files. Show a preview and keep each file linked to its case in private storage.
 - Read printed Arabic in images, text PDFs, and scanned PDFs. Show copyable extracted text and field suggestions; staff must review and confirm before saving. Do not promise reliable handwriting recognition.
 - Extract only fields present in the case form. Keep the initial file limit configurable at 20 MiB per file and 20 pages per PDF.
 - Track monthly sponsorship due and received amounts; an end date is optional. Expenses and full accounting are out of scope.
+- Record cash donations and sponsorship payments in Egyptian pounds (EGP) in the first release; foreign-currency conversion is out of scope.
 - Use synthetic data in tests and examples. Never write beneficiary information, passwords, API keys, or real session values into Markdown files.
 - Keep integrations grouped under `src/services/`; group screens and logic by feature under `src/features/`.
 - Update the relevant Markdown documentation after every task, including what changed, verification results, and the next step.
@@ -237,13 +239,13 @@ Record supported file types, limits, and OCR limitations in `docs/data-model.md`
 
 **Files:**
 
-- Create: `supabase/migrations/004_donations_sponsorships.sql`, `src/features/donations/DonationForm.tsx`, `src/features/donations/DonationListPage.tsx`, `src/features/donations/SponsorshipForm.tsx`, `src/features/donations/sponsorshipStatus.ts`, `src/features/donations/sponsorshipStatus.test.ts`
+- Create: `supabase/migrations/005_donations_sponsorships.sql`, `src/features/donations/DonationForm.tsx`, `src/features/donations/DonationListPage.tsx`, `src/features/donations/SponsorshipForm.tsx`, `src/features/donations/sponsorshipStatus.ts`, `src/features/donations/sponsorshipStatus.test.ts`
 - Test: `supabase/tests/donations_sponsorships.test.sql`, `src/features/donations/sponsorshipStatus.test.ts`
 - Update: `docs/data-model.md`, `docs/progress.md`
 
 **Interfaces:**
 
-- Donation types include cash, in-kind food, clothing, medicine, zakat, sadaqa, zakat al-fitr, Ramadan food bags, Eid clothing, sacrificial meat, blankets, school supplies, and treatment support; sponsorship is linked to a donor and family.
+- Donation types include cash, in-kind food, clothing, medicine, zakat, sadaqa, zakat al-fitr, Ramadan food bags, Eid clothing, sacrificial meat, blankets, school supplies, and treatment support; cash amounts use EGP. Sponsorship is linked to a donor and family.
 - `getSponsorshipStatus(dueDate: string, receivedAt: string | null, today: string): 'due' | 'received' | 'late'` reports a monthly installment status. An optional end date stops future installments.
 
 - [ ] **Step 1: Write failing donation and payment tests**
@@ -258,7 +260,7 @@ Expected: FAIL because the donation model and status helper do not exist.
 
 - [ ] **Step 3: Add donation and sponsorship tables**
 
-Create `donors`, `donations`, `sponsorships`, and `sponsorship_payments`. Store each monthly installment separately, unique by sponsorship and month. Add read/write policies for donation permissions.
+Create `donors`, `donations`, `sponsorships`, and `sponsorship_payments`. Store each monthly installment separately, unique by sponsorship and month. Add read/write policies for donation permissions. Sponsorship-to-family lookup also requires case-read permission; do not expose family names or IDs to donation-only staff.
 
 - [ ] **Step 4: Add donation and sponsorship screens**
 
