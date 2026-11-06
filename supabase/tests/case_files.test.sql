@@ -8,11 +8,13 @@ insert into private.employee_auth(employee_id,auth_user_id) select ('80000000-00
 insert into public.employee_permissions(employee_id,cases_read,cases_write) values ('80000000-0000-0000-0000-000000000001',false,true),('80000000-0000-0000-0000-000000000002',true,false);
 insert into public.families(id,name) values ('90000000-0000-0000-0000-000000000001','وهمي');
 insert into public.cases(id,family_id) values ('90000000-0000-0000-0000-000000000002','90000000-0000-0000-0000-000000000001');
+insert into storage.objects(bucket_id,name,owner_id) values ('case-files','90000000-0000-0000-0000-000000000002/90000000-0000-0000-0000-000000000003','60000000-0000-0000-0000-000000000001');
+insert into public.case_files(case_id,storage_path,file_name,mime_type,size_bytes,uploaded_by) values ('90000000-0000-0000-0000-000000000002','90000000-0000-0000-0000-000000000002/90000000-0000-0000-0000-000000000003','synthetic.png','image/png',5,'60000000-0000-0000-0000-000000000001');
 select ok((select not public from storage.buckets where id='case-files'),'bucket is private');
 select set_config('request.jwt.claims','{"sub":"60000000-0000-0000-0000-000000000001","session_id":"70000000-0000-0000-0000-000000000001","role":"authenticated"}',true);
 set local role authenticated;
-select lives_ok($$insert into storage.objects(bucket_id,name,owner_id) values ('case-files','90000000-0000-0000-0000-000000000002/90000000-0000-0000-0000-000000000003','60000000-0000-0000-0000-000000000001')$$,'writer uploads object');
-select lives_ok($$insert into public.case_files(case_id,storage_path,file_name,mime_type,size_bytes,uploaded_by) values ('90000000-0000-0000-0000-000000000002','90000000-0000-0000-0000-000000000002/90000000-0000-0000-0000-000000000003','synthetic.png','image/png',5,'60000000-0000-0000-0000-000000000001')$$,'writer creates metadata');
+select throws_ok($$insert into storage.objects(bucket_id,name,owner_id) values ('case-files','90000000-0000-0000-0000-000000000002/90000000-0000-0000-0000-000000000004','60000000-0000-0000-0000-000000000001')$$,'42501',null,'writer cannot bypass inspection');
+select throws_ok($$insert into public.case_files(case_id,storage_path,file_name,mime_type,size_bytes,uploaded_by) values ('90000000-0000-0000-0000-000000000002','90000000-0000-0000-0000-000000000002/90000000-0000-0000-0000-000000000004','synthetic.png','image/png',5,'60000000-0000-0000-0000-000000000001')$$,'42501',null,'writer cannot forge metadata');
 select throws_ok($$insert into storage.objects(bucket_id,name) values ('case-files','90000000-0000-0000-0000-000000000099/90000000-0000-0000-0000-000000000003')$$,'42501',null,'unknown case denied');
 reset role;
 select set_config('request.jwt.claims','{"sub":"60000000-0000-0000-0000-000000000002","session_id":"70000000-0000-0000-0000-000000000002","role":"authenticated"}',true);

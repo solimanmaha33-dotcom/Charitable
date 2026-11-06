@@ -59,11 +59,9 @@ export async function downloadCaseFile(file:CaseFile):Promise<File> {
 export async function uploadCaseFile(caseId:string,file:File):Promise<CaseFile> {
  validateDocument(file);
  if(file.type==='application/pdf') {const pdf=await openPdf(file); await pdf.cleanup();}
- const client=db(); const {data:{user},error:authError}=await client.auth.getUser(); check(authError);
- if(!user) throw new Error('يلزم تسجيل الدخول');
- const path=`${caseId}/${crypto.randomUUID()}`; const bucket=client.storage.from('case-files');
- const upload=await bucket.upload(path,file,{contentType:file.type,upsert:false}); check(upload.error);
- const {data,error}=await client.from('case_files').insert({case_id:caseId,storage_path:path,file_name:file.name,mime_type:file.type,size_bytes:file.size,uploaded_by:user.id}).select().single();
- if(error) {await bucket.remove([path]); throw new Error(error.message);}
- return data as CaseFile;
+ const client=db(); const {data:{session},error:authError}=await client.auth.getSession(); check(authError);
+ if(!session) throw new Error('يلزم تسجيل الدخول');
+ const response=await fetch('/api/case-files/upload',{method:'POST',headers:{Authorization:`Bearer ${session.access_token}`,'Content-Type':file.type,'X-Case-Id':caseId,'X-File-Name':encodeURIComponent(file.name)},body:file});
+ if(!response.ok) throw new Error('تعذّر رفع الملف');
+ return await response.json() as CaseFile;
 }

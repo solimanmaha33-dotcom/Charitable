@@ -5,7 +5,7 @@ test('case attachment: local Arabic PDF and image extraction', async ({page}) =>
  test.setTimeout(120000);
  const requests:string[]=[]; page.on('request',r=>requests.push(r.url()));
  await page.goto('/');
- for (const [name,source] of [['arabic-sample.pdf','pdf-text'],['arabic-scan.pdf','ocr'],['arabic-sample.png','ocr']] as const) {
+ for (const [name,source] of [['arabic-sample.pdf','pdf-text'],['arabic-scan.pdf','ocr'],['arabic-mixed.pdf','ocr'],['arabic-sample.png','ocr']] as const) {
   const base64=readFileSync(`tests/fixtures/${name}`).toString('base64');
   const result=await page.evaluate(async ({base64,name})=>{
    const bytes=Uint8Array.from(atob(base64), c=>c.charCodeAt(0));
@@ -16,6 +16,9 @@ test('case attachment: local Arabic PDF and image extraction', async ({page}) =>
   },{base64,name});
   expect(result.source).toBe(source); expect(result.pages[0].text).toContain('تجريبية');
  }
+ const huge=readFileSync('tests/fixtures/arabic-sample.png'); huge.writeUInt32BE(100000,16);huge.writeUInt32BE(100000,20);
+ const imageError=await page.evaluate(async base64=>{const bytes=Uint8Array.from(atob(base64),c=>c.charCodeAt(0)); const path='/src/features/files/ocr.ts'; const mod=await import(/* @vite-ignore */ path);try{await mod.extractDocumentText(new File([bytes],'huge.png',{type:'image/png'}));return '';}catch(e){return (e as Error).message;}},huge.toString('base64'));
+ expect(imageError).toContain('أبعاد');
  const tooMany=readFileSync('tests/fixtures/over-20-pages.pdf').toString('base64');
  const error=await page.evaluate(async base64=>{const bytes=Uint8Array.from(atob(base64),c=>c.charCodeAt(0)); const path='/src/features/files/ocr.ts'; const mod=await import(/* @vite-ignore */ path); try { await mod.extractDocumentText(new File([bytes],'large.pdf',{type:'application/pdf'})); return ''; } catch(e) {return (e as Error).message;}},tooMany);
  expect(error).toContain('٢٠ صفحة');
@@ -47,8 +50,12 @@ test('case attachment: staged image is uploaded and protected', async ({page}) =
   await page.getByRole('button',{name:'استخراج النص'}).click();
   await expect(page.getByLabel('النص المستخرج للمراجعة')).toContainText('تجريبية',{timeout:60000});
   await expect(page.getByLabel('ملاحظات')).toHaveValue('');
+  let failOnce=true; await page.route('**/api/case-files/upload',async route=>{if(failOnce){failOnce=false;await route.fulfill({status:503,body:'temporary failure'});}else await route.continue();});
+  await page.getByRole('button',{name:'حفظ الحالة'}).click();
+  await expect(page.getByRole('alert')).toContainText('تعذّر حفظ الحالة أو بعض المرفقات');
+  expect((await admin.from('cases').select('id').eq('family_id',familyId)).data).toHaveLength(1);
   await page.getByRole('button',{name:'حفظ الحالة'}).click(); await expect(page).toHaveURL(/\/cases\/[0-9a-f-]+$/, {timeout:30000});
-  caseId=page.url().split('/').pop()!;
+  caseId=page.url().split('/').pop()!; expect((await admin.from('cases').select('id').eq('family_id',familyId)).data).toHaveLength(1);
   const files=await admin.from('case_files').select('*').eq('case_id',caseId);if(files.error)throw files.error;expect(files.data).toHaveLength(1);path=files.data[0].storage_path;
   expect((await admin.from('cases').select('notes').eq('id',caseId).single()).data?.notes).toBe('');
   await page.getByRole('button',{name:'arabic-sample.png'}).click(); await expect(page.getByAltText('معاينة arabic-sample.png')).toBeVisible();
