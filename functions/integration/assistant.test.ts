@@ -43,6 +43,11 @@ it.each([
  const donation=await admin.from('donations').insert({donation_type:type,kind:'cash',amount:4321.67,description:'',received_on:'2026-01-02'}).select('id').single();if(donation.error)throw donation.error;
  try{const result=await user.rpc('assistant_search_donations',{p_question:question});expect(result.error).toBeNull();expect(result.data.some((row:{donation_type:string;amount:number})=>row.donation_type===type&&Number(row.amount)===4321.67)).toBe(true);expect(result.data.length).toBeLessThanOrEqual(10);}finally{await admin.from('donations').delete().eq('id',donation.data.id);sql(`update public.employee_permissions set donations_read=false where employee_id='${uid}';`);}
 });
+it('finds actual in-kind donations when asked for in-kind gifts in Arabic',async()=>{
+ sql(`update public.employee_permissions set donations_read=true where employee_id='${uid}';`);
+ const donation=await admin.from('donations').insert({donation_type:'in_kind_food',kind:'in_kind',amount:null,quantity:1,unit:'كرتونة',description:'أرز',received_on:'2026-01-02'}).select('id').single();if(donation.error)throw donation.error;
+ try{const result=await user.rpc('assistant_search_donations',{p_question:'ما التبرعات العينية؟'});expect(result.error).toBeNull();expect(result.data.some((row:{kind:string;unit:string})=>row.kind==='in_kind'&&row.unit==='كرتونة')).toBe(true);expect(result.data.length).toBeLessThanOrEqual(10);}finally{await admin.from('donations').delete().eq('id',donation.data.id);sql(`update public.employee_permissions set donations_read=false where employee_id='${uid}';`);}
+});
 it('does not reveal category matches when donation permission is revoked',async()=>{
  const donation=await admin.from('donations').insert({donation_type:'blankets',kind:'cash',amount:4321.68,description:'',received_on:'2026-01-02'}).select('id').single();if(donation.error)throw donation.error;
  try{const result=await user.rpc('assistant_search_donations',{p_question:'بطاطين'});expect(result.error).toBeNull();expect(result.data).toEqual([]);}finally{await admin.from('donations').delete().eq('id',donation.data.id);}

@@ -26,6 +26,7 @@ language sql stable security invoker set search_path='' as $$
   select d.*, (select count(*) from terms t
    where strpos(lower(d.donation_type||' '||d.kind||' '||d.description||' '||coalesce(d.unit,'')),t.term)>0
     or (d.kind='cash' and t.normalized in ('النقدية','نقدية','النقدي','نقدي','نقد','كاش'))
+    or (d.kind='in_kind' and t.normalized in ('عيني','عينية','عينيه','عينيا','العيني','العينية','العينيه','العينيا'))
     or exists(select 1 from category_words a where a.donation_type=d.donation_type and t.normalized in (a.word,'ال'||a.word))
   ) score
   from public.donations d where public.has_permission('donationsRead')
