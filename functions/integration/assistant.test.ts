@@ -32,3 +32,23 @@ it('finds cash donations for an Arabic cash question with no description',async(
  sql(`update public.employee_permissions set donations_read=true where employee_id='${uid}';`);const donation=await admin.from('donations').insert({donation_type:'cash',kind:'cash',amount:1234.56,description:'',received_on:'2026-01-02'}).select('id').single();if(donation.error)throw donation.error;
  try{const result=await user.rpc('assistant_search_donations',{p_question:'ما التبرعات النقدية؟'});expect(result.error).toBeNull();expect(result.data.some((row:{kind:string;amount:number})=>row.kind==='cash' && Number(row.amount)===1234.56)).toBe(true);expect(result.data.length).toBeLessThanOrEqual(10);env.AI.run.mockClear();const response=await ask({request:request({question:'ما التبرعات النقدية؟'}),env});expect(response.status).toBe(200);expect((await response.json()).coverage.partial).toBe(true);expect(JSON.stringify(env.AI.run.mock.calls)).toContain('1234.56');}finally{await admin.from('donations').delete().eq('id',donation.data.id);sql(`update public.employee_permissions set donations_read=false where employee_id='${uid}';`);}
 });
+it.each([
+ ['cash','نقدي'],['in_kind_food','مواد غذائية عينية'],['clothing','ملابس'],['medicine','أدوية'],
+ ['zakat','زكاة'],['sadaqa','صدقة'],['zakat_al_fitr','زكاة الفطر'],['ramadan_food_bags','شنط رمضان'],
+ ['eid_clothing','كسوة العيد'],['sacrificial_meat','لحوم الأضاحي'],['blankets','بطاطين'],
+ ['school_supplies','مستلزمات دراسية'],['treatment_support','مساعدة علاج'],
+ ['medicine','ادوية'],['sadaqa','صدقات'],['blankets','بطانية'],['sacrificial_meat','اضاحي'],
+])('finds %s donation by Arabic query %s even with an empty description',async(type,question)=>{
+ sql(`update public.employee_permissions set donations_read=true where employee_id='${uid}';`);
+ const donation=await admin.from('donations').insert({donation_type:type,kind:'cash',amount:4321.67,description:'',received_on:'2026-01-02'}).select('id').single();if(donation.error)throw donation.error;
+ try{const result=await user.rpc('assistant_search_donations',{p_question:question});expect(result.error).toBeNull();expect(result.data.some((row:{donation_type:string;amount:number})=>row.donation_type===type&&Number(row.amount)===4321.67)).toBe(true);expect(result.data.length).toBeLessThanOrEqual(10);}finally{await admin.from('donations').delete().eq('id',donation.data.id);sql(`update public.employee_permissions set donations_read=false where employee_id='${uid}';`);}
+});
+it('does not reveal category matches when donation permission is revoked',async()=>{
+ const donation=await admin.from('donations').insert({donation_type:'blankets',kind:'cash',amount:4321.68,description:'',received_on:'2026-01-02'}).select('id').single();if(donation.error)throw donation.error;
+ try{const result=await user.rpc('assistant_search_donations',{p_question:'بطاطين'});expect(result.error).toBeNull();expect(result.data).toEqual([]);}finally{await admin.from('donations').delete().eq('id',donation.data.id);}
+});
+it('ranks the specific Arabic category inside the ten-result limit and supplies it to the assistant',async()=>{
+ sql(`update public.employee_permissions set donations_read=true where employee_id='${uid}';`);
+ const donations=await admin.from('donations').insert([...Array.from({length:12},()=>({id:'0'+crypto.randomUUID().slice(1),donation_type:'zakat',kind:'cash',amount:4321.69,description:'',received_on:'2026-01-02'})),{id:'f'+crypto.randomUUID().slice(1),donation_type:'zakat_al_fitr',kind:'cash',amount:4321.70,description:'',received_on:'2026-01-02'}]).select('id');if(donations.error)throw donations.error;
+ try{const question='زكاة الفطر';const result=await user.rpc('assistant_search_donations',{p_question:question});expect(result.error).toBeNull();expect(result.data.length).toBe(10);expect(result.data.some((row:{donation_type:string;amount:number})=>row.donation_type==='zakat_al_fitr'&&Number(row.amount)===4321.70)).toBe(true);env.AI.run.mockClear();const response=await ask({request:request({question}),env});expect(response.status).toBe(200);expect(JSON.stringify(env.AI.run.mock.calls)).toContain('zakat_al_fitr');}finally{await admin.from('donations').delete().in('id',donations.data.map(row=>row.id));sql(`update public.employee_permissions set donations_read=false where employee_id='${uid}';`);}
+});

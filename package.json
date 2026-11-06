@@ -12,7 +12,7 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview --host 127.0.0.1",
     "test:db": "supabase test db",
-    "supabase:start": "supabase start -x studio,imgproxy,inbucket,mailpit,storage-api,realtime,edge-runtime,logflare,vector,supavisor,postgres-meta",
+    "supabase:start": "supabase start -x studio,imgproxy,inbucket,mailpit,realtime,edge-runtime,logflare,vector,supavisor,postgres-meta",
     "dev:pages": "wrangler pages dev dist --ip 127.0.0.1 --port 8788",
     "build:functions": "wrangler pages functions build functions --outdir .wrangler/functions"
   },
