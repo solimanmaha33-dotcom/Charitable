@@ -30,8 +30,12 @@ export async function generateInstallments() {
  const now=new Date(); const through=new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth()+1,0)).toISOString().slice(0,10);
  const {error}=await db().rpc('generate_sponsorship_installments',{p_through:through});check(error);
 }
+export class PaymentAlreadyReceivedError extends Error {
+ readonly code='PAYMENT_ALREADY_RECEIVED';
+ constructor(){super('الدفعة اتسجل استلامها بالفعل. أعد تحميل الصفحة لعرض الاستلام المحفوظ.');}
+}
 export async function receivePayment(id:string,receivedOn:string,amount:number) {
- const {data,error}=await db().from('sponsorship_payments').update({received_on:receivedOn,amount_received:amount}).eq('id',id).select('id').single();check(error);if(!data)throw new Error('تعذّر حفظ الاستلام');
+ const {data,error}=await db().from('sponsorship_payments').update({received_on:receivedOn,amount_received:amount}).eq('id',id).is('received_on',null).select('id').maybeSingle();check(error);if(!data)throw new PaymentAlreadyReceivedError();
 }
 export async function endSponsorship(id:string,endDate:string|null) {
  const {data,error}=await db().from('sponsorships').update({end_date:endDate}).eq('id',id).select('id').single();check(error);if(!data)throw new Error('تعذّر حفظ النهاية');

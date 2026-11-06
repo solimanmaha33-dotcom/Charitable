@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { listFamilies, type Family } from '../../services/cases';
-import { endSponsorship, generateInstallments, listDonations, listDonors, listPayments, listSponsorships, receivePayment, saveDonor, utcToday, type Donation, type Donor, type Sponsorship, type SponsorshipPayment } from '../../services/donations';
+import { endSponsorship, PaymentAlreadyReceivedError, generateInstallments, listDonations, listDonors, listPayments, listSponsorships, receivePayment, saveDonor, utcToday, type Donation, type Donor, type Sponsorship, type SponsorshipPayment } from '../../services/donations';
 import { DonationForm } from './DonationForm';
 import { SponsorshipForm } from './SponsorshipForm';
 import { donationTypeLabel } from './donationTypes';
@@ -9,8 +9,8 @@ import { getSponsorshipStatus } from './sponsorshipStatus';
 function CalendarDate({value}:{value:string}) { return <time dateTime={value} dir="ltr" style={{unicodeBidi:'isolate'}}>{value}</time>; }
 
 type Data = {donors:Donor[];donations:Donation[];sponsorships:Sponsorship[];payments:SponsorshipPayment[];families:Family[]};
-async function loadData(canWrite:boolean,canReadCases:boolean):Promise<Data> {
- if(canWrite&&canReadCases)await generateInstallments();
+async function loadData(canReadCases:boolean):Promise<Data> {
+ if(canReadCases)await generateInstallments();
  const [donors,donations,sponsorships,payments,families]=await Promise.all([
   listDonors(),listDonations(),canReadCases?listSponsorships():Promise.resolve([]),
   canReadCases?listPayments():Promise.resolve([]),canReadCases?listFamilies():Promise.resolve([]),
@@ -24,7 +24,7 @@ function DonorForm({onSaved}:{onSaved:()=>Promise<void>}) {
 }
 function PaymentRow({payment,canWrite,onSaved}:{payment:SponsorshipPayment;canWrite:boolean;onSaved:()=>Promise<void>}) {
  const [date,setDate]=useState(utcToday);const [amount,setAmount]=useState(String(payment.amount_due));const [busy,setBusy]=useState(false);const [error,setError]=useState('');
- async function submit(e:FormEvent){e.preventDefault();setBusy(true);setError('');try{await receivePayment(payment.id,date,Number(amount));await onSaved();}catch{setError('تعذّر تسجيل الاستلام.');}finally{setBusy(false);}}
+ async function submit(e:FormEvent){e.preventDefault();setBusy(true);setError('');try{await receivePayment(payment.id,date,Number(amount));await onSaved();}catch(error){setError(error instanceof PaymentAlreadyReceivedError?error.message:'تعذّر تسجيل الاستلام.');}finally{setBusy(false);}}
  const status=getSponsorshipStatus(payment.due_date,payment.received_on,utcToday());
  const labels={due:'مستحقة',late:'متأخرة',received:'مستلمة'};
  return <li data-testid={`installment-${payment.installment_month}`}><p>استحقاق <CalendarDate value={payment.due_date}/> — {payment.amount_due} جنيه مصري — {labels[status]}</p>
@@ -42,8 +42,8 @@ function SponsorshipCard({sponsorship,family,donor,payments,canWrite,onSaved}:{s
 }
 export function DonationListPage({canWrite,canReadCases}:{canWrite:boolean;canReadCases:boolean}) {
  const [data,setData]=useState<Data>({donors:[],donations:[],sponsorships:[],payments:[],families:[]});const [error,setError]=useState('');const [loading,setLoading]=useState(true);const [saved,setSaved]=useState('');
- useEffect(()=>{let alive=true;setLoading(true);loadData(canWrite,canReadCases).then(result=>{if(alive){setData(result);setError('');}}).catch(()=>{if(alive)setError('تعذّر تحميل التبرعات والكفالات.');}).finally(()=>{if(alive)setLoading(false);});return()=>{alive=false;};},[canWrite,canReadCases]);
- async function refresh() {setSaved('تم الحفظ.');try{setData(await loadData(canWrite,canReadCases));setError('');}catch{setError('تم الحفظ، لكن تعذّر تحديث القائمة. أعد تحميل الصفحة.');}}
+ useEffect(()=>{let alive=true;setLoading(true);loadData(canReadCases).then(result=>{if(alive){setData(result);setError('');}}).catch(()=>{if(alive)setError('تعذّر تحميل التبرعات والكفالات.');}).finally(()=>{if(alive)setLoading(false);});return()=>{alive=false;};},[canWrite,canReadCases]);
+ async function refresh() {setSaved('تم الحفظ.');try{setData(await loadData(canReadCases));setError('');}catch{setError('تم الحفظ، لكن تعذّر تحديث القائمة. أعد تحميل الصفحة.');}}
  const donors=new Map(data.donors.map(d=>[d.id,d]));const families=new Map(data.families.map(f=>[f.id,f]));
  const payments=new Map<string,SponsorshipPayment[]>();for(const p of data.payments){const group=payments.get(p.sponsorship_id)??[];group.push(p);payments.set(p.sponsorship_id,group);}
  for(const group of payments.values())group.sort((a,b)=>a.due_date.localeCompare(b.due_date));

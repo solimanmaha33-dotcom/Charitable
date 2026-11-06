@@ -65,3 +65,29 @@ test('sponsorship staff records donations, monthly receipt and inclusive end dat
   if(userId) {sql(`delete from private.employee_auth where employee_id='${userId}';delete from public.employees where id='${userId}';`);await admin.auth.admin.deleteUser(userId);}
  }
 });
+
+test('sponsorship reader sees current and overdue installments across months without any writer visit', async ({page}) => {
+ const s=JSON.parse(execFileSync('npx',['supabase','status','-o','json'],{encoding:'utf8',stdio:['pipe','pipe','pipe']}));if(!/^http:\/\/(127\.0\.0\.1|localhost):/.test(s.API_URL))throw new Error('Local only');
+ const admin=createClient(s.API_URL,s.SERVICE_ROLE_KEY,{auth:{persistSession:false,autoRefreshToken:false}}),reader=createClient(s.API_URL,s.ANON_KEY,{auth:{persistSession:false,autoRefreshToken:false}});
+ const sql=(input:string)=>execFileSync('docker',['exec','-i','supabase_db_charitable-case-system','psql','-U','postgres','-d','postgres','-v','ON_ERROR_STOP=1'],{input,stdio:['pipe','pipe','pipe']});
+ let uid='',family='',donor='',sponsorship='';const email=`${crypto.randomUUID()}@staff.invalid`,password='synthetic-password-123';
+ try {
+  const u=await admin.auth.admin.createUser({email,password,email_confirm:true});if(u.error||!u.data.user)throw u.error;uid=u.data.user.id;
+  sql(`insert into public.employees(id,employee_code,display_name) values('${uid}','M${uid.slice(0,8)}','Synthetic monthly reader');insert into private.employee_auth values('${uid}','${uid}');insert into public.employee_permissions(employee_id,donations_read,cases_read) values('${uid}',true,true);`);
+  const f=await admin.from('families').insert({name:'أسرة قارئ شهرية وهمية'}).select('id').single();if(f.error)throw f.error;family=f.data.id;
+  const d=await admin.from('donors').insert({name:'متبرع قارئ شهري وهمي'}).select('id').single();if(d.error)throw d.error;donor=d.data.id;
+  const sp=await admin.from('sponsorships').insert({family_id:family,donor_id:donor,monthly_amount:450,start_date:'2024-01-31'}).select('id').single();if(sp.error)throw sp.error;sponsorship=sp.data.id;
+  const signed=await reader.auth.signInWithPassword({email,password});if(signed.error||!signed.data.session)throw signed.error;
+  const key=`sb-${new URL(s.API_URL).hostname.split('.')[0]}-auth-token`;await page.addInitScript(({key,session})=>localStorage.setItem(key,JSON.stringify(session)),{key,session:signed.data.session});
+  await page.clock.setFixedTime(new Date('2024-01-31T12:00:00Z'));await page.goto('/donations');
+  await expect(page.getByTestId('installment-2024-01-01')).toContainText('مستحقة');await expect(page.getByTestId('installment-2024-02-01')).toHaveCount(0);
+  await page.clock.setFixedTime(new Date('2024-02-29T12:00:00Z'));await page.reload();
+  await expect(page.getByTestId('installment-2024-01-01')).toContainText('متأخرة');await expect(page.getByTestId('installment-2024-02-01')).toContainText('2024-02-29');await expect(page.getByTestId('installment-2024-02-01')).toContainText('مستحقة');
+  await page.clock.setFixedTime(new Date('2024-03-01T12:00:00Z'));await page.reload();
+  await expect(page.getByTestId('installment-2024-02-01')).toContainText('متأخرة');await expect(page.getByTestId('installment-2024-03-01')).toContainText('2024-03-31');
+  await expect(page.getByRole('button',{name:'تسجيل الاستلام'})).toHaveCount(0);
+ } finally {
+  if(sponsorship){await admin.from('sponsorship_payments').delete().eq('sponsorship_id',sponsorship);await admin.from('sponsorships').delete().eq('id',sponsorship);}if(donor)await admin.from('donors').delete().eq('id',donor);if(family)await admin.from('families').delete().eq('id',family);
+  if(uid){sql(`delete from private.employee_auth where employee_id='${uid}';delete from public.employees where id='${uid}';`);await admin.auth.admin.deleteUser(uid);}
+ }
+});
