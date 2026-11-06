@@ -137,3 +137,4 @@
 - بعد إعادة ضبط رمز الوصول في نافذة PowerShell الحالية، نجحت `migration list --remote` و`db push --remote --dry-run` من مجلد المستودع. الهدف Charitable Society، والبعيد فارغ، والترحيلات المحلية `001`–`011` معلّقة. إعداد `[db.vault]` معطّل/معلّق في `supabase/config.toml`؛ المعاينة الجافة لم تطبّق شيئاً.
 - طبّق صاحب المشروع `npx supabase db push --remote` على مشروع Charitable Society. أكدت `migration list --remote` تطابق المحلية والبعيدة للترحيلات `001`–`011`. لم يُنشأ حساب موظف بعد؛ الخطوة التالية إعداد Auth المستضاف وإعدادات Pages قبل تهيئة أول مدير عام.
 - أكد صاحب المشروع إيقاف التسجيل العام وتسجيل الدخول المجهول في إعدادات Supabase Auth.
+- أكد صاحب المشروع إنشاء خطاف **Customize Access Token (JWT) Claims** عبر دالة Postgres `public.staff_access_token_hook`.
