@@ -1,0 +1,45 @@
+{
+  "name": "charitable",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "test": "vitest run",
+    "test:worker": "vitest run --config vitest.worker.config.ts",
+    "test:e2e": "playwright test",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --host 127.0.0.1",
+    "test:db": "supabase test db",
+    "supabase:start": "supabase start -x studio,imgproxy,inbucket,mailpit,realtime,edge-runtime,logflare,vector,supavisor,postgres-meta",
+    "dev:pages": "wrangler pages dev dist --ip 127.0.0.1 --port 8788",
+    "build:functions": "wrangler pages functions build functions --outdir .wrangler/functions"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.119.0",
+    "@tesseract.js-data/ara": "^1.0.0",
+    "image-size": "^2.0.4",
+    "pdf-lib": "^1.17.1",
+    "pdfjs-dist": "^6.5.438",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "react-router-dom": "^7.18.5",
+    "tesseract.js": "^7.0.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.56.1",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.3",
+    "@types/node": "^26.6.6",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.2.1",
+    "jsdom": "^31.0.0",
+    "supabase": "^3.0.0",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.6",
+    "vitest": "^5.1.0",
+    "wrangler": "^4.158.0"
+  }
+}

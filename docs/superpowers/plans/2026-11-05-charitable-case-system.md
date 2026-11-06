@@ -18,12 +18,14 @@
 - Each employee has a unique code and personal password. The code identifies the account and is not the password.
 - The general manager can create staff accounts and remove their access while retaining historical activity records. A manager can create employee accounts but cannot remove access or grant manager roles.
 - Employee permissions include reading and writing cases, reading and writing donations, and using the assistant. A read-only permission cannot save changes.
+- Recording ordinary donations uses donation permissions alone. Linking a sponsorship to a family also requires case-read permission; case-write permission is not required.
 - The assistant only receives records and files the current employee is allowed to read, and it cannot change records or decide who receives assistance.
 - Give every family an easy-to-read, easy-to-enter, stable, unique code such as `F-0001`; never derive it from personal information, change it, or reuse it.
 - Accept images and PDF files. Show a preview and keep each file linked to its case in private storage.
 - Read printed Arabic in images, text PDFs, and scanned PDFs. Show copyable extracted text and field suggestions; staff must review and confirm before saving. Do not promise reliable handwriting recognition.
 - Extract only fields present in the case form. Keep the initial file limit configurable at 20 MiB per file and 20 pages per PDF.
 - Track monthly sponsorship due and received amounts; an end date is optional. Expenses and full accounting are out of scope.
+- Record cash donations and sponsorship payments in Egyptian pounds (EGP) in the first release; foreign-currency conversion is out of scope.
 - Use synthetic data in tests and examples. Never write beneficiary information, passwords, API keys, or real session values into Markdown files.
 - Keep integrations grouped under `src/services/`; group screens and logic by feature under `src/features/`.
 - Update the relevant Markdown documentation after every task, including what changed, verification results, and the next step.
@@ -80,27 +82,27 @@ docs/                  design, data model, evaluation, and progress notes
 - `AppShell({ children }: { children: React.ReactNode })` provides the right-to-left page frame, navigation area, and responsive layout.
 - `Router` exposes `/login` and authenticated application routes; protected routes show a sign-in prompt when no session exists.
 
-- [ ] **Step 1: Write the failing shell test**
+- [x] **Step 1: Write the failing shell test**
 
 Test that the rendered page has `lang="ar"`, `dir="rtl"`, the Arabic product name, and navigation that remains usable at a 360 px viewport.
 
-- [ ] **Step 2: Run the test and confirm it fails**
+- [x] **Step 2: Run the test and confirm it fails**
 
 Run: `npm run test -- src/shared/AppShell.test.tsx`
 
 Expected: FAIL because the application shell does not exist.
 
-- [ ] **Step 3: Build the smallest shell that passes**
+- [x] **Step 3: Build the smallest shell that passes**
 
 Create the React and Vite entry points, Arabic RTL shell, and empty feature routes. Configure `test`, `test:worker`, `test:e2e`, `typecheck`, and `build` scripts; keep labels in simple Egyptian Arabic.
 
-- [ ] **Step 4: Verify the shell**
+- [x] **Step 4: Verify the shell**
 
 Run: `npm run test -- src/shared/AppShell.test.tsx && npm run typecheck && npm run build`
 
 Expected: all commands exit successfully; the page remains readable at phone width.
 
-- [ ] **Step 5: Update docs and commit**
+- [x] **Step 5: Update docs and commit**
 
 Record the shell, test result, and next task in `docs/progress.md`; add local run instructions to `README.md`.
 
@@ -120,31 +122,31 @@ Record the shell, test result, and next task in `docs/progress.md`; add local ru
 - `functions/api/auth/login.ts` accepts `{ employeeCode, password }`, maps the code to a private Supabase Auth account, and returns the normal authenticated session. It uses a generic error for unknown codes and wrong passwords and never logs credentials.
 - Staff creation is server-side. A manager can create employees with employee-level permissions; only the general manager can deactivate staff accounts. Deactivation preserves audit history.
 
-- [ ] **Step 1: Write failing permission and database-policy tests**
+- [x] **Step 1: Write failing permission and database-policy tests**
 
 Test all role grants, manager limits, unique employee codes, read-only denies, a deactivated user being unable to sign in, a session ending after 30 days, and manual logout revoking it immediately. Test that case and donation rows are denied through Supabase policies without their matching read permission.
 
-- [ ] **Step 2: Run tests and confirm the intended failures**
+- [x] **Step 2: Run tests and confirm the intended failures**
 
 Run: `npm run test -- src/features/auth/permissions.test.ts` and `supabase test db`
 
 Expected: tests fail because the permission rules, tables, and policies do not exist.
 
-- [ ] **Step 3: Add the staff tables and policies**
+- [x] **Step 3: Add the staff tables and policies**
 
 Create `employees` with `auth_user_id`, unique `employee_code`, `display_name`, `role`, and `active`; create `employee_permissions` with the five flags above. Add row-level policies that derive the current employee from the Supabase session. Do not let managers assign manager roles or deactivate accounts.
 
-- [ ] **Step 4: Add code-based login and session behavior**
+- [x] **Step 4: Add code-based login and session behavior**
 
 Add the login-code lookup in a Cloudflare Function; store the internal Auth mapping outside employee-readable tables. Configure the session limit to 30 days, preserve the session across reloads, and revoke it on manual logout. Add generic errors and a rate limit for failed logins.
 
-- [ ] **Step 5: Verify staff access**
+- [x] **Step 5: Verify staff access**
 
 Run: `npm run test -- src/features/auth/permissions.test.ts && supabase test db && npm run typecheck`
 
 Expected: permission and RLS tests pass; manager cannot deactivate users; general manager can; read-only requests cannot write.
 
-- [ ] **Step 6: Update docs and commit**
+- [x] **Step 6: Update docs and commit**
 
 Document role rules and login recovery in `docs/data-model.md` and `docs/progress.md`. Never record the generated internal Auth mapping or passwords.
 
@@ -162,31 +164,31 @@ Document role rules and login recovery in `docs/data-model.md` and `docs/progres
 - `normalizeArabicSearch(value: string): string` normalizes Arabic letter variants and diacritics for matching only; it does not change saved names.
 - Case categories are `هجر`, `وفاة`, `أرملة`, `مطلقة`, `عجز أو مرض`, and `أيتام`; one family may have multiple category records.
 
-- [ ] **Step 1: Write failing model and search tests**
+- [x] **Step 1: Write failing model and search tests**
 
 Test family code formatting, database uniqueness when two inserts happen together, case categories, family-member links, and Arabic matching across common alef forms and diacritics.
 
-- [ ] **Step 2: Run tests and confirm failures**
+- [x] **Step 2: Run tests and confirm failures**
 
 Run: `npm run test -- src/features/families/familyCode.test.ts src/features/cases/arabicSearch.test.ts` and `supabase test db`
 
 Expected: FAIL because the functions, tables, and constraints are not implemented.
 
-- [ ] **Step 3: Add the family and case schema**
+- [x] **Step 3: Add the family and case schema**
 
 Create `families`, `people`, `family_members`, `cases`, and `case_categories`. Generate family codes from a database sequence, enforce uniqueness, and keep all relationships by IDs. Add permission-aware read/write policies.
 
-- [ ] **Step 4: Add the family and case screens**
+- [x] **Step 4: Add the family and case screens**
 
 Create, search, and edit family records and cases. Show the family code on list and detail views. Use the categories above and show related household members on the family page.
 
-- [ ] **Step 5: Verify case workflows**
+- [x] **Step 5: Verify case workflows**
 
 Run: `npm run test -- src/features/families src/features/cases && supabase test db && npm run typecheck`
 
 Expected: code uniqueness, Arabic search, category assignment, and read/write access tests pass.
 
-- [ ] **Step 6: Update docs and commit**
+- [x] **Step 6: Update docs and commit**
 
 Record the final field names and category behavior in `docs/data-model.md`, then update `docs/progress.md`.
 
@@ -205,31 +207,31 @@ Record the final field names and category behavior in `docs/data-model.md`, then
 - `copyExtractedText(text: string): Promise<void>` copies the reviewed OCR text to the clipboard.
 - `uploadCaseFile(caseId: string, file: File): Promise<CaseFile>` writes the file to a private Supabase Storage bucket and creates metadata linked to that case.
 
-- [ ] **Step 1: Write failing upload and OCR tests**
+- [x] **Step 1: Write failing upload and OCR tests**
 
 Test preview for images/PDFs, Arabic extraction from a text PDF and an image-only PDF, copy-to-clipboard, unsupported files, and the 20 MiB/20-page limits. Test that no extracted text or suggested field is saved automatically.
 
-- [ ] **Step 2: Run tests and confirm failures**
+- [x] **Step 2: Run tests and confirm failures**
 
 Run: `npm run test -- src/features/files/ocr.test.ts`
 
 Expected: FAIL because upload and extraction helpers do not exist.
 
-- [ ] **Step 3: Add private attachment storage**
+- [x] **Step 3: Add private attachment storage**
 
 Create `case_files` metadata with case ID, storage path, file name, MIME type, size, uploader, and timestamp. Use a private bucket and policies that require case read permission. Keep previews and download links protected.
 
-- [ ] **Step 4: Add preview, text extraction, and copy**
+- [x] **Step 4: Add preview, text extraction, and copy**
 
 Use PDF.js to read text PDFs and render scanned pages. Use Tesseract.js Arabic data for images and rendered pages. Show extracted text with a copy button. Display recognition as a draft for review; never write recognized values directly to the case.
 
-- [ ] **Step 5: Verify real file paths**
+- [x] **Step 5: Verify real file paths**
 
 Run: `npm run test -- src/features/files/ocr.test.ts && supabase test db && npm run test:e2e -- --grep "case attachment"`
 
 Expected: both PDF types and image OCR work on synthetic fixtures; staff without case read permission cannot preview or download files.
 
-- [ ] **Step 6: Update docs and commit**
+- [x] **Step 6: Update docs and commit**
 
 Record supported file types, limits, and OCR limitations in `docs/data-model.md` and `docs/progress.md`.
 
@@ -237,40 +239,40 @@ Record supported file types, limits, and OCR limitations in `docs/data-model.md`
 
 **Files:**
 
-- Create: `supabase/migrations/004_donations_sponsorships.sql`, `src/features/donations/DonationForm.tsx`, `src/features/donations/DonationListPage.tsx`, `src/features/donations/SponsorshipForm.tsx`, `src/features/donations/sponsorshipStatus.ts`, `src/features/donations/sponsorshipStatus.test.ts`
+- Create: `supabase/migrations/005_donations_sponsorships.sql`, `src/features/donations/DonationForm.tsx`, `src/features/donations/DonationListPage.tsx`, `src/features/donations/SponsorshipForm.tsx`, `src/features/donations/sponsorshipStatus.ts`, `src/features/donations/sponsorshipStatus.test.ts`
 - Test: `supabase/tests/donations_sponsorships.test.sql`, `src/features/donations/sponsorshipStatus.test.ts`
 - Update: `docs/data-model.md`, `docs/progress.md`
 
 **Interfaces:**
 
-- Donation types include cash, in-kind food, clothing, medicine, zakat, sadaqa, zakat al-fitr, Ramadan food bags, Eid clothing, sacrificial meat, blankets, school supplies, and treatment support; sponsorship is linked to a donor and family.
+- Donation types include cash, in-kind food, clothing, medicine, zakat, sadaqa, zakat al-fitr, Ramadan food bags, Eid clothing, sacrificial meat, blankets, school supplies, and treatment support; cash amounts use EGP. Sponsorship is linked to a donor and family.
 - `getSponsorshipStatus(dueDate: string, receivedAt: string | null, today: string): 'due' | 'received' | 'late'` reports a monthly installment status. An optional end date stops future installments.
 
-- [ ] **Step 1: Write failing donation and payment tests**
+- [x] **Step 1: Write failing donation and payment tests**
 
 Test each donation type, monthly due dates, received and late payments, optional sponsorship end dates, duplicate installment prevention, and permission-denied writes.
 
-- [ ] **Step 2: Run tests and confirm failures**
+- [x] **Step 2: Run tests and confirm failures**
 
 Run: `npm run test -- src/features/donations/sponsorshipStatus.test.ts`
 
 Expected: FAIL because the donation model and status helper do not exist.
 
-- [ ] **Step 3: Add donation and sponsorship tables**
+- [x] **Step 3: Add donation and sponsorship tables**
 
-Create `donors`, `donations`, `sponsorships`, and `sponsorship_payments`. Store each monthly installment separately, unique by sponsorship and month. Add read/write policies for donation permissions.
+Create `donors`, `donations`, `sponsorships`, and `sponsorship_payments`. Store each monthly installment separately, unique by sponsorship and month. Add read/write policies for donation permissions. Sponsorship-to-family lookup also requires case-read permission; do not expose family names or IDs to donation-only staff.
 
-- [ ] **Step 4: Add donation and sponsorship screens**
+- [x] **Step 4: Add donation and sponsorship screens**
 
 Allow permitted staff to record cash/in-kind donations, associate sponsorships to a donor and family, and mark a monthly installment received with date and amount.
 
-- [ ] **Step 5: Verify payment tracking**
+- [x] **Step 5: Verify payment tracking**
 
 Run: `npm run test -- src/features/donations && supabase test db && npm run test:e2e -- --grep "sponsorship"`
 
 Expected: monthly amounts and statuses appear correctly; ending a sponsorship prevents future due installments; unauthorized staff cannot add or change donations.
 
-- [ ] **Step 6: Update docs and commit**
+- [x] **Step 6: Update docs and commit**
 
 Document the donation types and monthly payment fields in `docs/data-model.md` and `docs/progress.md`.
 
@@ -278,43 +280,45 @@ Document the donation types and monthly payment fields in `docs/data-model.md` a
 
 **Files:**
 
-- Create: `functions/api/assistant.ts`, `functions/api/extract-fields.ts`, `functions/api/aiProvider.ts`, `src/features/assistant/AssistantPanel.tsx`, `src/features/assistant/FieldSuggestions.tsx`, `src/features/assistant/assistant.test.ts`, `src/features/assistant/extractFields.test.ts`
-- Modify: `src/features/cases/CaseForm.tsx`, `src/features/files/documentText.ts`
-- Test: `functions/api/assistant.test.ts`, `functions/api/extract-fields.test.ts`
+- Create: `supabase/migrations/007_case_file_search_text.sql`, `functions/api/case-files/ocr-text.ts`, `functions/api/assistant.ts`, `functions/api/extract-fields.ts`, `functions/api/aiProvider.ts`, `src/features/assistant/AssistantPanel.tsx`, `src/features/assistant/FieldSuggestions.tsx`, `src/features/assistant/assistant.test.ts`, `src/features/assistant/extractFields.test.ts`
+- Modify: `functions/_shared/supabase.ts`, `src/features/cases/CaseForm.tsx`, `src/features/files/documentText.ts`, `src/features/files/FilePreview.tsx`, `src/services/cases.ts`
+- Test: `functions/api/case-files/ocr-text.test.ts`, `functions/api/assistant.test.ts`, `functions/api/extract-fields.test.ts`, `supabase/tests/case_file_search_text.test.sql`
 - Update: `docs/architecture.md`, `docs/progress.md`
 
 **Interfaces:**
 
 - `POST /api/assistant` accepts `{ question: string }` and returns `{ answer: string; sources: Array<{ familyCode: string; caseId: string; fileName?: string }> }`.
 - `POST /api/extract-fields` accepts `{ text: string; targetFields: string[] }` and returns `{ suggestions: Array<{ field: string; value: string; evidence: string }> }`.
+- Field suggestions are limited to the current case form's `notes` and `case_categories`; the employee chooses the family from the existing list.
 - Both endpoints verify the employee session and `assistantUse`; retrieval is further filtered by the employee's case/donation read permissions before any content reaches the model.
 - Cloudflare Workers AI is the first provider. Provider secrets stay server-side. The browser receives only the answer or suggestions, never provider credentials.
+- OCR text is never stored automatically. The employee can review the OCR draft and explicitly save it for assistant search; this is separate from applying any field suggestion. Saved text inherits the case-file read boundary, and only a case writer can save it. Field suggestions use the current reviewed draft transiently and allow only fields already present in the case form.
 
-- [ ] **Step 1: Write failing authorization and extraction tests**
+- [x] **Step 1: Write failing authorization and extraction tests**
 
 Test allowed and denied assistant use, case/donation read scopes, file access, structured extraction for synthetic Arabic text, unsupported fields, model errors, and that the assistant endpoint cannot write to the database.
 
-- [ ] **Step 2: Run tests and confirm failures**
+- [x] **Step 2: Run tests and confirm failures**
 
 Run: `npm run test -- src/features/assistant && npm run test:worker -- functions/api`
 
 Expected: FAIL because the permissioned endpoints and provider wrapper do not exist.
 
-- [ ] **Step 3: Add provider wrapper and permission-scoped retrieval**
+- [x] **Step 3: Add explicit OCR search-text storage and provider wrapper**
 
-Implement `aiProvider.complete()` for Cloudflare Workers AI. Verify the session, assistant permission, and relevant read permissions before retrieving data. Send only records and OCR text that the current employee can read. Treat file text as untrusted input and ignore instructions found inside documents.
+Add a case-writer-only route to save employee-reviewed OCR text for assistant search; keep it under case-file read policies and test that the browser cannot update it directly. Implement `aiProvider.complete()` for Cloudflare Workers AI. Verify the session, assistant permission, and relevant read permissions before retrieving data. Send only records and OCR text that the current employee can read and that a staff member explicitly saved for search. Treat file text as untrusted input and ignore instructions found inside documents.
 
-- [ ] **Step 4: Add assistant answers and case-field suggestions**
+- [x] **Step 4: Add assistant answers and case-field suggestions**
 
-Render answers with links to the source family/case/file. Show extracted field values beside the OCR source text and let the employee edit or discard each suggestion before saving the case.
+Render answers with links to the source family/case/file. Show extracted field values beside the OCR source text and let the employee edit or discard each suggestion before saving the case. Saving OCR for search never applies any suggested value to the case.
 
-- [ ] **Step 5: Verify no permission bypass or automatic edits**
+- [x] **Step 5: Verify no permission bypass or automatic edits**
 
 Run: `npm run test -- src/features/assistant && npm run test:worker -- functions/api && npm run test:e2e -- --grep "assistant permissions|field suggestions"`
 
 Expected: a restricted employee cannot get or infer data outside their read permissions; malformed model results are rejected; suggested values remain unsaved until employee confirmation.
 
-- [ ] **Step 6: Update docs and commit**
+- [x] **Step 6: Update docs and commit**
 
 Document the selected provider, data flow, and permission behavior in `docs/architecture.md` and `docs/progress.md`. Do not put API keys or private case data in docs.
 
@@ -322,35 +326,37 @@ Document the selected provider, data flow, and permission behavior in `docs/arch
 
 **Files:**
 
-- Create: `wrangler.toml`, `.env.example`, `docs/architecture.md`, `docs/data-model.md`, `docs/deployment.md`
-- Modify: `README.md`, `docs/progress.md`
+- Create: `src/features/staff/StaffPage.tsx`, `src/features/staff/StaffPage.test.tsx`, `src/services/staff.ts`, `docs/deployment.md`
+- Modify: `src/app/Router.tsx`, `wrangler.jsonc`, `.env.example`, `.dev.vars.example`, `README.md`, `docs/architecture.md`, `docs/data-model.md`, `docs/progress.md`
 - Test: `tests/e2e/login-and-case-flow.spec.ts`, `tests/e2e/ocr-flow.spec.ts`, `tests/e2e/donations-flow.spec.ts`
 
-- [ ] **Step 1: Write failing end-to-end smoke tests**
+- [x] **Step 1: Write failing end-to-end smoke tests**
 
-Test login, a manager-created employee, family code generation, case creation with file/OCR, monthly sponsorship entry, and a permission-limited assistant response using synthetic records.
+Test manager login, employee creation through the staff page, the new employee's login, family code generation, case creation with file/OCR, monthly sponsorship entry, and a permission-limited assistant response using synthetic records.
 
-- [ ] **Step 2: Run smoke tests and confirm failures**
+- [x] **Step 2: Run smoke tests and confirm failures**
 
 Run: `npm run test:e2e`
 
 Expected: FAIL because the integrated workflows and deployment configuration are not complete.
 
-- [ ] **Step 3: Prepare Cloudflare and Supabase deployment files**
+- [x] **Step 3: Prepare Cloudflare and Supabase deployment files**
 
-Create deployment configuration and a `.env.example` with variable names only. Keep service-role and AI credentials server-side. Do not connect a real Supabase project or run a deployment command.
+Update the existing `wrangler.jsonc` configuration and environment examples. Keep `.env.example` to variable names only; `.dev.vars.example` may show loopback-only local URLs, but all credential values stay blank. Keep service-role and AI credentials server-side. Do not connect a real Supabase project or run a deployment command.
 
-- [ ] **Step 4: Document installation, startup, backups, and recovery**
+Complete the authorized staff-management flow under `/staff`: managers can create employees and change their permission flags but cannot create manager roles or deactivate accounts; general managers can create permitted roles and deactivate access without deleting history. The existing API and database functions remain the authorization boundary.
 
-Write repeatable setup steps, environment variable names without values, database migration instructions, file backup/restore steps, and free-tier limits in the documentation.
+- [x] **Step 4: Document installation, startup, backups, and recovery**
 
-- [ ] **Step 5: Run complete verification**
+Write repeatable setup steps, environment variable names without values, database migration instructions, file backup/restore steps, and links to official free-tier limits. Quote numeric quotas only if verified from an official source; otherwise mark them as unverified and require an operator to check them before a pilot.
 
-Run: `npm run test && npm run test:worker && supabase test db && npm run test:e2e && npm run typecheck && npm run build`
+- [x] **Step 5: Run complete verification**
 
-Expected: all local tests and build pass using synthetic data and test bindings. Record current free-tier limits and a testable backup/restore procedure. The app is deployment-ready but remains unpublished.
+Run: `npm run test && npm run test:worker && npm run test:db && npm run test:e2e && npm run typecheck && npm run build && npm run build:functions`
 
-- [ ] **Step 6: Update docs and commit**
+Expected: all local tests and build pass using synthetic data and test bindings. Record official free-tier references and a testable backup/restore procedure. The app is prepared for a future deployment but remains unpublished.
+
+- [x] **Step 6: Update docs and commit**
 
 Record local verification output, remaining limitations, deployment instructions, and the next step in `docs/progress.md`. Keep credentials out of all project files; do not claim the pilot is deployed.
 

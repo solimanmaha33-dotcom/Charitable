@@ -1,0 +1,47 @@
+:root {
+  font-family: Tahoma, Arial, sans-serif;
+  color: #213e35;
+  background: #f4f7f4;
+  font-synthesis: none;
+  line-height: 1.8;
+}
+* { box-sizing: border-box; }
+body { margin: 0; }
+a { color: #185c49; text-underline-offset: 0.2em; }
+a:focus-visible, main:focus-visible { outline: 3px solid #a95a0a; outline-offset: 3px; }
+.app-shell { min-height: 100vh; display: flex; flex-direction: column; }
+.app-header { background: #185c49; color: #fff; padding: 1.5rem; }
+.header-content { max-width: 72rem; margin-inline: auto; }
+.product-name { font-size: 1.6rem; font-weight: bold; }
+.app-header p { margin-block: 0.25rem 0; }
+.app-layout { width: 100%; max-width: 75rem; margin-inline: auto; padding: 1.5rem; display: grid; grid-template-columns: 13rem minmax(0, 1fr); gap: 1.5rem; flex: 1; align-items: start; }
+.app-navigation { display: flex; flex-direction: column; gap: 0.4rem; min-width: 0; }
+.app-navigation a { display: flex; align-items: center; min-height: 48px; padding: 0.6rem 0.9rem; border-radius: 0.5rem; text-decoration: none; overflow-wrap: anywhere; }
+.app-navigation a:hover { background: #e2ece5; }
+.app-navigation a.active { background: #dcebe1; color: #124532; font-weight: bold; }
+main { min-width: 0; overflow-wrap: anywhere; }
+.page-card { padding: 1.5rem; border: 1px solid #d7e2db; border-radius: 0.75rem; background: white; }
+h1 { font-size: 1.4rem; line-height: 1.5; margin-block: 0 0.75rem; }
+p { margin-block: 0 1rem; }
+.primary-link { display: inline-flex; align-items: center; min-height: 48px; padding: 0.5rem 1rem; background: #185c49; color: white; border-radius: 0.4rem; text-decoration: none; }
+footer { text-align: center; padding: 1rem; color: #50695f; font-size: 0.9rem; }
+.skip-link { position: absolute; top: 0.5rem; inset-inline-start: 0.5rem; transform: translateY(-200%); padding: 0.5rem; background: white; z-index: 1; }
+.skip-link:focus { transform: translateY(0); }
+@media (max-width: 640px) {
+  .app-header { padding: 1.1rem 1rem; }
+  .app-layout { grid-template-columns: minmax(0, 1fr); gap: 1rem; padding: 1rem; }
+  .app-navigation { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.3rem; }
+  .app-navigation a { padding-inline: 0.6rem; }
+  .page-card { padding: 1rem; }
+}
+
+.login-form { display: grid; gap: .75rem; max-width: 28rem; }
+.login-form input, button { min-height: 44px; padding: .6rem .8rem; font: inherit; border: 1px solid #b4c7c0; border-radius: .5rem; }
+.login-form input { min-width: 0; width: 100%; box-sizing: border-box; }
+button { cursor: pointer; background: #176248; color: white; }
+button:disabled { opacity: .7; cursor: wait; }
+.domain-form { display: grid; gap: .75rem; max-width: 34rem; margin-block: 1rem; }
+.domain-form label { display: block; }
+.domain-form input:not([type=checkbox]), .domain-form textarea, .domain-form select, .page-card > label input { display: block; width: 100%; min-height: 44px; padding: .6rem; font: inherit; border: 1px solid #b4c7c0; border-radius: .5rem; }
+.domain-form textarea { min-height: 6rem; }
+.domain-form fieldset label { display: inline-block; margin-inline-end: 1rem; }
