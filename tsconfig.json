@@ -1,7 +1,11 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ],
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "jsx": "react-jsx",
@@ -9,7 +13,16 @@
     "skipLibCheck": true,
     "noEmit": true,
     "esModuleInterop": true,
-    "types": ["vite/client", "node", "@testing-library/jest-dom"]
+    "types": [
+      "vite/client",
+      "node",
+      "@testing-library/jest-dom"
+    ]
   },
-  "include": ["src", "tests", "*.config.ts"]
+  "include": [
+    "src",
+    "tests",
+    "*.config.ts",
+    "functions"
+  ]
 }

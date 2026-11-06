@@ -34,3 +34,9 @@ footer { text-align: center; padding: 1rem; color: #50695f; font-size: 0.9rem; }
   .app-navigation a { padding-inline: 0.6rem; }
   .page-card { padding: 1rem; }
 }
+
+.login-form { display: grid; gap: .75rem; max-width: 28rem; }
+.login-form input, button { min-height: 44px; padding: .6rem .8rem; font: inherit; border: 1px solid #b4c7c0; border-radius: .5rem; }
+.login-form input { min-width: 0; width: 100%; box-sizing: border-box; }
+button { cursor: pointer; background: #176248; color: white; }
+button:disabled { opacity: .7; cursor: wait; }

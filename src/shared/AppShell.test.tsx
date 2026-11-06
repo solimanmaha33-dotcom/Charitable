@@ -23,14 +23,14 @@ describe('Arabic application shell', () => {
   });
 
   it('leaves signed-in feature routes as empty placeholders', () => {
-    render(<MemoryRouter initialEntries={['/families']}><Router session={{ employeeId: 'synthetic-staff' }} /></MemoryRouter>);
+    render(<MemoryRouter initialEntries={['/families']}><Router session={{ id: 'synthetic', employeeCode: 'E1', displayName: 'Synthetic', role: 'manager', active: true, permissions: { casesRead: false, casesWrite: false, donationsRead: false, donationsWrite: false, assistantUse: false } }} /></MemoryRouter>);
     expect(screen.getByRole('heading', { name: 'الأسر' })).toBeVisible();
     expect(screen.getByText('الصفحة دي هتكون جاهزة قريب.')).toBeVisible();
   });
 
-  it('exposes a login route without a pretend login form', () => {
+  it('exposes the employee login form', () => {
     render(<MemoryRouter initialEntries={['/login']}><Router /></MemoryRouter>);
     expect(screen.getByRole('heading', { name: 'تسجيل الدخول' })).toBeVisible();
-    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'كود الموظف' })).toBeVisible();
   });
 });

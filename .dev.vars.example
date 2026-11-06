@@ -1,0 +1,4 @@
+# Local Pages Function bindings. Copy to ignored .dev.vars, using local Supabase values only.
+SUPABASE_URL=http://127.0.0.1:54321
+SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
