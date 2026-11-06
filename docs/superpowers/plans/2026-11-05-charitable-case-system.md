@@ -326,13 +326,13 @@ Document the selected provider, data flow, and permission behavior in `docs/arch
 
 **Files:**
 
-- Create: `docs/deployment.md`
-- Modify: `wrangler.jsonc`, `.env.example`, `.dev.vars.example`, `README.md`, `docs/architecture.md`, `docs/data-model.md`, `docs/progress.md`
+- Create: `src/features/auth/StaffManagementPage.tsx`, `src/features/auth/StaffManagementPage.test.tsx`, `src/services/staff.ts`, `docs/deployment.md`
+- Modify: `src/app/Router.tsx`, `wrangler.jsonc`, `.env.example`, `.dev.vars.example`, `README.md`, `docs/architecture.md`, `docs/data-model.md`, `docs/progress.md`
 - Test: `tests/e2e/login-and-case-flow.spec.ts`, `tests/e2e/ocr-flow.spec.ts`, `tests/e2e/donations-flow.spec.ts`
 
 - [ ] **Step 1: Write failing end-to-end smoke tests**
 
-Test login, a manager-created employee, family code generation, case creation with file/OCR, monthly sponsorship entry, and a permission-limited assistant response using synthetic records.
+Test manager login, employee creation through the staff page, the new employee's login, family code generation, case creation with file/OCR, monthly sponsorship entry, and a permission-limited assistant response using synthetic records.
 
 - [ ] **Step 2: Run smoke tests and confirm failures**
 
@@ -343,6 +343,8 @@ Expected: FAIL because the integrated workflows and deployment configuration are
 - [ ] **Step 3: Prepare Cloudflare and Supabase deployment files**
 
 Update the existing `wrangler.jsonc` configuration and environment examples. Keep `.env.example` to variable names only; `.dev.vars.example` may show loopback-only local URLs, but all credential values stay blank. Keep service-role and AI credentials server-side. Do not connect a real Supabase project or run a deployment command.
+
+Complete the authorized staff-management flow under `/staff`: managers can create employees and change their permission flags but cannot create manager roles or deactivate accounts; general managers can create permitted roles and deactivate access without deleting history. The existing API and database functions remain the authorization boundary.
 
 - [ ] **Step 4: Document installation, startup, backups, and recovery**
 
