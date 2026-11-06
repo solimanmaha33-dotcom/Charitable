@@ -40,3 +40,8 @@ footer { text-align: center; padding: 1rem; color: #50695f; font-size: 0.9rem; }
 .login-form input { min-width: 0; width: 100%; box-sizing: border-box; }
 button { cursor: pointer; background: #176248; color: white; }
 button:disabled { opacity: .7; cursor: wait; }
+.domain-form { display: grid; gap: .75rem; max-width: 34rem; margin-block: 1rem; }
+.domain-form label { display: block; }
+.domain-form input:not([type=checkbox]), .domain-form textarea, .domain-form select, .page-card > label input { display: block; width: 100%; min-height: 44px; padding: .6rem; font: inherit; border: 1px solid #b4c7c0; border-radius: .5rem; }
+.domain-form textarea { min-height: 6rem; }
+.domain-form fieldset label { display: inline-block; margin-inline-end: 1rem; }

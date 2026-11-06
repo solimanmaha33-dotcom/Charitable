@@ -1,0 +1,11 @@
+import { useEffect, useState } from 'react';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { listCases, listFamilies, type CaseRecord, type Family } from '../../services/cases';
+import { CaseForm } from './CaseForm';
+export function CaseDetailsPage({ canWrite }: { canWrite: boolean }) {
+ const {id}=useParams(); const [params]=useSearchParams(); const navigate=useNavigate(); const [families,setFamilies]=useState<Family[]>([]); const [records,setRecords]=useState<CaseRecord[]>([]); const [error,setError]=useState(''); const [loading,setLoading]=useState(true); const [editing,setEditing]=useState(id==='new');
+ useEffect(()=>{let alive=true; setLoading(true); Promise.all([listFamilies(),listCases()]).then(([f,c])=>{if(alive){setFamilies(f);setRecords(c);setLoading(false);}}).catch(()=>{if(alive){setError('تعذّر تحميل الحالات.');setLoading(false);}}); return ()=>{alive=false;};},[id]);
+ const record=records.find(c=>c.id===id); const family=families.find(f=>f.id===record?.family_id);
+ if (!id) return <section className="page-card"><h1>الحالات</h1>{canWrite && <Link to="/cases/new">إضافة حالة</Link>}{error && <p role="alert">{error}</p>}<ul>{records.map(c=>{const f=families.find(x=>x.id===c.family_id);return <li key={c.id}><Link to={`/cases/${c.id}`}>{f?.code} — {f?.name} — {c.case_categories.map(x=>x.category).join('، ') || 'حالة'}</Link></li>;})}</ul></section>;
+ return <section className="page-card"><h1>{id==='new' ? 'إضافة حالة' : 'تفاصيل الحالة'}</h1>{error && <p role="alert">{error}</p>}{!loading && !error && id!=='new' && !record && <p>الحالة غير موجودة.</p>}{!loading && id==='new' && !canWrite && <p>معندكش صلاحية للإضافة.</p>}{record && !editing && <><p><Link to={`/families/${record.family_id}`}>{family?.code} — {family?.name}</Link></p><p>التصنيفات: {record.case_categories.map(c=>c.category).join('، ') || 'لا يوجد'}</p><p>الملاحظات: {record.notes || 'لا يوجد'}</p>{canWrite && <button onClick={()=>setEditing(true)}>تعديل الحالة</button>}</>}{!loading && canWrite && editing && (id==='new' || record) && <CaseForm key={id} families={families} record={record} initialFamily={params.get('family') ?? undefined} onSaved={saved=>{setEditing(false); if(saved===id){void listCases().then(setRecords).catch(()=>setError('تعذّر تحميل الحالات.'));} else navigate(`/cases/${saved}`);}} />}</section>;
+}

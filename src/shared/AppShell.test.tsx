@@ -22,10 +22,10 @@ describe('Arabic application shell', () => {
     expect(screen.getByRole('link', { name: 'روح لتسجيل الدخول' })).toHaveAttribute('href', '/login');
   });
 
-  it('leaves signed-in feature routes as empty placeholders', () => {
+  it('shows the family workspace for signed-in managers', () => {
     render(<MemoryRouter initialEntries={['/families']}><Router session={{ id: 'synthetic', employeeCode: 'E1', displayName: 'Synthetic', role: 'manager', active: true, permissions: { casesRead: false, casesWrite: false, donationsRead: false, donationsWrite: false, assistantUse: false } }} /></MemoryRouter>);
     expect(screen.getByRole('heading', { name: 'الأسر' })).toBeVisible();
-    expect(screen.getByText('الصفحة دي هتكون جاهزة قريب.')).toBeVisible();
+    expect(screen.getByRole('button', { name: 'إضافة أسرة' })).toBeVisible();
   });
 
   it('exposes the employee login form', () => {

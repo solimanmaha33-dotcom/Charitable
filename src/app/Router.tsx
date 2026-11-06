@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link, Route, Routes } from 'react-router-dom';
 import { LoginPage } from '../features/auth/LoginPage';
+import { FamilyDetailsPage, FamilyListPage } from '../features/families/FamilyListPage';
+import { CaseDetailsPage } from '../features/cases/CaseDetailsPage';
 import {
   hasPermission,
   type EmployeePermission,
@@ -9,8 +11,6 @@ import {
 import { currentStaff, getSupabase, signOut } from '../services/supabase';
 const applicationRoutes = [
   ['/', 'الرئيسية', null],
-  ['/families', 'الأسر', 'casesRead'],
-  ['/cases', 'الحالات', 'casesRead'],
   ['/donations', 'التبرعات والكفالات', 'donationsRead'],
   ['/assistant', 'المساعد', 'assistantUse'],
   ['/staff', 'الموظفين', null],
@@ -86,6 +86,9 @@ export function Router({ session }: { session?: StaffProfile | null }) {
             />
           }
         />
+        {['/families', '/families/:id', '/cases', '/cases/:id'].map(path => (
+          <Route key={path} path={path} element={!staff?.active ? <SignInPrompt /> : !allowed(path, 'casesRead') ? <section className="page-card"><h1>معندكش صلاحية للصفحة دي</h1></section> : path === '/families' ? <FamilyListPage canWrite={hasPermission(staff, 'casesWrite')} /> : path === '/families/:id' ? <FamilyDetailsPage canWrite={hasPermission(staff, 'casesWrite')} /> : <CaseDetailsPage canWrite={hasPermission(staff, 'casesWrite')} />} />
+        ))}
         {applicationRoutes.map(([path, title, permission]) => (
           <Route
             key={path}

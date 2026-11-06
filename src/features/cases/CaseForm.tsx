@@ -1,0 +1,8 @@
+import { useState, type FormEvent } from 'react';
+import { saveCase, type CaseRecord, type Family } from '../../services/cases';
+import { CASE_CATEGORIES, type CaseCategory } from './categories';
+export function CaseForm({ families, record, initialFamily, onSaved }: { families: Family[]; record?: CaseRecord; initialFamily?: string; onSaved: (id: string) => void }) {
+ const [family,setFamily]=useState(record?.family_id ?? initialFamily ?? ''); const [notes,setNotes]=useState(record?.notes ?? ''); const [categories,setCategories]=useState<CaseCategory[]>(record?.case_categories.map(c=>c.category) ?? []); const [busy,setBusy]=useState(false); const [error,setError]=useState('');
+ async function submit(e: FormEvent) { e.preventDefault(); setBusy(true); setError(''); try { onSaved(await saveCase(record?.id ?? null,family,notes,categories)); } catch { setError('تعذّر حفظ الحالة. حاول تاني.'); } finally { setBusy(false); } }
+ return <form className="domain-form" onSubmit={submit}><label>الأسرة<select required value={family} onChange={e=>setFamily(e.target.value)}><option value="">اختر الأسرة</option>{families.map(f=><option key={f.id} value={f.id}>{f.code} — {f.name}</option>)}</select></label><fieldset><legend>تصنيفات الحالة</legend>{CASE_CATEGORIES.map(c=><label key={c}><input type="checkbox" checked={categories.includes(c)} onChange={e=>setCategories(e.target.checked ? [...categories,c] : categories.filter(x=>x!==c))} /> {c}</label>)}</fieldset><label>ملاحظات<textarea value={notes} onChange={e=>setNotes(e.target.value)} /></label><button disabled={busy || !family}>حفظ الحالة</button>{error && <p role="alert">{error}</p>}</form>;
+}
