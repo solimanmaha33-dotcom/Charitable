@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 import { StaffPage } from './StaffPage';
 import * as service from '../../services/staff';
@@ -43,4 +43,18 @@ it('on a conflict reloads current permissions and asks the manager to review',as
  vi.mocked(service.updateStaffPermissions).mockRejectedValue(new service.StaffPermissionsConflict());
  render(<StaffPage role="manager"/>);const group=await screen.findByRole('group',{name:'موظف تجريبي'});fireEvent.click(within(group).getByLabelText('قراءة التبرعات'));fireEvent.click(within(group).getByRole('button',{name:'حفظ الصلاحيات'}));
  await waitFor(()=>expect(within(group).getByLabelText('قراءة الحالات')).not.toBeChecked());expect(within(group).getByLabelText('قراءة التبرعات')).not.toBeChecked();expect(within(group).getByRole('alert')).toHaveTextContent('تغيّرت الصلاحيات بواسطة شخص آخر');
+});
+
+it('disables permission edits until the save and refresh complete',async()=>{
+ const row={id:'e1',employeeCode:'E1',displayName:'موظف تجريبي',role:'employee' as const,active:true,permissions:{...permissions}};
+ let finishSave!:()=>void;let finishRefresh!:(rows:typeof row[])=>void;
+ vi.mocked(service.listStaff).mockResolvedValueOnce([row]).mockImplementationOnce(()=>new Promise(resolve=>{finishRefresh=resolve;}));
+ vi.mocked(service.updateStaffPermissions).mockImplementationOnce(()=>new Promise(resolve=>{finishSave=resolve;}));
+ render(<StaffPage role="manager"/>);const group=await screen.findByRole('group',{name:'موظف تجريبي'});
+ const cases=within(group).getByLabelText('قراءة الحالات'), donations=within(group).getByLabelText('قراءة التبرعات');
+ fireEvent.click(cases);fireEvent.click(within(group).getByRole('button',{name:'حفظ الصلاحيات'}));
+ expect(cases).toBeDisabled();expect(donations).toBeDisabled();
+ await act(async()=>finishSave());await waitFor(()=>expect(service.listStaff).toHaveBeenCalledTimes(2));expect(donations).toBeDisabled();
+ await act(async()=>finishRefresh([{...row,permissions:{...permissions,casesRead:true,donationsRead:true}}]));
+ await waitFor(()=>expect(donations).toBeEnabled());expect(cases).toBeChecked();expect(donations).toBeChecked();
 });
