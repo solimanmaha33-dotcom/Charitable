@@ -254,6 +254,16 @@ describe('local staff authentication boundary', () => {
       },
     );
   });
+  it('returns a conflict when permission snapshot is stale and preserves the revocation', async () => {
+    await fixture('employee', `C${suffix}`); const employeeId=created[created.length-1];
+    const update=(expectedPermissions:object, permissions:object)=>updateStaff({request:request('/api/staff',{employeeId,expectedPermissions,permissions},managerToken),env});
+    expect((await update({}, {casesRead:true})).status).toBe(200);
+    expect((await update({casesRead:true}, {})).status).toBe(200);
+    expect((await update({casesRead:true}, {casesRead:true,donationsRead:true})).status).toBe(409);
+    const result=await admin.from('employee_permissions').select('cases_read,donations_read').eq('employee_id',employeeId).single();
+    expect(result.data).toEqual({cases_read:false,donations_read:false});
+    expect((await updateStaff({request:request('/api/staff',{employeeId,permissions:{}},managerToken),env})).status).toBe(400);
+  });
   it('logout rejects an already-issued access token immediately and revokes refresh', async () => {
     const { session } = await (await signIn(`G${suffix}`)).json();
     expect(

@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(34);
+select plan(39);
 select has_table('public', 'employees', 'staff table exists');
 select has_table('private', 'employee_auth', 'Auth mapping is private');
 -- Fixtures are synthetic and rolled back; real auth.sessions are used for expiry checks.
@@ -34,6 +34,7 @@ with changed as (update public.test_cases set id=2 returning id) select is((sele
 select throws_ok($$insert into public.test_donations values (2)$$,'42501',null,'no donation permission cannot insert');
 with changed as (update public.test_donations set id=2 returning id) select is((select count(*)::int from changed),0,'no donation permission cannot update');
 select throws_ok($$select public.set_employee_permissions('20000000-0000-0000-0000-000000000003','{"casesWrite":true}')$$,'42501',null,'employee cannot grant own permissions');
+select throws_ok($$select public.compare_set_employee_permissions('20000000-0000-0000-0000-000000000003','{}','{"casesWrite":true}')$$,'42501',null,'employee cannot use compare and set to grant own permissions');
 select throws_ok($$select * from private.employee_auth$$,'42501',null,'mapping unavailable to employee');
 select throws_ok($$update public.employees set role='general_manager'$$,'42501',null,'direct privilege escalation blocked');
 select throws_ok($$select public.deactivate_employee('20000000-0000-0000-0000-000000000002')$$,'42501',null,'employee cannot deactivate');
@@ -47,6 +48,10 @@ select lives_ok($$insert into public.test_cases values (3)$$,'manager can insert
 select lives_ok($$insert into public.test_donations values (3)$$,'manager can insert donation rows');
 select lives_ok($$select public.set_employee_permissions('20000000-0000-0000-0000-000000000004','{"assistantUse":true}')$$,'manager may edit employee permissions');
 select throws_ok($$select public.set_employee_permissions('20000000-0000-0000-0000-000000000001','{}')$$,'42501',null,'manager cannot edit general manager permissions');
+select ok(public.compare_set_employee_permissions('20000000-0000-0000-0000-000000000003','{"casesRead":true}'::jsonb,'{}'::jsonb),'manager can revoke from expected snapshot');
+select ok(not public.compare_set_employee_permissions('20000000-0000-0000-0000-000000000003','{"casesRead":true}'::jsonb,'{"donationsRead":true}'::jsonb),'stale snapshot conflicts');
+select is((select cases_read from public.employee_permissions where employee_id='20000000-0000-0000-0000-000000000003'),false,'stale update does not restore revoked permission');
+select throws_ok($$select public.compare_set_employee_permissions('20000000-0000-0000-0000-000000000001','{}','{}')$$,'42501',null,'manager cannot use compare and set on general manager');
 select throws_ok($$select public.deactivate_employee('20000000-0000-0000-0000-000000000003')$$,'42501',null,'manager cannot deactivate');
 select throws_ok($$select public.register_employee('00000000-0000-0000-0000-000000000004','BAD','Bad','manager','{}')$$,'42501',null,'manager cannot create manager');
 reset role;

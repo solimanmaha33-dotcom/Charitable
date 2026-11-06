@@ -84,15 +84,16 @@ export async function onRequestPatch(context: Context): Promise<Response> {
         ? json({ error: 'Unable to update staff' }, 403)
         : json({ ok: true });
     }
-    if (!validPermissions(input.permissions))
+    if (!validPermissions(input.permissions) || !validPermissions(input.expectedPermissions))
       return json({ error: 'Invalid staff details' }, 400);
-    const result = await staff.client.rpc('set_employee_permissions', {
+    const result = await staff.client.rpc('compare_set_employee_permissions', {
       employee: input.employeeId,
+      expected_permissions: input.expectedPermissions,
       permissions: input.permissions,
     });
     return result.error
       ? json({ error: 'Unable to update staff' }, 403)
-      : json({ ok: true });
+      : result.data ? json({ ok: true }) : json({ error: 'Permissions changed' }, 409);
   } catch {
     return json({ error: 'Unable to update staff' }, 503);
   }

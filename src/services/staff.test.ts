@@ -14,6 +14,6 @@ it('sends authenticated staff mutations to the protected endpoint and propagates
  const fetchMock=vi.spyOn(globalThis,'fetch').mockResolvedValue(new Response(null,{status:200}));
  await createStaff({employeeCode:'E1',displayName:'Staff',password:'synthetic-password',role:'employee',permissions});
  expect(fetchMock).toHaveBeenCalledWith('/api/staff',expect.objectContaining({method:'POST',headers:expect.objectContaining({Authorization:'Bearer synthetic-token'})}));
- await updateStaffPermissions('1',permissions);expect(JSON.parse(String(fetchMock.mock.calls[1][1]?.body))).toEqual({employeeId:'1',permissions});
+ await updateStaffPermissions('1',permissions,permissions);expect(JSON.parse(String(fetchMock.mock.calls[1][1]?.body))).toEqual({employeeId:'1',permissions,expectedPermissions:permissions});
  fetchMock.mockResolvedValueOnce(new Response(null,{status:403}));await expect(deactivateStaff('1')).rejects.toThrow();
 });

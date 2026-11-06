@@ -11,7 +11,8 @@ export async function listStaff():Promise<StaffProfile[]>{
   if((data?.length??0)<size)return staff;
  }
 }
-async function mutate(method:'POST'|'PATCH',body:unknown){const {data,error}=await client().auth.getSession();if(error||!data.session)throw Error('Session required');const response=await fetch('/api/staff',{method,headers:{'Content-Type':'application/json',Authorization:`Bearer ${data.session.access_token}`},body:JSON.stringify(body)});if(!response.ok)throw Error('Staff update failed');}
+async function mutate(method:'POST'|'PATCH',body:unknown){const {data,error}=await client().auth.getSession();if(error||!data.session)throw Error('Session required');const response=await fetch('/api/staff',{method,headers:{'Content-Type':'application/json',Authorization:`Bearer ${data.session.access_token}`},body:JSON.stringify(body)});if(response.status===409)throw new StaffPermissionsConflict();if(!response.ok)throw Error('Staff update failed');}
 export async function createStaff(input:StaffInput){await mutate('POST',input);}
-export async function updateStaffPermissions(employeeId:string,permissions:EmployeePermission){await mutate('PATCH',{employeeId,permissions});}
+export class StaffPermissionsConflict extends Error {}
+export async function updateStaffPermissions(employeeId:string,permissions:EmployeePermission,expectedPermissions:EmployeePermission){await mutate('PATCH',{employeeId,permissions,expectedPermissions});}
 export async function deactivateStaff(employeeId:string){await mutate('PATCH',{employeeId,active:false});}
