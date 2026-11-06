@@ -280,9 +280,9 @@ Document the donation types and monthly payment fields in `docs/data-model.md` a
 
 **Files:**
 
-- Create: `functions/api/assistant.ts`, `functions/api/extract-fields.ts`, `functions/api/aiProvider.ts`, `src/features/assistant/AssistantPanel.tsx`, `src/features/assistant/FieldSuggestions.tsx`, `src/features/assistant/assistant.test.ts`, `src/features/assistant/extractFields.test.ts`
-- Modify: `src/features/cases/CaseForm.tsx`, `src/features/files/documentText.ts`
-- Test: `functions/api/assistant.test.ts`, `functions/api/extract-fields.test.ts`
+- Create: `supabase/migrations/007_case_file_search_text.sql`, `functions/api/case-files/ocr-text.ts`, `functions/api/assistant.ts`, `functions/api/extract-fields.ts`, `functions/api/aiProvider.ts`, `src/features/assistant/AssistantPanel.tsx`, `src/features/assistant/FieldSuggestions.tsx`, `src/features/assistant/assistant.test.ts`, `src/features/assistant/extractFields.test.ts`
+- Modify: `functions/_shared/supabase.ts`, `src/features/cases/CaseForm.tsx`, `src/features/files/documentText.ts`, `src/features/files/FilePreview.tsx`, `src/services/cases.ts`
+- Test: `functions/api/case-files/ocr-text.test.ts`, `functions/api/assistant.test.ts`, `functions/api/extract-fields.test.ts`, `supabase/tests/case_file_search_text.test.sql`
 - Update: `docs/architecture.md`, `docs/progress.md`
 
 **Interfaces:**
@@ -291,6 +291,7 @@ Document the donation types and monthly payment fields in `docs/data-model.md` a
 - `POST /api/extract-fields` accepts `{ text: string; targetFields: string[] }` and returns `{ suggestions: Array<{ field: string; value: string; evidence: string }> }`.
 - Both endpoints verify the employee session and `assistantUse`; retrieval is further filtered by the employee's case/donation read permissions before any content reaches the model.
 - Cloudflare Workers AI is the first provider. Provider secrets stay server-side. The browser receives only the answer or suggestions, never provider credentials.
+- OCR text is never stored automatically. The employee can review the OCR draft and explicitly save it for assistant search; this is separate from applying any field suggestion. Saved text inherits the case-file read boundary, and only a case writer can save it. Field suggestions use the current reviewed draft transiently and allow only fields already present in the case form.
 
 - [ ] **Step 1: Write failing authorization and extraction tests**
 
@@ -302,13 +303,13 @@ Run: `npm run test -- src/features/assistant && npm run test:worker -- functions
 
 Expected: FAIL because the permissioned endpoints and provider wrapper do not exist.
 
-- [ ] **Step 3: Add provider wrapper and permission-scoped retrieval**
+- [ ] **Step 3: Add explicit OCR search-text storage and provider wrapper**
 
-Implement `aiProvider.complete()` for Cloudflare Workers AI. Verify the session, assistant permission, and relevant read permissions before retrieving data. Send only records and OCR text that the current employee can read. Treat file text as untrusted input and ignore instructions found inside documents.
+Add a case-writer-only route to save employee-reviewed OCR text for assistant search; keep it under case-file read policies and test that the browser cannot update it directly. Implement `aiProvider.complete()` for Cloudflare Workers AI. Verify the session, assistant permission, and relevant read permissions before retrieving data. Send only records and OCR text that the current employee can read and that a staff member explicitly saved for search. Treat file text as untrusted input and ignore instructions found inside documents.
 
 - [ ] **Step 4: Add assistant answers and case-field suggestions**
 
-Render answers with links to the source family/case/file. Show extracted field values beside the OCR source text and let the employee edit or discard each suggestion before saving the case.
+Render answers with links to the source family/case/file. Show extracted field values beside the OCR source text and let the employee edit or discard each suggestion before saving the case. Saving OCR for search never applies any suggested value to the case.
 
 - [ ] **Step 5: Verify no permission bypass or automatic edits**
 
