@@ -326,7 +326,7 @@ Document the selected provider, data flow, and permission behavior in `docs/arch
 
 **Files:**
 
-- Create: `src/features/auth/StaffManagementPage.tsx`, `src/features/auth/StaffManagementPage.test.tsx`, `src/services/staff.ts`, `docs/deployment.md`
+- Create: `src/features/staff/StaffPage.tsx`, `src/features/staff/StaffPage.test.tsx`, `src/services/staff.ts`, `docs/deployment.md`
 - Modify: `src/app/Router.tsx`, `wrangler.jsonc`, `.env.example`, `.dev.vars.example`, `README.md`, `docs/architecture.md`, `docs/data-model.md`, `docs/progress.md`
 - Test: `tests/e2e/login-and-case-flow.spec.ts`, `tests/e2e/ocr-flow.spec.ts`, `tests/e2e/donations-flow.spec.ts`
 
