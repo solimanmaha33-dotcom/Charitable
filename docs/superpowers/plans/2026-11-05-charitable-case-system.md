@@ -289,6 +289,7 @@ Document the donation types and monthly payment fields in `docs/data-model.md` a
 
 - `POST /api/assistant` accepts `{ question: string }` and returns `{ answer: string; sources: Array<{ familyCode: string; caseId: string; fileName?: string }> }`.
 - `POST /api/extract-fields` accepts `{ text: string; targetFields: string[] }` and returns `{ suggestions: Array<{ field: string; value: string; evidence: string }> }`.
+- Field suggestions are limited to the current case form's `notes` and `case_categories`; the employee chooses the family from the existing list.
 - Both endpoints verify the employee session and `assistantUse`; retrieval is further filtered by the employee's case/donation read permissions before any content reaches the model.
 - Cloudflare Workers AI is the first provider. Provider secrets stay server-side. The browser receives only the answer or suggestions, never provider credentials.
 - OCR text is never stored automatically. The employee can review the OCR draft and explicitly save it for assistant search; this is separate from applying any field suggestion. Saved text inherits the case-file read boundary, and only a case writer can save it. Field suggestions use the current reviewed draft transiently and allow only fields already present in the case form.
