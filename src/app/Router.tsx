@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, Route, Routes } from 'react-router-dom';
+import { StaffPage } from '../features/staff/StaffPage';
 import { AssistantPanel } from '../features/assistant/AssistantPanel';
 import { DonationListPage } from '../features/donations/DonationListPage';
 import { LoginPage } from '../features/auth/LoginPage';
@@ -99,7 +100,7 @@ export function Router({ session }: { session?: StaffProfile | null }) {
               !staff?.active ? (
                 <SignInPrompt />
               ) : allowed(path, permission) ? (
-                path === '/assistant' ? <AssistantPanel /> : path === '/donations' ? <DonationListPage canWrite={hasPermission(staff, 'donationsWrite')} canReadCases={hasPermission(staff, 'casesRead')} /> : <section className="page-card">
+                path === '/staff' ? <StaffPage role={staff.role} /> : path === '/assistant' ? <AssistantPanel /> : path === '/donations' ? <DonationListPage canWrite={hasPermission(staff, 'donationsWrite')} canReadCases={hasPermission(staff, 'casesRead')} /> : <section className="page-card">
                   <h1>{title}</h1>
                   <p>الصفحة دي هتكون جاهزة قريب.</p>
                 </section>

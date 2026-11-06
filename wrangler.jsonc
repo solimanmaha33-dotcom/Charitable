@@ -2,5 +2,6 @@
   "name": "charitable",
   "pages_build_output_dir": "dist",
   "compatibility_date": "2026-01-01",
+  // Server-side Workers AI binding; secrets belong in the deployment environment.
   "ai": { "binding": "AI" }
 }

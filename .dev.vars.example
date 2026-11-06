@@ -2,3 +2,4 @@
 SUPABASE_URL=http://127.0.0.1:54321
 SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
+# Workers AI is a server-side binding configured in wrangler.jsonc, not a browser key.
