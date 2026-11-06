@@ -69,8 +69,8 @@
 - Consumes: GitHub `preview` branch, Task 1 checklist, and the owner's Cloudflare/Supabase accounts.
 - Produces: a Cloudflare Pages public preview URL whose Pages Functions use the test Supabase project.
 
-- [ ] **Step 1: Set the Pages project name** in `wrangler.jsonc` to `charitable-preview`, keeping `pages_build_output_dir` and the existing AI binding unchanged.
-- [ ] **Step 2: Commit and publish the reviewed configuration** to remote `preview` only; verify `main` remains unchanged.
+- [x] **Step 1: Set the Pages project name** in `wrangler.jsonc` to `charitable-preview`, keeping `pages_build_output_dir` and the existing AI binding unchanged.
+- [x] **Step 2: Commit and publish the reviewed configuration** to remote `preview` only; verify `main` remains unchanged.
 - [ ] **Step 3: Connect the GitHub repository** in Cloudflare Pages as the dedicated `charitable-preview` project and select `preview` as that project's production branch; do not add a custom domain. The project URL remains public.
 - [ ] **Step 4: Configure the Pages build** with `npm run build` and `dist`; verify Pages picks up the root `functions/` directory and `wrangler.jsonc` AI binding.
 - [ ] **Step 5: Add project variables** in the Pages production environment (which serves only the dedicated test project); put `SUPABASE_SERVICE_ROLE_KEY` in the secret field and keep all values out of GitHub and logs.
