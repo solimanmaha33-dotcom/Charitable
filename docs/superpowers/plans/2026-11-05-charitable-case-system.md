@@ -342,7 +342,7 @@ Expected: FAIL because the integrated workflows and deployment configuration are
 
 - [ ] **Step 3: Prepare Cloudflare and Supabase deployment files**
 
-Update the existing `wrangler.jsonc` configuration and provide example environment files with variable names only. Keep service-role and AI credentials server-side. Do not connect a real Supabase project or run a deployment command.
+Update the existing `wrangler.jsonc` configuration and environment examples. Keep `.env.example` to variable names only; `.dev.vars.example` may show loopback-only local URLs, but all credential values stay blank. Keep service-role and AI credentials server-side. Do not connect a real Supabase project or run a deployment command.
 
 - [ ] **Step 4: Document installation, startup, backups, and recovery**
 
