@@ -5,6 +5,7 @@ import { CaseDetailsPage } from './CaseDetailsPage';
 import { saveCase } from '../../services/cases';
 vi.mock('../../services/cases', () => ({
  listFamilies: vi.fn().mockResolvedValue([{id:'f1',code:'F-0001',name:'إِبراهيم',phone:null},{id:'f2',code:'F-0002',name:'عائلة أخرى',phone:null}]),
+ listCaseFiles: vi.fn().mockResolvedValue([]),
  listCases: vi.fn().mockResolvedValue([{id:'c1',family_id:'f1',notes:'',case_categories:[{category:'أيتام'}]},{id:'c2',family_id:'f2',notes:'',case_categories:[{category:'وفاة'}]}]),
  getCase: vi.fn().mockResolvedValue({id:'c1',family_id:'f1',notes:'ملاحظة قديمة',case_categories:[{category:'أيتام'}]}),
  getFamily: vi.fn().mockResolvedValue({id:'f1',code:'F-0001',name:'إِبراهيم',phone:null}),
