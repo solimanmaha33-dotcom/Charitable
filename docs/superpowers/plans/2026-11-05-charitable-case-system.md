@@ -362,8 +362,8 @@ Record local verification output, remaining limitations, deployment instructions
 
 ## Self-review
 
-- The plan covers the approved first release: staff login and permissions, family records and easy unique family codes, cases, private attachments and Arabic OCR, donations, monthly sponsorships, and a permission-limited assistant.
+- The approved plan has been implemented across Tasks 1–7: staff login and permissions, family records and easy unique family codes, cases, private attachments and Arabic OCR, donations, monthly sponsorships, and a permission-limited assistant.
 - Each feature includes focused tests, database access-policy checks where data is involved, and an end-to-end check for the main workflow. Family codes are generated from a database sequence with a uniqueness constraint so concurrent registrations cannot assign the same code.
-- The code is intended to be easy for staff to read, enter, and search, such as `F-0001`; it does not expose family details. Final formatting can be checked with staff during the first screen review.
-- OCR and AI quality, provider terms, free-tier capacity, and backup limits remain to be checked using synthetic data before a pilot uses real beneficiary information.
-- No application code or service has been deployed yet; implementation should start only after the plan is reviewed and an execution approach is chosen.
+- The code is intended to be easy for staff to read, enter, and search, such as `F-0001`; it does not expose family details. Staff should check labels and forms during pilot preparation.
+- Real-world OCR and AI quality, provider terms, free-tier capacity, and managed-provider recovery remain to be checked before a pilot uses real beneficiary information.
+- The application remains unpublished. Deployment or production connection needs a separate user instruction.
