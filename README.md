@@ -68,3 +68,5 @@ npm run build:functions
 في بيئة العمل الحالية، healthcheck داخل حاوية Auth يرسل طلبه المحلي عبر proxy ويستقبل 403 رغم أن الخدمة تعمل. استخدم `npm run supabase:start -- --ignore-health-check` فقط لهذه المشكلة المؤكدة، ثم أثبت الصحة الحقيقية بـ`npm run test:db` و`npm run test:worker`. لم نعطّل التحقق من TLS أو مصادقة الطلبات. يستغرق أول تنزيل للحاويات مساحة كبيرة مع Docker VFS.
 
 تفاصيل التجهيز والنسخ الاحتياطي والاستعادة والقيود في [دليل التشغيل](docs/deployment.md). أكواد الأسر ثابتة وفريدة وتظهر في البحث والقوائم، مثل `F-0001`.
+
+لإعداد معاينة عامة غير إنتاجية من GitHub على Cloudflare Pages باستخدام مشروع Supabase الاختباري الجديد، اتبع [دليل المعاينة العامة](docs/deployment.md#public-cloudflare-pages-preview-from-github). الرابط العام لا يتجاوز تسجيل الدخول أو صلاحيات البيانات.

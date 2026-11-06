@@ -11,6 +11,68 @@ The application is unpublished. Do not link a project, push migrations, deploy, 
 
 Before any future pilot, verify the current limits, pricing, data handling and terms at the official [Supabase pricing](https://supabase.com/pricing), [Supabase platform billing](https://supabase.com/docs/guides/platform/billing), [Cloudflare Workers pricing](https://developers.cloudflare.com/workers/platform/pricing/), [Pages limits](https://developers.cloudflare.com/pages/platform/limits/), and [Workers AI pricing](https://developers.cloudflare.com/workers-ai/platform/pricing/) pages. Current numeric quotas were not externally verified in this environment; an operator must verify them and capacity for database, storage, bandwidth, requests, builds, and AI before a pilot. Verify provider quality and terms for the intended use and data before sending any real records to the model.
 
+## Public Cloudflare Pages preview from GitHub
+
+This is an owner-operated, non-production preview using **only the owner's newly created Supabase test project** and synthetic records/files. The Pages address will be public: anyone can load the login page, but app authorization and Supabase RLS must still protect records and private attachments. These instructions do not mean a deployment or a Pages URL already exists. Keep real beneficiary data out of this environment.
+
+### 1. Prepare the dedicated branch and test database
+
+1. In GitHub, open `solimanmaha33-dotcom/Charitable` and create the dedicated `preview` branch from the reviewed commit you intend to test. Keep subsequent preview changes on that branch. Do not deploy the source repository's production branch.
+2. In the Supabase dashboard, open the **new test project** and check its organization, project name, project reference and API URL against the project the owner created for this preview. Stop if any identity differs or the project contains real data. Obtain its URL, anon key and service-role key privately from that project's API settings; do not paste values into GitHub, repository files, browser code, logs or chat. Only the public URL and anon key will later enter the browser build.
+3. From a trusted local checkout of `preview`, run `npm ci`, then `npx supabase login` and `npx supabase link`. Select only the verified test project, authenticate privately, and recheck the linked project reference before proceeding. Run `npx supabase migration list` and `npx supabase db push --dry-run`. Review that the target is still the new test project and the pending files are the ordered migrations in `supabase/migrations` (currently `001` through `011`). Only then run `npx supabase db push`. Do not reset a hosted/shared database or apply migrations to any other project. Do not commit CLI credentials or linked-project metadata.
+4. SQL migrations do not automatically configure hosted Auth settings. In the test project's Authentication settings, disable public signups and anonymous sign-ins, enable the Custom Access Token hook using `public.staff_access_token_hook`, and preserve the 720-hour maximum session lifetime described in [the data model](data-model.md). Confirm that the migrated attachment bucket remains private. Check hosted-plan support for the Auth session setting before inviting testers; resolve any unsupported setting before treating this preview as ready.
+5. Bootstrap the first general manager using the existing trusted [first-account procedure](data-model.md#أول-حساب-واستعادة-الدخول): a trusted operator creates the Auth user via Admin API with a random `.invalid` email and a strong temporary password, then inserts the general-manager employee and its `private.employee_auth` mapping in one database transaction. Keep credentials and the mapping private, and deliver the password securely. There is no default account or public bootstrap endpoint. Later staff accounts are created through the authenticated manager flow.
+
+### 2. Create the dedicated Pages project
+
+1. In the Cloudflare dashboard, open **Workers & Pages → Create application → Pages → Connect to Git** (labels may vary). Connect GitHub and grant access to `solimanmaha33-dotcom/Charitable` only as needed. Select that repository and create a **Pages** project, rather than a Worker deployment.
+2. Use these settings:
+
+   | Setting | Value |
+   | --- | --- |
+   | Pages project name | `charitable-preview` |
+   | Production branch for this dedicated project | `preview` |
+   | Framework preset | None; set the build command explicitly |
+   | Repository root directory | Repository root; leave the root override empty |
+   | Build command | `npm run build` |
+   | Build output directory | `dist` |
+   | Node.js version | 24 (`NODE_VERSION` build variable if needed) |
+
+   Cloudflare calls the stable deployment of this test project **Production**, even though it is a non-production app preview. Do not select the source repository's production branch or attach a custom domain. Under **Settings → Builds & deployments → Branch control**, allow automatic production deployments from `preview` and disable preview deployments from all other branches. Apply these settings before enabling further branch-triggered builds.
+3. Pages discovers the repository-root `functions/` directory and compiles its API routes alongside the static build; `functions/` is not the build output directory. Use the existing root `wrangler.jsonc` with its `dist` output and server-side Workers AI binding named `AI`. Do not add a second Wrangler config, copy the offline local mock configuration, or add a GitHub Actions deploy token. The Git integration handles deployment. The dashboard Pages project must be `charitable-preview`; the existing config's `name` is not a reason to create or deploy another Pages project.
+4. Before testing the assistant, confirm the deployed Functions have the **Workers AI** binding named exactly `AI` from the checked-in config and that Workers AI is available in the Cloudflare account. This is a server-side binding, not an API key for the browser. Review provider limits, billing and data handling using the links above; use only synthetic content for AI tests.
+
+### 3. Set Cloudflare configuration and deploy
+
+In `charitable-preview` → **Settings → Variables and Secrets**, select the **Production** environment because `preview` is this project's production branch. Use only values from the verified Supabase test project. Do not add values to GitHub secrets, committed examples or local repository files for this hosted setup.
+
+| Name | Use and scope |
+| --- | --- |
+| `VITE_SUPABASE_URL` | Browser build configuration: the verified test-project URL. |
+| `VITE_SUPABASE_ANON_KEY` | Browser build configuration: that project's public anon key. RLS is required even though this key is public. |
+| `SUPABASE_URL` | Pages Functions runtime binding: the same test-project URL. |
+| `SUPABASE_ANON_KEY` | Pages Functions runtime binding: the same test-project anon key. |
+| `SUPABASE_SERVICE_ROLE_KEY` | **Encrypted Cloudflare runtime secret for Pages Functions only.** Enter it directly into Cloudflare's secret control, never as a `VITE_*` variable or browser/build configuration. Never expose its value in GitHub, repository files, browser code, logs or chat. |
+
+The two `VITE_*` values are embedded in the JavaScript bundle at build time; changing them requires a fresh build/deployment. The server values belong to Functions; application build code must never read or print the service-role secret. Keep Cloudflare's separate **Preview** environment unconfigured while other-branch deployments are disabled. If those deployments are deliberately enabled later, review their code and environment scope first; this guide does not authorize sharing secrets with arbitrary branches.
+
+Save settings, then use **Save and Deploy** or retry the `preview` branch deployment after configuration is complete. Confirm the deployment succeeded in `charitable-preview`, shows branch `preview` and the intended commit, and includes Pages Functions. If the initial setup build ran before variables were saved, rebuild it. Copy the actual HTTPS Pages URL from the successful deployment; do not announce a URL before Cloudflare creates it.
+
+In the **same Supabase test project**, open **Authentication → URL Configuration**. Set **Site URL** to that actual stable Pages origin and add the exact same URL to **Redirect URLs** (plus only explicit callback URLs the app actually uses). Do not use a broad wildcard or a production domain. Save before login testing. The stable URL belongs to this preview Pages project even though Cloudflare labels its environment Production.
+
+### 4. Smoke-test the public preview
+
+Use synthetic accounts, records and attachments only. Record pass/fail results without passwords, tokens, service-role values or record contents.
+
+- Open the actual Pages URL in a private browser window, then open a protected route directly and reload it. Both must lead an unauthenticated visitor to the login flow without showing records or attachments.
+- Submit an incorrect login, then sign in with the bootstrapped general manager. Confirm real authenticated access works, persists across reload, and that a small synthetic family/case and donation can be created and read by the authorized user. A rendered static page alone does not prove Functions or Supabase are configured.
+- Create a restricted test employee through the manager flow. Verify denied features remain inaccessible and direct Supabase requests using that user's session cannot read/write unauthorized rows. With only the public anon key and no session, verify protected rows are not returned and writes are rejected. Use a trusted test client without recording credentials; hiding navigation alone is insufficient.
+- Upload a harmless synthetic attachment with an authorized user and confirm authenticated download works. Try its private Storage path while signed out and with a user lacking case access; neither may download it. Do not make the bucket public to resolve an error.
+- Exercise the assistant once with synthetic content and an authorized account. Confirm the Function can use the server-side `AI` binding and that a user lacking assistant permission is denied. Inspect failures privately without logging credentials or content.
+- Log out and confirm protected routes and subsequent data requests using the previous session are denied. Check browser bundles and network responses for accidental service-role exposure without copying any secret into a report. If a check fails, fix configuration or code through review before sharing the preview as ready.
+
+Only after these checks should the owner share the actual Pages URL with testers. The URL stays public; employee authorization and RLS remain mandatory. No deployment, migrations, accounts or smoke tests against hosted services were performed by writing this guide.
+
 ## Backup and recovery
 
 Back up PostgreSQL **and** private Storage object bytes. A database dump includes metadata and object paths, not the objects themselves. Choose a consistent point in time: stop writes, record the migration version, back up the database with `pg_dump` in a secure location, and export every private bucket object by its exact bucket and path through a trusted authenticated Storage client. Include Auth and application schemas, roles and configuration as appropriate to the target environment; a simple application-schema dump is insufficient for complete recovery. Keep encrypted copies with restricted access, retention and restoration ownership. Never record keys or beneficiary data in this document.
