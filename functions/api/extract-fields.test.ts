@@ -1,0 +1,11 @@
+import { beforeEach, expect, it, vi } from 'vitest';
+vi.mock('../_shared/supabase', async (importOriginal) => ({ ...(await importOriginal<typeof import('../_shared/supabase')>()), staffContext: vi.fn() }));
+vi.mock('./aiProvider', () => ({ complete: vi.fn() }));
+import { staffContext } from '../_shared/supabase';
+import { complete } from './aiProvider';
+import { onRequestPost } from './extract-fields';
+const context = (fields:string[]) => ({ request:new Request('http://local/api/extract-fields',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({text:'أسرة تحتاج علاج',targetFields:fields})}), env:{} as never });
+beforeEach(()=>{vi.resetAllMocks();vi.mocked(staffContext).mockResolvedValue({client:{rpc:vi.fn().mockResolvedValue({data:true,error:null})},profile:{},token:'x'} as never)});
+it('rejects unsupported fields without invoking the model',async()=>{expect((await onRequestPost(context(['family_id']))).status).toBe(400);expect(complete).not.toHaveBeenCalled()});
+it('returns structured suggestions for reviewed Arabic text',async()=>{vi.mocked(complete).mockResolvedValue(JSON.stringify({suggestions:[{field:'notes',value:'تحتاج علاج',evidence:'أسرة تحتاج علاج'}]}));const res=await onRequestPost(context(['notes']));expect(res.status).toBe(200);expect(await res.json()).toEqual({suggestions:[{field:'notes',value:'تحتاج علاج',evidence:'أسرة تحتاج علاج'}]})});
+it('rejects malformed model output',async()=>{vi.mocked(complete).mockResolvedValue('{bad');expect((await onRequestPost(context(['notes']))).status).toBe(502)});

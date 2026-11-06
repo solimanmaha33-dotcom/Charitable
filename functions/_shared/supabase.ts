@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import type { StaffProfile } from '../../src/features/auth/permissions';
 export type Env = {
+  AI?: { run: (model: string, input: unknown) => Promise<unknown> };
   SUPABASE_URL: string;
   SUPABASE_ANON_KEY: string;
   SUPABASE_SERVICE_ROLE_KEY: string;
@@ -49,10 +50,11 @@ export async function staffContext({ request, env }: Context) {
 }
 export async function body(
   request: Request,
+  limit = 4096,
 ): Promise<Record<string, unknown> | null> {
   if (!request.headers.get('Content-Type')?.startsWith('application/json'))
     return null;
-  if (Number(request.headers.get('Content-Length')) > 4096) return null;
+  if (Number(request.headers.get('Content-Length')) > limit) return null;
   const reader = request.body?.getReader();
   if (!reader) return null;
   let size = 0;
@@ -63,7 +65,7 @@ export async function body(
       const { done, value } = await reader.read();
       if (done) break;
       size += value.byteLength;
-      if (size > 4096) {
+      if (size > limit) {
         await reader.cancel();
         return null;
       }
