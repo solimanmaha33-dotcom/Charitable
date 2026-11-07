@@ -138,6 +138,7 @@
 - طبّق صاحب المشروع `npx supabase db push --remote` على مشروع Charitable Society. أكدت `migration list --remote` تطابق المحلية والبعيدة للترحيلات `001`–`011`. لم يُنشأ حساب موظف بعد؛ الخطوة التالية إعداد Auth المستضاف وإعدادات Pages قبل تهيئة أول مدير عام.
 - أكد صاحب المشروع إيقاف التسجيل العام وتسجيل الدخول المجهول في إعدادات Supabase Auth.
 - أكد صاحب المشروع إنشاء خطاف **Customize Access Token (JWT) Claims** عبر دالة Postgres `public.staff_access_token_hook`.
+- أكد صاحب المشروع ضبط Supabase Auth Site URL وRedirect URL إلى عنوان Pages الثابت `https://charitable-preview.pages.dev`.
 - صفحة الجلسات في خطة Supabase الحالية تعرض أن Time-box وإعدادات الجلسات تحتاج Pro. لم تتم ترقية الخطة أو تغيير إعدادات الجلسة. حد ٣٠ يوماً ما زال مفروضاً على وصول التطبيق للبيانات بواسطة `current_employee_id()` وRLS؛ قد يظل رمز Auth قابلاً للتحديث في المتصفح بعد ذلك، لكن طلبات بيانات التطبيق تُرفض. حدّثنا دليل النشر لتوضيح هذا الفرق.
 - أظهرت لوحة Storage وجود حاوية `case-files` بحد 20 MB وأنواع PDF وPNG وJPEG وWEBP. قائمة الحاويات لا تعرض حالة Public/Private؛ لا نعتبر الخصوصية متحققة حتى فحص تفاصيل الحاوية.
 - أظهرت شاشة Policies سياسة `case_objects_read` لأمر `SELECT` مطبقة على `authenticated`. هذا لا يكشف إعداد Public للحاوية؛ يلزم فحص إعداد الحاوية من تبويب Buckets.
