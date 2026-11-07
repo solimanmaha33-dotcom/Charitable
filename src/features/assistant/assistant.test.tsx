@@ -11,5 +11,11 @@ it('keeps a category suggestion and shows an error when application fails',async
  const api=await import('./api');const spy=vi.spyOn(api,'postAssistant').mockResolvedValue({suggestions:[{field:'case_categories',value:'عجز أو مرض',evidence:'علاج'}]});render(<FieldSuggestions text="تحتاج علاج" onApply={()=>false}/>);fireEvent.click(screen.getByRole('button',{name:'اقتراح حقول'}));expect(await screen.findByRole('combobox',{name:'القيمة المقترحة'})).toHaveValue('عجز أو مرض');fireEvent.click(screen.getByRole('button',{name:'استخدم في النموذج'}));expect(screen.getByRole('alert')).toBeInTheDocument();expect(screen.getByRole('combobox',{name:'القيمة المقترحة'})).toBeInTheDocument();spy.mockRestore();
 });
 it('shows partial coverage to the employee alongside the answer',async()=>{
- const {AssistantPanel}=await import('./AssistantPanel');const {MemoryRouter}=await import('react-router-dom');const api=await import('./api');const spy=vi.spyOn(api,'postAssistant').mockResolvedValue({answer:'إجابة',sources:[],coverage:{partial:true,explanation:'النتائج جزئية'}});render(<MemoryRouter><AssistantPanel/></MemoryRouter>);fireEvent.change(screen.getByLabelText('سؤالك'),{target:{value:'سؤال'}});fireEvent.click(screen.getByRole('button',{name:'اسأل'}));expect(await screen.findByRole('status')).toHaveTextContent('النتائج جزئية');spy.mockRestore();
+ const {AssistantPanel}=await import('./AssistantPanel');const {MemoryRouter}=await import('react-router-dom');const api=await import('./api');const spy=vi.spyOn(api,'postAssistant').mockResolvedValue({answer:'إجابة',sources:[],coverage:{partial:true,explanation:'النتائج جزئية'}});render(<MemoryRouter><AssistantPanel/></MemoryRouter>);fireEvent.change(screen.getByLabelText('سؤالك'),{target:{value:'سؤال'}});fireEvent.click(screen.getByRole('button',{name:'اسأل المساعد'}));expect(await screen.findByText('النتائج جزئية')).toBeVisible();spy.mockRestore();
+});
+it('offers example questions and explains that answers need review',async()=>{
+ const {AssistantPanel}=await import('./AssistantPanel');const {MemoryRouter}=await import('react-router-dom');render(<MemoryRouter><AssistantPanel/></MemoryRouter>);
+ expect(screen.getByText(/راجع ملف الحالة قبل ما تعتمد على الإجابة/)).toBeVisible();
+ fireEvent.click(screen.getByRole('button',{name:'ابحث عن حالة فيها علاج'}));
+ expect(screen.getByLabelText('سؤالك')).toHaveValue('ابحث عن حالة فيها علاج');
 });

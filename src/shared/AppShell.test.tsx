@@ -1,9 +1,15 @@
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { StaffProfile } from '../features/auth/permissions';
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppShell } from './AppShell';
 import { Router } from '../app/Router';
+
+beforeEach(() => {
+  localStorage.clear();
+  document.documentElement.removeAttribute('data-theme');
+});
+afterEach(() => vi.unstubAllGlobals());
 
 describe('Arabic application shell', () => {
   it('gives its content Arabic language, RTL direction, and a named navigation', () => {
@@ -58,5 +64,22 @@ describe('Arabic application shell', () => {
   it('uses the full content width when a signed-out visitor has no navigation rail', () => {
     const { container } = render(<MemoryRouter><AppShell staff={null}><p>سجّل دخولك</p></AppShell></MemoryRouter>);
     expect(container.querySelector('.app-layout')).toHaveClass('no-navigation');
+  });
+
+  it('remembers the staff member’s dark theme choice after remount', () => {
+    const view = render(<MemoryRouter><AppShell staff={null}><p>سجّل دخولك</p></AppShell></MemoryRouter>);
+    fireEvent.click(screen.getByRole('button', { name: 'تفعيل الوضع الليلي' }));
+    expect(document.documentElement).toHaveAttribute('data-theme', 'dark');
+    expect(localStorage.getItem('maram-theme')).toBe('dark');
+    view.unmount();
+    render(<MemoryRouter><AppShell staff={null}><p>سجّل دخولك</p></AppShell></MemoryRouter>);
+    expect(screen.getByRole('button', { name: 'تفعيل الوضع النهاري' })).toBeVisible();
+  });
+
+  it('starts from the device theme when the staff member has not chosen one', () => {
+    vi.stubGlobal('matchMedia', () => ({ matches: true }));
+    render(<MemoryRouter><AppShell staff={null}><p>سجّل دخولك</p></AppShell></MemoryRouter>);
+    expect(screen.getByRole('button', { name: 'تفعيل الوضع النهاري' })).toBeVisible();
+    expect(document.documentElement).toHaveAttribute('data-theme', 'dark');
   });
 });

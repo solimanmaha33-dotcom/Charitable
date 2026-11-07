@@ -7,6 +7,12 @@ export type FamilyMember = Member & { family_id: string };
 export type CaseRecord = { id: string; family_id: string; notes: string; case_categories: { category: CaseCategory }[] };
 function db() { const client = getSupabase(); if (!client) throw new Error('تعذّر الاتصال بقاعدة البيانات'); return client; }
 function check(error: { message: string } | null) { if (error) throw new Error(error.message); }
+async function countRows(table: 'families' | 'cases'): Promise<number> {
+ const {count,error}=await db().from(table).select('id',{count:'exact',head:true});
+ check(error);
+ if(count===null) throw new Error('تعذّر تحميل العدد');
+ return count;
+}
 const PAGE_SIZE = 500;
 async function allPages<T>(fetchPage: (start: number, end: number) => PromiseLike<{data: T[] | null; error: {message:string} | null}>): Promise<T[]> {
  const result: T[]=[];
@@ -18,6 +24,8 @@ async function allPages<T>(fetchPage: (start: number, end: number) => PromiseLik
 export async function listFamilies(): Promise<Family[]> {
  return allPages((start,end)=>db().from('families').select('id,code,name,phone').order('id').range(start,end));
 }
+export const countFamilies=()=>countRows('families');
+export const countCases=()=>countRows('cases');
 export async function getFamily(id: string): Promise<Family | null> {
  const {data,error}=await db().from('families').select('id,code,name,phone').eq('id',id).maybeSingle(); check(error); return data;
 }

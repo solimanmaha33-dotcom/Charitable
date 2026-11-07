@@ -42,6 +42,14 @@ This is an owner-operated, non-production preview using **only the owner's newly
 3. Pages discovers the repository-root `functions/` directory and compiles its API routes alongside the static build; `functions/` is not the build output directory. Use the existing root `wrangler.jsonc` with its `dist` output and server-side Workers AI binding named `AI`. Do not add a second Wrangler config, copy the offline local mock configuration, or add a GitHub Actions deploy token. The Git integration handles deployment. The dashboard Pages project and the `name` in that same config must both be `charitable-preview`, after the required Task 3 rename described above. Wrangler uses the config name as its default Pages deployment target; a dashboard project name alone does not resolve a config mismatch. Do not deploy while the config still says `charitable`.
 4. Before testing the assistant, confirm the deployed Functions have the **Workers AI** binding named exactly `AI` from the checked-in config and that Workers AI is available in the Cloudflare account. This is a server-side binding, not an API key for the browser. Review provider limits, billing and data handling using the links above; use only synthetic content for AI tests.
 
+### Assistant provider keys
+
+The current app uses Cloudflare Workers AI through the `AI` binding in `wrangler.jsonc`; it does not need an API token. The assistant currently ignores OpenRouter, Gemini, OpenAI, and Kilo Code keys, so adding one now will not switch models.
+
+If a provider is added to the server code later, put its key in **Cloudflare Dashboard → Workers & Pages → charitable-preview → Settings → Variables and Secrets → Production → Add**, and choose the encrypted **Secret** type. Never put it in GitHub, a source file, browser storage, or a variable starting with `VITE_`. A provider key is not requested in this repository or chat. After adding a secret, rebuild the `preview` deployment.
+
+ChatGPT and Gemini consumer subscriptions are separate from their developer APIs and do not automatically include API usage. OpenAI, Gemini API, and OpenRouter each require an API key and their own usage/billing terms. Kilo Code is not yet connected here; integration would need the exact Kilo endpoint and supported model format as well as a key. Review each provider's data-handling terms before sending family records to it.
+
 ### 3. Set Cloudflare configuration and deploy
 
 In `charitable-preview` → **Settings → Variables and Secrets**, select the **Production** environment because `preview` is this project's production branch. The current Wrangler-managed project accepts dashboard values as encrypted **Secrets**. Add all five entries below there. Use only values from the verified Supabase test project; never add the service-role key to a `VITE_*` variable, browser code, GitHub secrets, or committed files.

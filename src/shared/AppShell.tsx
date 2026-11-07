@@ -1,6 +1,18 @@
-import type { ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import { hasPermission, type StaffProfile } from '../features/auth/permissions';
+
+type Theme = 'light' | 'dark';
+
+function initialTheme(): Theme {
+  try {
+    const saved = window.localStorage.getItem('maram-theme');
+    if (saved === 'light' || saved === 'dark') return saved;
+  } catch {
+    // Keep the app usable if browser storage is unavailable.
+  }
+  return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
 
 const navigation = [
   ['/', 'الرئيسية', 'home'],
@@ -25,7 +37,16 @@ function NavigationIcon({ name }: { name: (typeof navigation)[number][2] }) {
 
 export function AppShell({ children, staff }: { children: ReactNode; staff?: StaffProfile | null }) {
   const { pathname } = useLocation();
+  const [theme, setTheme] = useState<Theme>(initialTheme);
   const loginPage = pathname === '/login';
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    try {
+      window.localStorage.setItem('maram-theme', theme);
+    } catch {
+      // Applying the theme does not depend on browser storage.
+    }
+  }, [theme]);
   const visibleNavigation = staff === undefined
     ? navigation
     : navigation.filter(([to]) => {
@@ -46,7 +67,13 @@ export function AppShell({ children, staff }: { children: ReactNode; staff?: Sta
             <span className="brand-mark" aria-hidden="true">✿</span>
             <span><strong className="product-name">مرام الخير</strong><small>نظام إدارة الجمعية</small></span>
           </Link>
-          {staff?.active ? <span className="header-user"><strong>{staff.displayName}</strong><small>كود الموظف: <bdi dir="ltr">{staff.employeeCode}</bdi></small></span> : <Link className="header-login" to="/login">تسجيل الدخول</Link>}
+          <div className="header-tools">
+            {staff?.active ? <span className="header-user"><strong>{staff.displayName}</strong><small>كود الموظف: <bdi dir="ltr">{staff.employeeCode}</bdi></small></span> : null}
+            <button type="button" className="theme-toggle secondary" aria-label={theme === 'dark' ? 'تفعيل الوضع النهاري' : 'تفعيل الوضع الليلي'} aria-pressed={theme === 'dark'} onClick={() => setTheme(value => value === 'dark' ? 'light' : 'dark')}>
+              <span aria-hidden="true">{theme === 'dark' ? '☼' : '◐'}</span>{theme === 'dark' ? 'الوضع النهاري' : 'الوضع الليلي'}
+            </button>
+            {!staff?.active ? <Link className="header-login" to="/login">تسجيل الدخول</Link> : null}
+          </div>
         </div>
       </header>
       <div className={`app-layout${loginPage ? ' login-layout' : ''}${!loginPage && visibleNavigation.length === 0 ? ' no-navigation' : ''}`}>

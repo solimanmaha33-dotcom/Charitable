@@ -14,6 +14,12 @@ async function list<T>(table:string,columns:string):Promise<T[]> {
 }
 export const listDonors=()=>list<Donor>('donors','id,name,phone');
 export const listDonations=()=>list<Donation>('donations','id,donor_id,donation_type,kind,amount,quantity,unit,description,received_on');
+export async function countDonations():Promise<number> {
+ const {count,error}=await db().from('donations').select('id',{count:'exact',head:true});
+ check(error);
+ if(count===null) throw new Error('تعذّر تحميل العدد');
+ return count;
+}
 export const listSponsorships=()=>list<Sponsorship>('sponsorships','id,donor_id,family_id,monthly_amount,start_date,end_date');
 export const listPayments=()=>list<SponsorshipPayment>('sponsorship_payments','id,sponsorship_id,installment_month,due_date,amount_due,received_on,amount_received');
 export async function saveDonor(name:string,phone:string) {
