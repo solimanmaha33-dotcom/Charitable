@@ -12,7 +12,7 @@ vi.mock('../../services/cases', () => service);
 beforeEach(() => {
   service.listFamilies.mockResolvedValue([
     { id: 'f1', code: 'F-1001', name: 'أسرة أم أحمد', phone: '0100 111 2222' },
-    { id: 'f2', code: 'F-1002', name: 'أسرة محمود', phone: '0100 333 4444' },
+    { id: 'f2', code: 'F-1002', name: 'أسرة محمود', phone: '0100 333 4444', phone_2: null, phone_3: '0100 555 6666' },
   ]);
   service.listCases.mockResolvedValue([
     { id: 'c1', family_id: 'f1', notes: '', case_categories: [{ category: 'أرملة' }] },
@@ -56,5 +56,13 @@ describe('family directory', () => {
     fireEvent.change(search, { target: { value: '0100 111' } });
     expect(await screen.findByRole('link', { name: 'أسرة أم أحمد' })).toHaveAttribute('href', '/families/f1');
     expect(screen.queryByText('أسرة محمود')).not.toBeInTheDocument();
+  });
+
+  it('finds a family by its third phone number', async () => {
+    render(<MemoryRouter><FamilyListPage canWrite={false} /></MemoryRouter>);
+    const search = await screen.findByRole('searchbox', { name: 'بحث عن أسرة' });
+    fireEvent.change(search, { target: { value: '0100 555' } });
+    expect(await screen.findByRole('link', { name: 'أسرة محمود' })).toHaveAttribute('href', '/families/f2');
+    expect(screen.queryByText('أسرة أم أحمد')).not.toBeInTheDocument();
   });
 });

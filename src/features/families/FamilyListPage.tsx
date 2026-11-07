@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { addMember, getFamily, listAllMembers, listCases, listFamilies, listMembers, type Family, type FamilyMember, type Member, type CaseRecord } from '../../services/cases';
+import { addMember, getFamily, listAllMembers, listCases, listFamilies, listMembers, type Family, type FamilyProfile, type FamilyMember, type Member, type CaseRecord } from '../../services/cases';
 import { normalizeArabicSearch } from '../cases/arabicSearch';
 import { CASE_CATEGORIES } from '../cases/categories';
 import { FamilyForm } from './FamilyForm';
+import { FamilyFilesPanel } from './FamilyFilesPanel';
 
 export function FamilyListPage({ canWrite }: { canWrite: boolean }) {
   const [families, setFamilies] = useState<Family[]>([]);
@@ -48,7 +49,7 @@ export function FamilyListPage({ canWrite }: { canWrite: boolean }) {
   }, [members]);
   const term = normalizeArabicSearch(search);
   const matches = families.filter((family) => {
-    const text = [family.name, family.code, family.phone ?? '', ...(memberNamesByFamily.get(family.id) ?? [])].map(normalizeArabicSearch);
+    const text = [family.name, family.code, family.phone ?? '', family.phone_2 ?? '', family.phone_3 ?? '', ...(memberNamesByFamily.get(family.id) ?? [])].map(normalizeArabicSearch);
     return (!term || text.some((value) => value.includes(term))) && (!category || (categoriesByFamily.get(family.id) ?? []).includes(category));
   });
   useEffect(() => {
@@ -99,7 +100,7 @@ export function FamilyListPage({ canWrite }: { canWrite: boolean }) {
                 <tr key={family.id}>
                   <td><span className="family-code">{family.code}</span></td>
                   <td><Link to={`/families/${family.id}`}>{family.name}</Link></td>
-                  <td>{family.phone ? <bdi dir="ltr">{family.phone}</bdi> : <span className="muted-cell">مش متسجل</span>}</td>
+                  <td>{[family.phone,family.phone_2,family.phone_3].filter((phone):phone is string=>!!phone).length ? <span className="family-list-phones">{[family.phone,family.phone_2,family.phone_3].filter((phone):phone is string=>!!phone).map(phone=><bdi dir="ltr" key={phone}>{phone}</bdi>)}</span> : <span className="muted-cell">مش متسجل</span>}</td>
                   <td>{(categoriesByFamily.get(family.id) ?? []).length ? (categoriesByFamily.get(family.id) ?? []).map((item) => <span className="category-label" key={item}>{item}</span>) : <span className="muted-cell">مفيش تصنيف</span>}</td>
                   <td><Link className="table-action" to={`/families/${family.id}`}>فتح الملف</Link></td>
                 </tr>
@@ -114,7 +115,7 @@ export function FamilyListPage({ canWrite }: { canWrite: boolean }) {
 
 export function FamilyDetailsPage({ canWrite }: { canWrite: boolean }) {
   const { id } = useParams();
-  const [family, setFamily] = useState<Family>();
+  const [family, setFamily] = useState<FamilyProfile>();
   const [members, setMembers] = useState<Member[]>([]);
   const [cases, setCases] = useState<CaseRecord[]>([]);
   const [error, setError] = useState('');
@@ -155,11 +156,16 @@ export function FamilyDetailsPage({ canWrite }: { canWrite: boolean }) {
       {family ? <>
         <header className="page-heading family-detail-heading">
           <div><h1>ملف الأسرة</h1><div className="family-summary">
-            <div><span className="family-code">{family.code}</span><h2>{family.name}</h2><p className="summary-detail">{family.phone ? <>رقم التليفون: <bdi dir="ltr">{family.phone}</bdi></> : 'رقم التليفون مش متسجل'}</p></div>
+            <div><span className="family-code">{family.code}</span><h2>{family.name}</h2>
+              <div className="family-contact-summary">{family.contact_name&&<p>مسؤول الأسرة: {family.contact_name}</p>}{family.contact_age!==null&&<p>السن: {new Intl.NumberFormat('ar-EG').format(family.contact_age)} سنة</p>}{family.national_id&&<p>الرقم القومي: <bdi dir="ltr">{family.national_id}</bdi></p>}</div>
+              <div className="family-detail-phones">{[family.phone,family.phone_2,family.phone_3].map((phone,index)=>phone?<p key={index}>رقم التليفون {['١','٢','٣'][index]}: <bdi dir="ltr">{phone}</bdi></p>:null)}{![family.phone,family.phone_2,family.phone_3].some(Boolean)&&<p>مفيش رقم تليفون متسجل</p>}</div>
+            </div>
           </div></div>
           {canWrite ? <div className="heading-actions"><button type="button" className="secondary" onClick={() => setEditing((value) => !value)}>{editing ? 'إلغاء التعديل' : 'تعديل بيانات الأسرة'}</button><Link className="primary-link" to={`/cases/new?family=${family.id}`}>إضافة حالة</Link></div> : null}
         </header>
         {editing ? <div className="section-block"><FamilyForm family={family} onSaved={() => { setEditing(false); void refresh().catch(() => setError('اتحفظت البيانات، بس تعذّر تحديث الملف.')); }} /></div> : null}
+        {family&&<FamilyFilesPanel familyId={family.id} canWrite={canWrite}/>}
+        <section className="section-block" aria-labelledby="family-notes-title"><h2 id="family-notes-title">ملاحظات الأسرة</h2><p className="family-notes">{family.notes||'مفيش ملاحظات متسجلة للأسرة.'}</p></section>
         <section className="section-block" aria-labelledby="family-members-title">
           <div className="section-heading"><h2 id="family-members-title">أفراد الأسرة</h2><span>{members.length} أفراد</span></div>
           {members.length ? <ul className="record-list">{members.map((member) => <li key={member.person_id}><strong>{member.people.name}</strong><span className="muted-cell">{member.relationship}</span></li>)}</ul> : <div className="empty-state">لسه مفيش أفراد مضافين للأسرة.</div>}

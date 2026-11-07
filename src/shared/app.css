@@ -233,6 +233,17 @@ fieldset label { display: inline-flex; align-items: center; gap: 8px; margin: 5p
 .section-heading > span { color: var(--muted); font-size: .85rem; }
 .member-form { max-width: none; margin-block-start: 20px; padding: 18px; background: var(--surface-soft); border: 1px solid var(--border); border-radius: 9px; }
 .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.family-form { max-width: none; }
+.family-form .form-section { display: grid; gap: 14px; }
+.family-form .form-section h2 { margin: 0; }
+.family-list-phones, .family-contact-summary, .family-detail-phones { display: grid; gap: 3px; }
+.family-list-phones { font-size: .85rem; }
+.family-contact-summary p, .family-detail-phones p { margin: 3px 0; }
+.family-notes { white-space: pre-wrap; overflow-wrap: anywhere; }
+.family-files-panel .form-help { color: var(--muted); }
+.family-file-row small { display: block; color: var(--muted); }
+.family-file-actions { display: inline-flex; flex-wrap: wrap; gap: 8px; }
+.family-file-upload { margin-block-start: 14px; }
 .family-detail-heading { display: block; }
 .family-detail-heading > div:first-child { margin-block-end: 20px; }
 .family-summary { display: flex; justify-content: space-between; align-items: center; gap: 18px; padding: 20px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-soft); }

@@ -1,7 +1,9 @@
 import { getSupabase } from './supabase';
 import { validateDocument, openPdf } from '../features/files/documentText';
 import type { CaseCategory } from '../features/cases/categories';
-export type Family = { id: string; code: string; name: string; phone: string | null };
+export type Family = { id: string; code: string; name: string; phone: string | null; phone_2?: string | null; phone_3?: string | null };
+export type FamilyProfile = Family & { contact_name: string | null; contact_age: number | null; national_id: string | null; notes: string };
+export type FamilyProfileInput = { name: string; contactName: string; contactAge: number | null; nationalId: string; phones: string[]; notes: string };
 export type Member = { person_id: string; relationship: string; people: { name: string } };
 export type FamilyMember = Member & { family_id: string };
 export type CaseRecord = { id: string; family_id: string; notes: string; case_categories: { category: CaseCategory }[] };
@@ -22,15 +24,16 @@ async function allPages<T>(fetchPage: (start: number, end: number) => PromiseLik
  }
 }
 export async function listFamilies(): Promise<Family[]> {
- return allPages((start,end)=>db().from('families').select('id,code,name,phone').order('id').range(start,end));
+ return allPages((start,end)=>db().from('families').select('id,code,name,phone,phone_2,phone_3').order('id').range(start,end));
 }
 export const countFamilies=()=>countRows('families');
 export const countCases=()=>countRows('cases');
-export async function getFamily(id: string): Promise<Family | null> {
- const {data,error}=await db().from('families').select('id,code,name,phone').eq('id',id).maybeSingle(); check(error); return data;
+export async function getFamily(id: string): Promise<FamilyProfile | null> {
+ const {data,error}=await db().from('families').select('id,code,name,phone,phone_2,phone_3,contact_name,contact_age,national_id,notes').eq('id',id).maybeSingle(); check(error); return data;
 }
-export async function saveFamily(id: string | null, name: string, phone: string): Promise<string> {
- const query = id ? db().from('families').update({name,phone: phone || null}).eq('id',id) : db().from('families').insert({name,phone: phone || null});
+export async function saveFamily(id: string | null, input: FamilyProfileInput): Promise<string> {
+ const values={name:input.name,phone:input.phones[0]||null,contact_name:input.contactName.trim()||null,contact_age:input.contactAge,national_id:input.nationalId||null,phone_2:input.phones[1]||null,phone_3:input.phones[2]||null,notes:input.notes};
+ const query = id ? db().from('families').update(values).eq('id',id) : db().from('families').insert(values);
  const {data,error}=await query.select('id').single(); check(error); if (!data) throw new Error('تعذّر حفظ الأسرة'); return data.id;
 }
 export async function listMembers(familyId: string): Promise<Member[]> {
@@ -72,4 +75,28 @@ export async function uploadCaseFile(caseId:string,file:File):Promise<CaseFile> 
  const response=await fetch('/api/case-files/upload',{method:'POST',headers:{Authorization:`Bearer ${session.access_token}`,'Content-Type':file.type,'X-Case-Id':caseId,'X-File-Name':encodeURIComponent(file.name)},body:file});
  if(!response.ok) throw new Error('تعذّر رفع الملف');
  return await response.json() as CaseFile;
+}
+export type FamilyFile = { id:string; family_id:string; storage_path:string; file_name:string; mime_type:string; size_bytes:number; uploaded_by:string; created_at:string };
+export async function listFamilyFiles(familyId:string):Promise<FamilyFile[]> {
+ return allPages((start,end)=>db().from('family_files').select('*').eq('family_id',familyId).order('created_at').order('id').range(start,end));
+}
+export async function downloadFamilyFile(file:FamilyFile):Promise<File> {
+ const {data,error}=await db().storage.from('case-files').download(file.storage_path); check(error);
+ if(!data) throw new Error('تعذّر تحميل الملف');
+ return new File([data],file.file_name,{type:file.mime_type});
+}
+export async function uploadFamilyFile(familyId:string,file:File):Promise<FamilyFile> {
+ validateDocument(file);
+ if(file.type==='application/pdf') {const pdf=await openPdf(file); await pdf.cleanup();}
+ const client=db(); const {data:{session},error:authError}=await client.auth.getSession(); check(authError);
+ if(!session) throw new Error('يلزم تسجيل الدخول');
+ const response=await fetch('/api/family-files/upload',{method:'POST',headers:{Authorization:`Bearer ${session.access_token}`,'Content-Type':file.type,'X-Family-Id':familyId,'X-File-Name':encodeURIComponent(file.name)},body:file});
+ if(!response.ok) throw new Error('تعذّر رفع الملف');
+ return await response.json() as FamilyFile;
+}
+export async function removeFamilyFile(fileId:string):Promise<void> {
+ const client=db(); const {data:{session},error:authError}=await client.auth.getSession(); check(authError);
+ if(!session) throw new Error('يلزم تسجيل الدخول');
+ const response=await fetch('/api/family-files/delete',{method:'POST',headers:{Authorization:`Bearer ${session.access_token}`,'Content-Type':'application/json'},body:JSON.stringify({fileId})});
+ if(!response.ok) throw new Error('تعذّر حذف الملف');
 }
