@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { downloadCaseFile, listCaseFiles, type CaseFile, getCase, getFamily, listAllMembers, listCases, listFamilies, type CaseRecord, type Family, type FamilyMember } from '../../services/cases';
 import { normalizeArabicSearch } from './arabicSearch';
@@ -9,6 +9,7 @@ export function CaseDetailsPage({ canWrite }: { canWrite: boolean }) {
  const [families,setFamilies]=useState<Family[]>([]); const [members,setMembers]=useState<FamilyMember[]>([]); const [records,setRecords]=useState<CaseRecord[]>([]); const [record,setRecord]=useState<CaseRecord | null>(null); const [family,setFamily]=useState<Family | null>(null);
  const [attachments,setAttachments]=useState<CaseFile[]>([]); const [preview,setPreview]=useState<File | null>(null); const [previewId,setPreviewId]=useState('');
  const [search,setSearch]=useState(''); const [error,setError]=useState(''); const [loading,setLoading]=useState(true); const [editing,setEditing]=useState(id==='new');
+ const tableWrap=useRef<HTMLDivElement>(null);
  useEffect(()=>{
   let alive=true; setLoading(true); setError(''); setRecord(null); setFamily(null); setAttachments([]); setPreview(null); setEditing(id==='new');
   async function load() {
@@ -23,6 +24,30 @@ export function CaseDetailsPage({ canWrite }: { canWrite: boolean }) {
  const memberNames=new Map<string,string[]>(); for(const m of members) memberNames.set(m.family_id,[...(memberNames.get(m.family_id) ?? []),m.people.name]);
  const term=normalizeArabicSearch(search);
  const matches=records.filter(c=>{const f=familiesById.get(c.family_id); return [f?.name ?? '',f?.code ?? '',...(memberNames.get(c.family_id) ?? []),...c.case_categories.map(x=>x.category)].some(value=>normalizeArabicSearch(value).includes(term));});
- if (!id) return <section className="page-card"><h1>الحالات</h1>{canWrite && <Link to="/cases/new">إضافة حالة</Link>}<label>بحث باسم الأسرة أو الفرد أو الكود أو التصنيف<input value={search} onChange={e=>setSearch(e.target.value)} /></label>{error && <p role="alert">{error}</p>}<ul>{matches.map(c=>{const f=familiesById.get(c.family_id);return <li key={c.id}><Link to={`/cases/${c.id}`}>{f?.code} — {f?.name} — {c.case_categories.map(x=>x.category).join('، ') || 'حالة'}</Link></li>;})}</ul></section>;
- return <section className="page-card"><h1>{id==='new' ? 'إضافة حالة' : 'تفاصيل الحالة'}</h1>{error && <p role="alert">{error}</p>}{!loading && !error && id!=='new' && !record && <p>الحالة غير موجودة.</p>}{!loading && id==='new' && !canWrite && <p>معندكش صلاحية للإضافة.</p>}{record && !editing && <><p><Link to={`/families/${record.family_id}`}>{family?.code} — {family?.name}</Link></p><p>التصنيفات: {record.case_categories.map(c=>c.category).join('، ') || 'لا يوجد'}</p><p>الملاحظات: {record.notes || 'لا يوجد'}</p><h2>المرفقات</h2><ul>{attachments.map(file=><li key={file.id}><button onClick={()=>void downloadCaseFile(file).then(result=>{setPreview(result);setPreviewId(file.id);}).catch(()=>setError('تعذّر تحميل المرفق.'))}>{file.file_name}</button></li>)}</ul>{preview && <FilePreview key={previewId} file={preview} fileId={previewId} canWrite={canWrite}/>} {canWrite && <button onClick={()=>setEditing(true)}>تعديل الحالة</button>}</>}{!loading && canWrite && editing && (id==='new' || record) && <CaseForm key={id} families={families} record={id==='new' ? undefined : record ?? undefined} initialFamily={params.get('family') ?? undefined} onSaved={saved=>{setEditing(false); if(saved===id){void getCase(saved).then(async c=>{setRecord(c);setFamily(c ? await getFamily(c.family_id) : null);setAttachments(await listCaseFiles(saved));}).catch(()=>setError('تعذّر تحميل الحالات.'));} else navigate(`/cases/${saved}`);}} />}</section>;
+ useEffect(()=>{if(!loading && window.matchMedia?.('(max-width: 680px)').matches && tableWrap.current)tableWrap.current.scrollLeft=tableWrap.current.scrollWidth;},[loading,id,matches.length]);
+ if (!id) return <section className="page-card">
+  <header className="page-heading"><div><h1>الحالات</h1><p>دور على حالة باسم الأسرة أو الفرد أو التصنيف.</p></div>{canWrite && <Link className="primary-link" to="/cases/new">إضافة حالة</Link>}</header>
+  <div className="toolbar"><label className="search-control">بحث عن حالة<input type="search" role="searchbox" aria-label="بحث عن حالة" placeholder="اكتب اسم الأسرة أو الفرد أو الكود أو التصنيف" value={search} onChange={e=>setSearch(e.target.value)} /></label></div>
+  {loading && <p className="empty-state" role="status">جاري تحميل الحالات…</p>}{error && <p className="error-message" role="alert">{error}</p>}
+  {!loading && !error && records.length===0 && <div className="empty-state"><strong>لسه مفيش حالات مسجلة</strong>{canWrite ? <Link to="/cases/new">ابدأ بإضافة حالة</Link> : 'الحالات الجديدة هتظهر هنا.'}</div>}
+  {!loading && !error && records.length>0 && matches.length===0 && <div className="empty-state"><strong>ملقيناش حالات مطابقة</strong>جرّب كلمة تانية.</div>}
+  {!loading && !error && matches.length>0 && <><div className="table-caption">الحالات المعروضة: {matches.length}</div><div className="data-table-wrap" ref={tableWrap}><table className="data-table" aria-label="قائمة الحالات">
+   <thead><tr><th scope="col">كود الأسرة واسمها</th><th scope="col">أفراد الأسرة</th><th scope="col">نوع الحالة</th><th scope="col">ملاحظات</th><th scope="col"><span className="sr-only">فتح الحالة</span></th></tr></thead>
+   <tbody>{matches.map(c=>{const f=familiesById.get(c.family_id);return <tr key={c.id}><td><Link to={`/cases/${c.id}`}><span className="family-code">{f?.code ?? '—'}</span>{f ? ` — ${f.name}` : ''}</Link></td><td>{(memberNames.get(c.family_id) ?? []).join('، ') || <span className="muted-cell">مش متسجل</span>}</td><td>{c.case_categories.length ? c.case_categories.map(x=><span className="category-label" key={x.category}>{x.category}</span>) : <span className="muted-cell">مفيش تصنيف</span>}</td><td>{c.notes || <span className="muted-cell">مفيش ملاحظات</span>}</td><td><Link className="table-action" to={`/cases/${c.id}`}>فتح الحالة</Link></td></tr>;})}</tbody>
+  </table></div></>}
+ </section>;
+ return <section className="page-card">
+  <p><Link to="/cases">رجوع لقائمة الحالات</Link></p>
+  <header className="page-heading"><div><h1>{id==='new' ? 'إضافة حالة' : 'ملف الحالة'}</h1><p>{id==='new' ? 'اختار الأسرة وحدد نوع الحالة وارفق المستندات.' : 'بيانات الحالة والمستندات المرتبطة بيها.'}</p></div>{record && canWrite && !editing && <button type="button" className="secondary" onClick={()=>setEditing(true)}>تعديل الحالة</button>}</header>
+  {error && <p className="error-message" role="alert">{error}</p>}{loading && id!=='new' && <p role="status">جاري تحميل الحالة…</p>}{!loading && !error && id!=='new' && !record && <div className="empty-state"><strong>الحالة مش موجودة</strong><Link to="/cases">ارجع لقائمة الحالات</Link></div>}{!loading && id==='new' && !canWrite && <p className="error-message">معندكش صلاحية لإضافة حالة.</p>}
+  {record && !editing && <>
+   <div className="family-summary"><div><span className="muted-cell">الأسرة</span><h2><Link to={`/families/${record.family_id}`}>{family?.code} — {family?.name}</Link></h2></div><div><span className="muted-cell">نوع الحالة</span><div>{record.case_categories.map(c=><span className="category-label" key={c.category}>{c.category}</span>)}</div></div></div>
+   <section className="section-block"><h2>ملاحظات الحالة</h2><p>{record.notes || 'مفيش ملاحظات متسجلة.'}</p></section>
+   <section className="section-block"><div className="section-heading"><h2>الصور والمستندات</h2>{canWrite && <button type="button" className="secondary" onClick={()=>setEditing(true)}>إضافة مستند أو تعديل الحالة</button>}</div>
+    {attachments.length ? <ul className="record-list">{attachments.map(file=><li key={file.id}><button type="button" className="secondary" onClick={()=>void downloadCaseFile(file).then(result=>{setPreview(result);setPreviewId(file.id);}).catch(()=>setError('تعذّر تحميل المرفق.'))}>{file.file_name}</button></li>)}</ul> : <div className="empty-state">مفيش صور أو مستندات مضافة للحالة.</div>}
+    {preview && <FilePreview key={previewId} file={preview} fileId={previewId} canWrite={canWrite}/>}
+   </section>
+  </>}
+  {!loading && canWrite && editing && (id==='new' || record) && <CaseForm key={id} families={families} record={id==='new' ? undefined : record ?? undefined} initialFamily={params.get('family') ?? undefined} onSaved={saved=>{setEditing(false); if(saved===id){void getCase(saved).then(async c=>{setRecord(c);setFamily(c ? await getFamily(c.family_id) : null);setAttachments(await listCaseFiles(saved));}).catch(()=>setError('اتحفظت الحالة، بس تعذّر تحديث الملف.'));} else navigate(`/cases/${saved}`);}} />}
+ </section>;
 }

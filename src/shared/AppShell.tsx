@@ -1,31 +1,60 @@
 import type { ReactNode } from 'react';
-import { NavLink } from 'react-router-dom';
+import { Link, NavLink, useLocation } from 'react-router-dom';
+import { hasPermission, type StaffProfile } from '../features/auth/permissions';
 
 const navigation = [
-  ['/', 'الرئيسية'],
-  ['/families', 'الأسر'],
-  ['/cases', 'الحالات'],
-  ['/donations', 'التبرعات والكفالات'],
-  ['/assistant', 'المساعد'],
-  ['/staff', 'الموظفين'],
-  ['/login', 'تسجيل الدخول'],
+  ['/', 'الرئيسية', 'home'],
+  ['/families', 'الأسر', 'families'],
+  ['/cases', 'الحالات', 'cases'],
+  ['/donations', 'التبرعات والكفالات', 'donations'],
+  ['/assistant', 'المساعد الذكي', 'assistant'],
+  ['/staff', 'الموظفين', 'staff'],
 ] as const;
 
-export function AppShell({ children }: { children: ReactNode }) {
+function NavigationIcon({ name }: { name: (typeof navigation)[number][2] }) {
+  const paths: Record<(typeof navigation)[number][2], ReactNode> = {
+    home: <><path d="m3 10 9-7 9 7" /><path d="M5 9v11h14V9M9 20v-6h6v6" /></>,
+    families: <><circle cx="9" cy="8" r="3" /><path d="M3 20v-1a6 6 0 0 1 12 0v1" /><path d="M16 5a3 3 0 0 1 0 6m2 9v-1a6 6 0 0 0-3-5" /></>,
+    cases: <><path d="M7 3h10v3h3v15H4V6h3z" /><path d="M8 11h8M8 15h8" /></>,
+    donations: <><path d="M12 20s-8-4.6-8-10a4.5 4.5 0 0 1 8-2.8A4.5 4.5 0 0 1 20 10c0 5.4-8 10-8 10Z" /><path d="M3 21h18" /></>,
+    assistant: <><path d="M4 4h7a4 4 0 0 1 4 4v12a4 4 0 0 0-4-4H4z" /><path d="M20 4h-1a4 4 0 0 0-4 4v12a4 4 0 0 1 4-4h1z" /></>,
+    staff: <><circle cx="12" cy="8" r="4" /><path d="M4 21v-2a8 8 0 0 1 16 0v2" /></>,
+  };
+  return <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{paths[name]}</svg>;
+}
+
+export function AppShell({ children, staff }: { children: ReactNode; staff?: StaffProfile | null }) {
+  const { pathname } = useLocation();
+  const loginPage = pathname === '/login';
+  const visibleNavigation = staff === undefined
+    ? navigation
+    : navigation.filter(([to]) => {
+        if (!staff?.active) return false;
+        if (to === '/') return true;
+        if (to === '/families' || to === '/cases') return hasPermission(staff, 'casesRead');
+        if (to === '/donations') return hasPermission(staff, 'donationsRead');
+        if (to === '/assistant') return hasPermission(staff, 'assistantUse');
+        if (to === '/staff') return staff.role !== 'employee';
+        return false;
+      });
   return (
     <div className="app-shell" lang="ar" dir="rtl">
       <a className="skip-link" href="#main-content">روح لمحتوى الصفحة</a>
       <header className="app-header">
         <div className="header-content">
-          <span className="product-name">نظام الجمعية</span>
-          <p>الأسر والحالات والتبرعات في مكان واحد</p>
+          <Link className="brand" to="/" aria-label="مرام الخير - الرئيسية">
+            <span className="brand-mark" aria-hidden="true">✿</span>
+            <span><strong className="product-name">مرام الخير</strong><small>نظام إدارة الجمعية</small></span>
+          </Link>
+          {staff?.active ? <span className="header-user"><strong>{staff.displayName}</strong><small>كود الموظف: <bdi dir="ltr">{staff.employeeCode}</bdi></small></span> : <Link className="header-login" to="/login">تسجيل الدخول</Link>}
         </div>
       </header>
-      <div className="app-layout">
-        <nav className="app-navigation" aria-label="القائمة الرئيسية">
-          {navigation.map(([to, label]) => <NavLink key={to} to={to} end={to === '/'}>{label}</NavLink>)}
-        </nav>
-        <main id="main-content" tabIndex={-1}>{children}</main>
+      <div className={`app-layout${loginPage ? ' login-layout' : ''}${!loginPage && visibleNavigation.length === 0 ? ' no-navigation' : ''}`}>
+        {!loginPage && visibleNavigation.length > 0 ? <nav className="app-navigation" aria-label="القائمة الرئيسية">
+          <span className="navigation-caption">القائمة الرئيسية</span>
+          {visibleNavigation.map(([to, label, icon]) => <NavLink key={to} to={to} end={to === '/'}><NavigationIcon name={icon} /><span>{label}</span></NavLink>)}
+        </nav> : null}
+        <main id="main-content" tabIndex={-1} className="app-main">{children}</main>
       </div>
       <footer>مع بعض نسهّل شغل الجمعية</footer>
     </div>

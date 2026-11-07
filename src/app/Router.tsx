@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, Route, Routes } from 'react-router-dom';
 import { StaffPage } from '../features/staff/StaffPage';
+import { HomePage } from '../features/home/HomePage';
 import { AssistantPanel } from '../features/assistant/AssistantPanel';
 import { DonationListPage } from '../features/donations/DonationListPage';
 import { LoginPage } from '../features/auth/LoginPage';
@@ -29,19 +30,24 @@ function SignInPrompt() {
     </section>
   );
 }
-export function Router({ session }: { session?: StaffProfile | null }) {
+export function Router({ session, onStaffChange }: { session?: StaffProfile | null; onStaffChange?: (staff: StaffProfile | null) => void }) {
   const [verified, setVerified] = useState<StaffProfile | null>(null);
   const [error, setError] = useState('');
   const staff = session === undefined ? verified : session;
   async function refresh() {
-    setVerified(await currentStaff());
+    const profile = await currentStaff();
+    setVerified(profile);
+    onStaffChange?.(profile);
   }
   useEffect(() => {
     if (session !== undefined || !getSupabase()) return;
     let alive = true;
     const refreshProfile = () => {
       void currentStaff().then((profile) => {
-        if (alive) setVerified(profile);
+        if (alive) {
+          setVerified(profile);
+          onStaffChange?.(profile);
+        }
       });
     };
     refreshProfile();
@@ -61,6 +67,7 @@ export function Router({ session }: { session?: StaffProfile | null }) {
     try {
       await signOut();
       setVerified(null);
+      onStaffChange?.(null);
       setError('');
     } catch {
       setError('تعذّر تسجيل الخروج. حاول تاني.');
@@ -76,8 +83,8 @@ export function Router({ session }: { session?: StaffProfile | null }) {
   }
   return (
     <>
-      {staff?.active ? <button onClick={logout}>تسجيل الخروج</button> : null}
-      {error ? <p role="alert">{error}</p> : null}
+      {staff?.active ? <div className="session-actions"><button className="secondary" onClick={logout}>تسجيل الخروج</button></div> : null}
+      {error ? <p className="error-message" role="alert">{error}</p> : null}
       <Routes>
         <Route
           path="/login"
@@ -92,7 +99,7 @@ export function Router({ session }: { session?: StaffProfile | null }) {
         {['/families', '/families/:id', '/cases', '/cases/:id'].map(path => (
           <Route key={path} path={path} element={!staff?.active ? <SignInPrompt /> : !allowed(path, 'casesRead') ? <section className="page-card"><h1>معندكش صلاحية للصفحة دي</h1></section> : path === '/families' ? <FamilyListPage canWrite={hasPermission(staff, 'casesWrite')} /> : path === '/families/:id' ? <FamilyDetailsPage canWrite={hasPermission(staff, 'casesWrite')} /> : <CaseDetailsPage canWrite={hasPermission(staff, 'casesWrite')} />} />
         ))}
-        {applicationRoutes.map(([path, title, permission]) => (
+        {applicationRoutes.map(([path, , permission]) => (
           <Route
             key={path}
             path={path}
@@ -100,10 +107,7 @@ export function Router({ session }: { session?: StaffProfile | null }) {
               !staff?.active ? (
                 <SignInPrompt />
               ) : allowed(path, permission) ? (
-                path === '/staff' ? <StaffPage role={staff.role} /> : path === '/assistant' ? <AssistantPanel /> : path === '/donations' ? <DonationListPage canWrite={hasPermission(staff, 'donationsWrite')} canReadCases={hasPermission(staff, 'casesRead')} /> : <section className="page-card">
-                  <h1>{title}</h1>
-                  <p>الصفحة دي هتكون جاهزة قريب.</p>
-                </section>
+                path === '/staff' ? <StaffPage role={staff.role} /> : path === '/assistant' ? <AssistantPanel /> : path === '/donations' ? <DonationListPage canWrite={hasPermission(staff, 'donationsWrite')} canReadCases={hasPermission(staff, 'casesRead')} /> : <HomePage staff={staff} />
               ) : (
                 <section className="page-card">
                   <h1>معندكش صلاحية للصفحة دي</h1>

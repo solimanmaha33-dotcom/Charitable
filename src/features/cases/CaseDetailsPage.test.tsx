@@ -15,7 +15,7 @@ vi.mock('../../services/cases', () => ({
 it('searches cases by normalized family and member names, family code, and category', async () => {
  render(<MemoryRouter initialEntries={['/cases']}><Routes><Route path="/cases" element={<CaseDetailsPage canWrite={false} />} /></Routes></MemoryRouter>);
  await screen.findByRole('link',{name:/F-0001/});
- const search=screen.getByRole('textbox',{name:/بحث/});
+ const search=screen.getByRole('searchbox',{name:'بحث عن حالة'});
  for (const term of ['ابراهيم','احمد','f-0001','ايتام']) {
   fireEvent.change(search,{target:{value:term}});
   expect(screen.getByRole('link',{name:/F-0001/})).toBeVisible();
@@ -26,12 +26,19 @@ it('searches cases by normalized family and member names, family code, and categ
  expect(screen.queryByRole('link',{name:/F-0001/})).toBeNull();
 });
 
+it('shows case rows in an accessible directory and hides creation for read-only staff', async () => {
+ render(<MemoryRouter initialEntries={['/cases']}><Routes><Route path="/cases" element={<CaseDetailsPage canWrite={false} />} /></Routes></MemoryRouter>);
+ expect(await screen.findByRole('table',{name:'قائمة الحالات'})).toBeVisible();
+ expect(screen.getAllByRole('link',{name:'فتح الحالة'})[0]).toHaveAttribute('href','/cases/c1');
+ expect(screen.queryByRole('link',{name:'إضافة حالة'})).not.toBeInTheDocument();
+});
+
 function BackButton() { const navigate=useNavigate(); return <button onClick={()=>navigate(-1)}>رجوع</button>; }
 it('creates a blank case after navigating back from a loaded case', async () => {
  render(<MemoryRouter initialEntries={['/cases/new','/cases/c1']} initialIndex={1}><BackButton /><Routes><Route path="/cases/:id" element={<CaseDetailsPage canWrite />} /></Routes></MemoryRouter>);
  expect(await screen.findByText(/ملاحظة قديمة/)).toBeVisible();
  fireEvent.click(screen.getByRole('button',{name:'رجوع'}));
- const notes=await screen.findByLabelText('ملاحظات');
+ const notes=await screen.findByLabelText('ملاحظات الحالة');
  expect(notes).toHaveValue('');
  expect(screen.getByLabelText('الأسرة')).toHaveValue('');
  expect(screen.getByLabelText('أيتام')).not.toBeChecked();

@@ -24,8 +24,8 @@ export function LoginPage({ onSignedIn }: { onSignedIn: () => void }) {
     }
   }
   return (
-    <section className="page-card">
-      <h1>تسجيل الدخول</h1>
+    <section className="page-card login-card">
+      <div className="login-intro"><h1>تسجيل الدخول</h1><p>اكتب كود الموظف وكلمة السر عشان تدخل على نظام الجمعية.</p></div>
       <form onSubmit={submit} className="login-form">
         <label htmlFor="employee-code">كود الموظف</label>
         <input
