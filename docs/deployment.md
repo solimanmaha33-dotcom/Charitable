@@ -44,19 +44,17 @@ This is an owner-operated, non-production preview using **only the owner's newly
 
 ### 3. Set Cloudflare configuration and deploy
 
-In `charitable-preview` → **Settings → Builds & deployments → Build configuration**, set the two public `VITE_*` values as **Production build variables** because Vite embeds them during `npm run build`. The deployment summary must no longer say `Environment variables: None`. Use only values from the verified Supabase test project. Do not add the service-role key to build variables, GitHub secrets, committed files or browser code.
-
-Pages Functions runtime values are separate. Because this project's Wrangler config is the source of truth for plain runtime variables, keep the three `SUPABASE_*` values as **Production encrypted Secrets** in **Settings → Variables and Secrets**. `SUPABASE_SERVICE_ROLE_KEY` must remain secret and server-only; encrypting the URL and publishable key there is also acceptable. Do not put `VITE_*` values in the Functions-only secrets section as a replacement for build variables.
+In `charitable-preview` → **Settings → Variables and Secrets**, select the **Production** environment because `preview` is this project's production branch. The current Wrangler-managed project accepts dashboard values as encrypted **Secrets**. Add all five entries below there. Use only values from the verified Supabase test project; never add the service-role key to a `VITE_*` variable, browser code, GitHub secrets, or committed files.
 
 | Name | Use and scope |
 | --- | --- |
-| `VITE_SUPABASE_URL` | Production build variable: the verified test-project URL. |
-| `VITE_SUPABASE_ANON_KEY` | Production build variable: that project's public publishable/anon key. RLS is required even though this key is public. |
-| `SUPABASE_URL` | Encrypted Pages Functions runtime secret: the same test-project URL. |
-| `SUPABASE_ANON_KEY` | Encrypted Pages Functions runtime secret: the same test-project publishable/anon key. |
+| `VITE_SUPABASE_URL` | Build configuration: the verified test-project URL. Vite embeds it in the browser bundle. |
+| `VITE_SUPABASE_ANON_KEY` | Build configuration: the project's public publishable/anon key. Vite embeds it in the browser bundle; RLS is required. |
+| `SUPABASE_URL` | Pages Functions runtime secret: the same test-project URL. |
+| `SUPABASE_ANON_KEY` | Pages Functions runtime secret: the same test-project publishable/anon key. |
 | `SUPABASE_SERVICE_ROLE_KEY` | **Encrypted Cloudflare runtime secret for Pages Functions only.** Never expose its value in GitHub, repository files, browser code, build variables, logs or chat. |
 
-The two `VITE_*` values are embedded in the JavaScript bundle at build time; changing them requires a fresh build/deployment. The server values belong to Functions; application build code must never read or print the service-role secret. Keep Cloudflare's separate **Preview** environment unconfigured while other-branch deployments are disabled. If those deployments are deliberately enabled later, review their code and environment scope first; this guide does not authorize sharing secrets with arbitrary branches.
+The two `VITE_*` values are embedded in the JavaScript bundle at build time; their encrypted dashboard storage does not make them private after build. Only the publishable key belongs there. Changing values requires a fresh build/deployment. The server values belong to Functions; application build code must never read or print the service-role secret. Keep Cloudflare's separate **Preview** environment unconfigured while other-branch deployments are disabled. If those deployments are deliberately enabled later, review their code and environment scope first; this guide does not authorize sharing secrets with arbitrary branches.
 
 Save settings, then use **Save and Deploy** or retry the `preview` branch deployment after configuration is complete. Confirm the deployment succeeded in `charitable-preview`, shows branch `preview` and the intended commit, and includes Pages Functions. If the initial setup build ran before variables were saved, rebuild it. Copy the actual HTTPS Pages URL from the successful deployment; do not announce a URL before Cloudflare creates it.
 

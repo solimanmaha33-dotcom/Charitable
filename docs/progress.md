@@ -143,4 +143,4 @@
 - أظهرت شاشة Policies سياسة `case_objects_read` لأمر `SELECT` مطبقة على `authenticated`. هذا لا يكشف إعداد Public للحاوية؛ يلزم فحص إعداد الحاوية من تبويب Buckets.
 - شاشة تفاصيل `case-files` تؤكد أنها فارغة، لكنها لا تعرض حالة Public/Private؛ زر `Edit bucket` هو الخطوة التالية لفحص هذا الخيار دون تغييره.
 - أكد صاحب المشروع أن خيار **Public bucket** لحاوية `case-files` مغلق، وأن حد 20 MB وقائمة أنواع الملفات ما زالا مفعّلين؛ الحاوية خاصة.
-- أظهر ملخص نشر Pages الناجح أن `Environment variables: None`؛ أسرار Wrangler الموجودة لا تمثل متغيرات بناء Vite. يلزم إضافة `VITE_SUPABASE_URL` و`VITE_SUPABASE_ANON_KEY` في Build configuration، مع بقاء قيم `SUPABASE_*` ضمن Secrets لوقت تشغيل Functions.
+- أظهر نشر Pages الأقدم `1d2fb25` أن `Environment variables: None`. أظهر النشر الأحدث الناجح `8384c06` أسماء المتغيرات الخمسة كقيم مشفرة؛ اتضح أن صفحة Variables and Secrets تضيفها للنشر القادم ولا حاجة لصفحة بناء منفصلة. صححنا الدليل بناء على النشر الأحدث. قيم `VITE_*` ستظهر في حزمة المتصفح بعد البناء، لذا يجب أن تكون قيم URL وPublishable فقط.
