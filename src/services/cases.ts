@@ -1,11 +1,14 @@
 import { getSupabase } from './supabase';
 import { validateDocument, openPdf } from '../features/files/documentText';
 import type { CaseCategory } from '../features/cases/categories';
+import type { MemberGender } from '../features/families/memberDemographics';
 export type Family = { id: string; code: string; name: string; phone: string | null; phone_2?: string | null; phone_3?: string | null };
-export type FamilyProfile = Family & { contact_name: string | null; contact_age: number | null; national_id: string | null; notes: string };
-export type FamilyProfileInput = { name: string; contactName: string; contactAge: number | null; nationalId: string; phones: string[]; notes: string };
-export type Member = { person_id: string; relationship: string; people: { name: string } };
+export type FamilyProfile = Family & { contact_name: string | null; contact_age: number | null; national_id: string | null; national_id_expires_on: string | null; notes: string };
+export type FamilyProfileInput = { name: string; contactName: string; contactAge: number | null; nationalId: string; nationalIdExpiresOn: string; phones: string[]; notes: string };
+export type FamilyIdExpiry = { id:string; code:string; name:string; contact_name:string|null; national_id_expires_on:string };
+export type Member = { person_id: string; relationship: string; people: { name: string; gender:MemberGender|null; date_of_birth:string|null } };
 export type FamilyMember = Member & { family_id: string };
+export type MemberAgeProfile=FamilyMember & {families:{name:string;code:string}};
 export type CaseRecord = { id: string; family_id: string; notes: string; case_categories: { category: CaseCategory }[] };
 function db() { const client = getSupabase(); if (!client) throw new Error('تعذّر الاتصال بقاعدة البيانات'); return client; }
 function check(error: { message: string } | null) { if (error) throw new Error(error.message); }
@@ -29,21 +32,31 @@ export async function listFamilies(): Promise<Family[]> {
 export const countFamilies=()=>countRows('families');
 export const countCases=()=>countRows('cases');
 export async function getFamily(id: string): Promise<FamilyProfile | null> {
- const {data,error}=await db().from('families').select('id,code,name,phone,phone_2,phone_3,contact_name,contact_age,national_id,notes').eq('id',id).maybeSingle(); check(error); return data;
+ const {data,error}=await db().from('families').select('id,code,name,phone,phone_2,phone_3,contact_name,contact_age,national_id,national_id_expires_on,notes').eq('id',id).maybeSingle(); check(error); return data;
 }
 export async function saveFamily(id: string | null, input: FamilyProfileInput): Promise<string> {
- const values={name:input.name,phone:input.phones[0]||null,contact_name:input.contactName.trim()||null,contact_age:input.contactAge,national_id:input.nationalId||null,phone_2:input.phones[1]||null,phone_3:input.phones[2]||null,notes:input.notes};
+ const values={name:input.name,phone:input.phones[0]||null,contact_name:input.contactName.trim()||null,contact_age:input.contactAge,national_id:input.nationalId||null,national_id_expires_on:input.nationalIdExpiresOn||null,phone_2:input.phones[1]||null,phone_3:input.phones[2]||null,notes:input.notes};
  const query = id ? db().from('families').update(values).eq('id',id) : db().from('families').insert(values);
  const {data,error}=await query.select('id').single(); check(error); if (!data) throw new Error('تعذّر حفظ الأسرة'); return data.id;
 }
+export async function listFamilyIdExpirationsBy(cutoff:string):Promise<FamilyIdExpiry[]> {
+ return allPages((start,end)=>db().from('families').select('id,code,name,contact_name,national_id_expires_on').not('national_id_expires_on','is',null).lte('national_id_expires_on',cutoff).order('national_id_expires_on').order('id').range(start,end));
+}
 export async function listMembers(familyId: string): Promise<Member[]> {
- return allPages((start,end)=>db().from('family_members').select('person_id,relationship,people(name)').eq('family_id',familyId).order('person_id').range(start,end)) as unknown as Promise<Member[]>;
+ return allPages((start,end)=>db().from('family_members').select('person_id,relationship,people(name,gender,date_of_birth)').eq('family_id',familyId).order('person_id').range(start,end)) as unknown as Promise<Member[]>;
 }
 export async function listAllMembers(): Promise<FamilyMember[]> {
- return allPages((start,end)=>db().from('family_members').select('family_id,person_id,relationship,people(name)').order('family_id').order('person_id').range(start,end)) as unknown as Promise<FamilyMember[]>;
+ return allPages((start,end)=>db().from('family_members').select('family_id,person_id,relationship,people(name,gender,date_of_birth)').order('family_id').order('person_id').range(start,end)) as unknown as Promise<FamilyMember[]>;
 }
-export async function addMember(familyId: string, name: string, relationship: string): Promise<void> {
- const {error}=await db().rpc('add_family_member',{p_family_id:familyId,p_name:name,p_relationship:relationship}); check(error);
+export async function listAgeThresholdMembers():Promise<MemberAgeProfile[]> {
+ return allPages((start,end)=>db().from('family_members').select('family_id,person_id,relationship,people(name,gender,date_of_birth),families(name,code)').order('family_id').order('person_id').range(start,end)) as unknown as Promise<MemberAgeProfile[]>;
+}
+export async function addMember(familyId: string, name: string, relationship: string, gender:MemberGender|null=null, dateOfBirth:string|null=null): Promise<void> {
+ const {error}=await db().rpc('add_family_member_profile',{p_family_id:familyId,p_name:name,p_relationship:relationship,p_gender:gender,p_date_of_birth:dateOfBirth}); check(error);
+}
+export async function updateMemberDemographics(personId:string,gender:MemberGender|null,dateOfBirth:string|null):Promise<void>{
+ const {data,error}=await db().from('people').update({gender,date_of_birth:dateOfBirth}).eq('id',personId).select('id').single();
+ check(error);if(!data)throw new Error('تعذّر حفظ بيانات السن');
 }
 export async function listCases(familyId?: string): Promise<CaseRecord[]> {
  return allPages((start,end)=>{

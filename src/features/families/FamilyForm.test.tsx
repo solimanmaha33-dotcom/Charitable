@@ -14,6 +14,7 @@ it('saves primary contact, optional age and ID, three phones and a family note',
   fireEvent.change(screen.getByLabelText(/اسم مسؤول الأسرة/), { target: { value: 'أحمد' } });
   fireEvent.change(screen.getByLabelText(/سن مسؤول الأسرة/), { target: { value: '42' } });
   fireEvent.change(screen.getByLabelText(/الرقم القومي لمسؤول الأسرة/), { target: { value: '٢٩٠٠١٠١١٢٣٤٥٦٧' } });
+  fireEvent.change(screen.getByLabelText(/تاريخ انتهاء البطاقة/), { target: { value: '2027-01-15' } });
   fireEvent.change(screen.getByLabelText(/رقم التليفون ١/), { target: { value: '01000000001' } });
   fireEvent.change(screen.getByLabelText(/رقم التليفون ٢/), { target: { value: '01000000002' } });
   fireEvent.change(screen.getByLabelText(/رقم التليفون ٣/), { target: { value: '01000000003' } });
@@ -21,7 +22,7 @@ it('saves primary contact, optional age and ID, three phones and a family note',
   fireEvent.click(screen.getByRole('button', { name: 'حفظ بيانات الأسرة' }));
   await waitFor(() => expect(save).toHaveBeenCalledWith(null, {
     name: 'أسرة تجريبية', contactName: 'أحمد', contactAge: 42, nationalId: '29001011234567',
-    phones: ['01000000001', '01000000002', '01000000003'], notes: 'ملاحظة تجريبية',
+    nationalIdExpiresOn: '2027-01-15', phones: ['01000000001', '01000000002', '01000000003'], notes: 'ملاحظة تجريبية',
   }));
   expect(onSaved).toHaveBeenCalledWith('family-1');
 });

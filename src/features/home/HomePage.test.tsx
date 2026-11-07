@@ -3,9 +3,10 @@ import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { HomePage } from './HomePage';
 import type { StaffProfile } from '../auth/permissions';
+import {addDateOnlyDays,cairoToday} from '../families/idExpiry';
 
-const counts = vi.hoisted(() => ({ families: vi.fn(), cases: vi.fn(), donations: vi.fn() }));
-vi.mock('../../services/cases', () => ({ countFamilies: counts.families, countCases: counts.cases }));
+const counts = vi.hoisted(() => ({ families: vi.fn(), cases: vi.fn(), donations: vi.fn(), expirations: vi.fn(), ageMembers:vi.fn() }));
+vi.mock('../../services/cases', () => ({ countFamilies: counts.families, countCases: counts.cases, listFamilyIdExpirationsBy: counts.expirations,listAgeThresholdMembers:counts.ageMembers }));
 vi.mock('../../services/donations', () => ({ countDonations: counts.donations }));
 
 const staff: StaffProfile = {
@@ -17,9 +18,13 @@ beforeEach(() => {
   counts.families.mockResolvedValue(3);
   counts.cases.mockResolvedValue(5);
   counts.donations.mockResolvedValue(2);
+  counts.expirations.mockResolvedValue([]);
+  counts.ageMembers.mockResolvedValue([]);
   counts.families.mockClear();
   counts.cases.mockClear();
   counts.donations.mockClear();
+  counts.expirations.mockClear();
+  counts.ageMembers.mockClear();
 });
 
 describe('home workspace', () => {
@@ -40,6 +45,30 @@ describe('home workspace', () => {
     expect(counts.families).toHaveBeenCalledOnce();
     expect(counts.cases).toHaveBeenCalledOnce();
     expect(counts.donations).not.toHaveBeenCalled();
+  });
+
+  it('shows expired and soon-to-expire IDs as family links', async()=>{
+    const today=cairoToday();
+    counts.expirations.mockResolvedValue([
+      {id:'old',code:'F-OLD',name:'أسرة البطاقة المنتهية',contact_name:null,national_id_expires_on:addDateOnlyDays(today,-1)},
+      {id:'soon',code:'F-SOON',name:'أسرة البطاقة القريبة',contact_name:'مسؤولة',national_id_expires_on:addDateOnlyDays(today,25)},
+    ]);
+    render(<MemoryRouter><HomePage staff={staff}/></MemoryRouter>);
+    expect(await screen.findByText('منتهية')).toBeVisible();
+    expect(screen.getByRole('link',{name:/أسرة البطاقة المنتهية/})).toHaveAttribute('href','/families/old');
+    expect(await screen.findByText(/هتنتهي خلال ٢٥ يوم/)).toBeVisible();
+    expect(screen.getByRole('link',{name:/أسرة البطاقة القريبة/})).toHaveAttribute('href','/families/soon');
+    expect(counts.expirations).toHaveBeenCalledWith(addDateOnlyDays(today,90));
+  });
+
+  it('shows the correct age threshold reminder and family link',async()=>{
+    const today=cairoToday();const threshold=addDateOnlyDays(today,25);const [year,month,day]=threshold.split('-');
+    counts.ageMembers.mockResolvedValue([{family_id:'family-1',person_id:'member-1',relationship:'بنت',people:{name:'ريم',gender:'female',date_of_birth:`${Number(year)-21}-${month}-${day}`},families:{name:'أسرة ريم',code:'F-0001'}}]);
+    render(<MemoryRouter><HomePage staff={staff}/></MemoryRouter>);
+    expect(await screen.findByText((_text,element)=>element?.tagName==='SMALL'&&element.textContent?.includes('هيكمل ٢١ سنة')===true)).toBeVisible();
+    expect(await screen.findByText('خلال ٢٥ يوم')).toBeVisible();
+    expect(screen.getByRole('link',{name:/ريم · أسرة ريم/})).toHaveAttribute('href','/families/family-1');
+    expect(counts.ageMembers).toHaveBeenCalledOnce();
   });
 
   it('does not turn a failed count request into a zero total', async () => {
@@ -66,6 +95,8 @@ describe('home workspace', () => {
     expect(counts.donations).toHaveBeenCalledOnce();
     expect(counts.families).not.toHaveBeenCalled();
     expect(counts.cases).not.toHaveBeenCalled();
+    expect(counts.expirations).not.toHaveBeenCalled();
+    expect(counts.ageMembers).not.toHaveBeenCalled();
   });
 
   it('shows manager case creation shortcuts even when employee permission flags are unset', () => {

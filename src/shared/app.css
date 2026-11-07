@@ -244,6 +244,14 @@ fieldset label { display: inline-flex; align-items: center; gap: 8px; margin: 5p
 .family-file-row small { display: block; color: var(--muted); }
 .family-file-actions { display: inline-flex; flex-wrap: wrap; gap: 8px; }
 .family-file-upload { margin-block-start: 14px; }
+.id-expiry-alerts { margin-block: 22px; }
+.expiry-status { color: var(--accent-text); }
+.expiry-status-expired { color: var(--danger); }
+.family-id-scanner { padding: 18px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+.member-demographics { display: grid; gap: 12px; margin: 16px 0; padding: 16px; border: 1px solid var(--border); border-radius: 10px; }
+.member-demographics legend { padding-inline: 6px; color: var(--ink); font-weight: 700; }
+.member-age-preview { margin: 0; color: var(--accent-text); font-weight: 700; }
+.member-age-alerts { margin-block: 22px; }
 .family-detail-heading { display: block; }
 .family-detail-heading > div:first-child { margin-block-end: 20px; }
 .family-summary { display: flex; justify-content: space-between; align-items: center; gap: 18px; padding: 20px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-soft); }

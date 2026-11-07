@@ -1,10 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { addMember, getFamily, listAllMembers, listCases, listFamilies, listMembers, type Family, type FamilyProfile, type FamilyMember, type Member, type CaseRecord } from '../../services/cases';
+import { getFamily, listAllMembers, listCases, listFamilies, listMembers, type Family, type FamilyProfile, type FamilyMember, type Member, type CaseRecord } from '../../services/cases';
 import { normalizeArabicSearch } from '../cases/arabicSearch';
 import { CASE_CATEGORIES } from '../cases/categories';
 import { FamilyForm } from './FamilyForm';
 import { FamilyFilesPanel } from './FamilyFilesPanel';
+import { FamilyMemberForm } from './FamilyMemberForm';
+import { ageOn } from './memberAge';
+import { cairoToday } from './idExpiry';
 
 export function FamilyListPage({ canWrite }: { canWrite: boolean }) {
   const [families, setFamilies] = useState<Family[]>([]);
@@ -121,9 +124,9 @@ export function FamilyDetailsPage({ canWrite }: { canWrite: boolean }) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
-  const [name, setName] = useState('');
-  const [relationship, setRelationship] = useState('');
-  const [busy, setBusy] = useState(false);
+  const [editingMemberId,setEditingMemberId]=useState<string|null>(null);
+  const [fileRefreshKey,setFileRefreshKey]=useState(0);
+  const today=cairoToday();
 
   async function refresh() {
     if (!id) return;
@@ -138,15 +141,6 @@ export function FamilyDetailsPage({ canWrite }: { canWrite: boolean }) {
     return () => { alive = false; };
   }, [id]);
 
-  async function submit(event: React.FormEvent) {
-    event.preventDefault();
-    if (!id) return;
-    setBusy(true); setError('');
-    try { await addMember(id, name.trim(), relationship.trim()); setName(''); setRelationship(''); await refresh(); }
-    catch { setError('تعذّر إضافة الفرد. راجع البيانات وحاول تاني.'); }
-    finally { setBusy(false); }
-  }
-
   return (
     <section className="page-card">
       <p><Link to="/families">رجوع لقائمة الأسر</Link></p>
@@ -157,19 +151,19 @@ export function FamilyDetailsPage({ canWrite }: { canWrite: boolean }) {
         <header className="page-heading family-detail-heading">
           <div><h1>ملف الأسرة</h1><div className="family-summary">
             <div><span className="family-code">{family.code}</span><h2>{family.name}</h2>
-              <div className="family-contact-summary">{family.contact_name&&<p>مسؤول الأسرة: {family.contact_name}</p>}{family.contact_age!==null&&<p>السن: {new Intl.NumberFormat('ar-EG').format(family.contact_age)} سنة</p>}{family.national_id&&<p>الرقم القومي: <bdi dir="ltr">{family.national_id}</bdi></p>}</div>
+              <div className="family-contact-summary">{family.contact_name&&<p>مسؤول الأسرة: {family.contact_name}</p>}{family.contact_age!==null&&<p>السن: {new Intl.NumberFormat('ar-EG').format(family.contact_age)} سنة</p>}{family.national_id&&<p>الرقم القومي: <bdi dir="ltr">{family.national_id}</bdi></p>}{family.national_id_expires_on&&<p>انتهاء البطاقة: <time dateTime={family.national_id_expires_on}>{new Intl.DateTimeFormat('ar-EG',{dateStyle:'long'}).format(new Date(`${family.national_id_expires_on}T12:00:00`))}</time></p>}</div>
               <div className="family-detail-phones">{[family.phone,family.phone_2,family.phone_3].map((phone,index)=>phone?<p key={index}>رقم التليفون {['١','٢','٣'][index]}: <bdi dir="ltr">{phone}</bdi></p>:null)}{![family.phone,family.phone_2,family.phone_3].some(Boolean)&&<p>مفيش رقم تليفون متسجل</p>}</div>
             </div>
           </div></div>
           {canWrite ? <div className="heading-actions"><button type="button" className="secondary" onClick={() => setEditing((value) => !value)}>{editing ? 'إلغاء التعديل' : 'تعديل بيانات الأسرة'}</button><Link className="primary-link" to={`/cases/new?family=${family.id}`}>إضافة حالة</Link></div> : null}
         </header>
         {editing ? <div className="section-block"><FamilyForm family={family} onSaved={() => { setEditing(false); void refresh().catch(() => setError('اتحفظت البيانات، بس تعذّر تحديث الملف.')); }} /></div> : null}
-        {family&&<FamilyFilesPanel familyId={family.id} canWrite={canWrite}/>}
+        {family&&<FamilyFilesPanel family={family} canWrite={canWrite} refreshKey={fileRefreshKey} onFamilyUpdated={()=>{void refresh().catch(()=>setError('اتحفظت البيانات، بس تعذّر تحديث ملف الأسرة.'));}}/>}
         <section className="section-block" aria-labelledby="family-notes-title"><h2 id="family-notes-title">ملاحظات الأسرة</h2><p className="family-notes">{family.notes||'مفيش ملاحظات متسجلة للأسرة.'}</p></section>
         <section className="section-block" aria-labelledby="family-members-title">
           <div className="section-heading"><h2 id="family-members-title">أفراد الأسرة</h2><span>{members.length} أفراد</span></div>
-          {members.length ? <ul className="record-list">{members.map((member) => <li key={member.person_id}><strong>{member.people.name}</strong><span className="muted-cell">{member.relationship}</span></li>)}</ul> : <div className="empty-state">لسه مفيش أفراد مضافين للأسرة.</div>}
-          {canWrite ? <form className="domain-form member-form" onSubmit={submit}><h3>إضافة فرد للأسرة</h3><div className="form-grid"><label>اسم الفرد<input required maxLength={200} value={name} onChange={(event) => setName(event.target.value)} /></label><label>صلة القرابة<input required maxLength={100} value={relationship} onChange={(event) => setRelationship(event.target.value)} /></label></div><button disabled={busy || !name.trim() || !relationship.trim()}>{busy ? 'جاري الحفظ…' : 'إضافة فرد'}</button></form> : null}
+          {members.length ? <ul className="record-list">{members.map((member) => <li key={member.person_id}><div><strong>{member.people.name}</strong><small>{member.relationship}{member.people.gender?` · ${member.people.gender==='female'?'بنت':'ولد'}`:''}{member.people.date_of_birth?` · العمر: ${new Intl.NumberFormat('ar-EG').format(ageOn(member.people.date_of_birth,today))} سنة`:''}</small>{editingMemberId===member.person_id&&id&&<FamilyMemberForm familyId={id} member={member} onAdded={async()=>{setFileRefreshKey(value=>value+1);await refresh();}}/>}</div>{canWrite&&<button type="button" className="secondary" aria-label={`تعديل بيانات السن ${member.people.name}`} onClick={()=>setEditingMemberId(current=>current===member.person_id?null:member.person_id)}>{editingMemberId===member.person_id?'إغلاق':'تعديل السن'}</button>}</li>)}</ul> : <div className="empty-state">لسه مفيش أفراد مضافين للأسرة.</div>}
+          {canWrite&&id ? <FamilyMemberForm familyId={id} onAdded={async()=>{setFileRefreshKey(value=>value+1);await refresh();}}/> : null}
         </section>
         <section className="section-block" aria-labelledby="family-cases-title">
           <div className="section-heading"><h2 id="family-cases-title">حالات الأسرة</h2><span>{cases.length} حالات</span></div>
