@@ -44,15 +44,17 @@ This is an owner-operated, non-production preview using **only the owner's newly
 
 ### 3. Set Cloudflare configuration and deploy
 
-In `charitable-preview` → **Settings → Variables and Secrets**, select the **Production** environment because `preview` is this project's production branch. Use only values from the verified Supabase test project. Do not add values to GitHub secrets, committed examples or local repository files for this hosted setup.
+In `charitable-preview` → **Settings → Builds & deployments → Build configuration**, set the two public `VITE_*` values as **Production build variables** because Vite embeds them during `npm run build`. The deployment summary must no longer say `Environment variables: None`. Use only values from the verified Supabase test project. Do not add the service-role key to build variables, GitHub secrets, committed files or browser code.
+
+Pages Functions runtime values are separate. Because this project's Wrangler config is the source of truth for plain runtime variables, keep the three `SUPABASE_*` values as **Production encrypted Secrets** in **Settings → Variables and Secrets**. `SUPABASE_SERVICE_ROLE_KEY` must remain secret and server-only; encrypting the URL and publishable key there is also acceptable. Do not put `VITE_*` values in the Functions-only secrets section as a replacement for build variables.
 
 | Name | Use and scope |
 | --- | --- |
-| `VITE_SUPABASE_URL` | Browser build configuration: the verified test-project URL. |
-| `VITE_SUPABASE_ANON_KEY` | Browser build configuration: that project's public anon key. RLS is required even though this key is public. |
-| `SUPABASE_URL` | Pages Functions runtime binding: the same test-project URL. |
-| `SUPABASE_ANON_KEY` | Pages Functions runtime binding: the same test-project anon key. |
-| `SUPABASE_SERVICE_ROLE_KEY` | **Encrypted Cloudflare runtime secret for Pages Functions only.** Enter it directly into Cloudflare's secret control, never as a `VITE_*` variable or browser/build configuration. Never expose its value in GitHub, repository files, browser code, logs or chat. |
+| `VITE_SUPABASE_URL` | Production build variable: the verified test-project URL. |
+| `VITE_SUPABASE_ANON_KEY` | Production build variable: that project's public publishable/anon key. RLS is required even though this key is public. |
+| `SUPABASE_URL` | Encrypted Pages Functions runtime secret: the same test-project URL. |
+| `SUPABASE_ANON_KEY` | Encrypted Pages Functions runtime secret: the same test-project publishable/anon key. |
+| `SUPABASE_SERVICE_ROLE_KEY` | **Encrypted Cloudflare runtime secret for Pages Functions only.** Never expose its value in GitHub, repository files, browser code, build variables, logs or chat. |
 
 The two `VITE_*` values are embedded in the JavaScript bundle at build time; changing them requires a fresh build/deployment. The server values belong to Functions; application build code must never read or print the service-role secret. Keep Cloudflare's separate **Preview** environment unconfigured while other-branch deployments are disabled. If those deployments are deliberately enabled later, review their code and environment scope first; this guide does not authorize sharing secrets with arbitrary branches.
 
