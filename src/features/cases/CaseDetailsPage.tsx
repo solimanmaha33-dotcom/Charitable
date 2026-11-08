@@ -39,11 +39,10 @@ export function CaseDetailsPage({ canWrite }: { canWrite: boolean }) {
  </section>;
  return <section className="page-card">
   <p><Link to="/cases">رجوع لقائمة الحالات</Link></p>
-  <header className="page-heading"><div><h1>{id==='new' ? 'إضافة حالة' : 'ملف الحالة'}</h1><p>{id==='new' ? 'اختار الأسرة وحدد نوع الحالة وارفق المستندات.' : 'بيانات الحالة والمستندات المرتبطة بيها.'}</p></div>{record && canWrite && !editing && <button type="button" className="secondary" onClick={()=>setEditing(true)}>تعديل الحالة</button>}</header>
+  <header className="page-heading"><div><h1>{id==='new' ? 'إضافة حالة' : 'ملف الحالة'}</h1><p>{id==='new' ? 'اختار الأسرة وحدد نوع الحالة وارفق المستندات.' : 'بيانات الحالة والمستندات المرتبطة بيها.'}</p></div>{record && !editing && <div className="heading-actions"><button type="button" className="secondary" onClick={()=>window.print()}>طباعة الحالة</button>{canWrite && <button type="button" className="secondary" onClick={()=>setEditing(true)}>تعديل الحالة</button>}</div>}</header>
   {error && <p className="error-message" role="alert">{error}</p>}{loading && id!=='new' && <p role="status">جاري تحميل الحالة…</p>}{!loading && !error && id!=='new' && !record && <div className="empty-state"><strong>الحالة مش موجودة</strong><Link to="/cases">ارجع لقائمة الحالات</Link></div>}{!loading && id==='new' && !canWrite && <p className="error-message">معندكش صلاحية لإضافة حالة.</p>}
   {record && !editing && <>
    <div className="family-summary"><div><span className="muted-cell">ملف الأسرة</span><h2><Link to={`/cases/family/${record.family_id}`}>{family?.code} — {family?.name}</Link></h2></div><div><span className="muted-cell">نوع الحالة</span><div>{record.case_categories.map(c=><span className="category-label" key={c.category}>{c.category}</span>)}</div></div></div>
-   <div className="print-actions"><button type="button" className="secondary" onClick={()=>window.print()}>طباعة الحالة</button></div>
    {family&&<CasePrintDocument family={family} record={record} members={caseMembers} attachments={attachments}/>}
    <section className="section-block"><h2>ملاحظات الحالة</h2><p>{record.notes || 'مفيش ملاحظات متسجلة.'}</p></section>
    <section className="section-block"><div className="section-heading"><h2>الصور والمستندات</h2>{canWrite && <button type="button" className="secondary" onClick={()=>setEditing(true)}>إضافة مستند أو تعديل الحالة</button>}</div>

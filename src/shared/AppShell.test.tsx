@@ -31,6 +31,7 @@ describe('Arabic application shell', () => {
     expect(main.closest('[lang="ar"][dir="rtl"]')).not.toBeNull();
     expect(screen.getByText('مرام الخير')).toBeVisible();
     expect(within(main).getByText('محتوى الصفحة')).toBeVisible();
+    expect(screen.getByRole('img', { name: 'شعار جمعية مرام الخير' })).toHaveAttribute('src', '/brand/maram-logo.png');
     const navigation = screen.getByRole('navigation', { name: 'القائمة الرئيسية' });
     expect(within(navigation).getByRole('link', { name: 'الحالات' })).toHaveAttribute('href', '/cases');
     expect(within(navigation).queryByRole('link', { name: 'الأسر' })).not.toBeInTheDocument();

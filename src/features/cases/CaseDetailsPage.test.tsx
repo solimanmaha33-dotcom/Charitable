@@ -38,7 +38,7 @@ function BackButton() { const navigate=useNavigate(); return <button onClick={()
 it('creates a blank case after navigating back from a loaded case', async () => {
  render(<MemoryRouter initialEntries={['/cases/new','/cases/c1']} initialIndex={1}><BackButton /><Routes><Route path="/cases/:id" element={<CaseDetailsPage canWrite />} /></Routes></MemoryRouter>);
  expect((await screen.findAllByText(/ملاحظة قديمة/))[0]).toBeVisible();
- expect(screen.getByRole('button',{name:'طباعة الحالة'})).toBeVisible();
+ expect(screen.getByRole('button',{name:'طباعة الحالة'}).closest('.page-heading')).not.toBeNull();
  fireEvent.click(screen.getByRole('button',{name:'رجوع'}));
  const notes=await screen.findByLabelText('ملاحظات الحالة');
  expect(notes).toHaveValue('');

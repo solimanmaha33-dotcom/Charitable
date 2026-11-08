@@ -5,6 +5,7 @@ test('signed-out Arabic shell fits a 360px phone and links to sign-in', async ({
   await expect(page.locator('html')).toHaveAttribute('lang', 'ar');
   await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
   await expect(page.getByText('نظام إدارة الجمعية')).toBeVisible();
+  await expect(page.getByRole('img', { name: 'شعار جمعية مرام الخير' })).toHaveAttribute('src', '/brand/maram-logo.png');
   await expect(page.getByRole('navigation')).toHaveCount(0);
   const loginLink = page.getByRole('link', { name: 'تسجيل الدخول', exact: true });
   await expect(loginLink).toBeVisible();
@@ -19,4 +20,15 @@ test('signed-out Arabic shell fits a 360px phone and links to sign-in', async ({
   await expect(page.getByRole('heading', { name: 'تسجيل الدخول' })).toBeVisible();
   await page.goto('/cases');
   await expect(page.getByRole('heading', { name: 'سجّل دخولك الأول' })).toBeVisible();
+});
+
+test('case print sheet appears in print media', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('main').evaluate((main) => main.insertAdjacentHTML('beforeend', '<article class="case-print-document">نموذج اختبار</article>'));
+  const sheet = page.locator('.case-print-document');
+  await expect(sheet).toHaveCSS('display', 'none');
+  await page.emulateMedia({ media: 'print' });
+  await expect(sheet).toHaveCSS('display', 'block');
+  await expect(sheet).toHaveCSS('visibility', 'visible');
+  await expect(page.locator('.app-header')).toHaveCSS('visibility', 'hidden');
 });

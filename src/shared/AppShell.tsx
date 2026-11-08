@@ -62,7 +62,7 @@ export function AppShell({ children, staff, onSignOut, logoutError }: { children
       <header className="app-header">
         <div className="header-content">
           <Link className="brand" to="/" aria-label="مرام الخير - الرئيسية">
-            <span className="brand-mark" aria-hidden="true">✿</span>
+            <img className="brand-logo" src="/brand/maram-logo.png" alt="شعار جمعية مرام الخير" />
             <span><strong className="product-name">مرام الخير</strong><small>نظام إدارة الجمعية</small></span>
           </Link>
           <div className="header-tools">

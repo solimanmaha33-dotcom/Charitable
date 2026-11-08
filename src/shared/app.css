@@ -120,7 +120,7 @@ button:disabled { cursor: wait; opacity: .65; }
 .sign-out-button { white-space: nowrap; }
 .header-error { max-width: 1500px; margin: 10px auto 0; }
 .brand { display: inline-flex; align-items: center; gap: 12px; text-decoration: none; color: var(--accent-text); }
-.brand-mark { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 12px; background: var(--green-900); color: #fff; font-size: 25px; line-height: 1; }
+.brand-logo { width: 54px; height: 54px; flex: 0 0 auto; object-fit: contain; background: #fff; border-radius: 50%; }
 .brand strong, .brand small { display: block; }
 .product-name { font-size: 1.16rem; line-height: 1.3; font-weight: 700; }
 .brand small { margin-top: 2px; color: var(--muted); font-size: .78rem; }
@@ -336,7 +336,7 @@ img, iframe { max-width: 100%; }
   @page { size: A4; margin: 14mm; }
   body * { visibility: hidden !important; }
   .case-print-document, .case-print-document * { visibility: visible !important; }
-  .case-print-document { display: block; position: absolute; inset: 0; width: 100%; color: #172d25; background: #fff; font: 10.5pt/1.65 'Noto Sans Arabic', Tahoma, sans-serif; }
+  .case-print-document { display: block !important; position: absolute; inset: 0; width: 100%; color: #172d25; background: #fff; font: 10.5pt/1.65 'Noto Sans Arabic', Tahoma, sans-serif; }
   .print-heading { display: grid; grid-template-columns: 110px 1fr auto; align-items: center; gap: 16px; padding-block-end: 14px; border-bottom: 2px solid #1c6446; }
   .print-heading img { width: 105px; height: 105px; object-fit: contain; }
   .print-heading h1 { margin: 0; color: #164e38; font-size: 19pt; }
