@@ -41,7 +41,7 @@ test('case attachment: staged image is uploaded and protected', async ({page}) =
   const login=await auth.auth.signInWithPassword({email,password});if(login.error || !login.data.session)throw login.error;
   const key=`sb-${new URL(status.API_URL).hostname.split('.')[0]}-auth-token`;
   await page.addInitScript(({key,session})=>localStorage.setItem(key,JSON.stringify(session)),{key,session:login.data.session});
-  await page.goto('/cases/new'); await page.getByLabel('الأسرة').selectOption(familyId);
+  await page.goto(`/cases/new?family=${familyId}`);
   await page.getByLabel('اختيار صور أو PDF').setInputFiles('tests/fixtures/arabic-sample.pdf');
   await expect(page.getByTitle('معاينة arabic-sample.pdf')).toBeVisible();
   await page.getByRole('button',{name:'إزالة arabic-sample.pdf'}).click();

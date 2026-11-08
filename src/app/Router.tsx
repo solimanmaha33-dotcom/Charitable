@@ -89,7 +89,6 @@ export function Router({ session, onStaffChange }: { session?: StaffProfile | nu
         <Route path="/families/:id" element={<LegacyFamilyRedirect />} />
         <Route path="/cases" element={!staff?.active ? <SignInPrompt /> : !allowed('/cases', 'casesRead') ? <section className="page-card"><h1>معندكش صلاحية للصفحة دي</h1></section> : <FamilyListPage canWrite={hasPermission(staff, 'casesWrite')} />} />
         <Route path="/cases/family/:id" element={!staff?.active ? <SignInPrompt /> : !allowed('/cases', 'casesRead') ? <section className="page-card"><h1>معندكش صلاحية للصفحة دي</h1></section> : <FamilyDetailsPage canWrite={hasPermission(staff, 'casesWrite')} />} />
-        <Route path="/cases/new" element={!staff?.active ? <SignInPrompt /> : !allowed('/cases', 'casesRead') ? <section className="page-card"><h1>معندكش صلاحية للصفحة دي</h1></section> : <CaseDetailsPage canWrite={hasPermission(staff, 'casesWrite')} />} />
         <Route path="/cases/:id" element={!staff?.active ? <SignInPrompt /> : !allowed('/cases', 'casesRead') ? <section className="page-card"><h1>معندكش صلاحية للصفحة دي</h1></section> : <CaseDetailsPage canWrite={hasPermission(staff, 'casesWrite')} />} />
         {applicationRoutes.map(([path, , permission]) => (
           <Route
