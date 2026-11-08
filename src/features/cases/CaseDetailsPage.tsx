@@ -5,6 +5,7 @@ import { normalizeArabicSearch } from './arabicSearch';
 import { FilePreview } from '../files/FilePreview';
 import { CaseForm } from './CaseForm';
 import { CasePrintDocument } from './CasePrintDocument';
+import { CaseIntakeForm } from './CaseIntakeForm';
 export function CaseDetailsPage({ canWrite }: { canWrite: boolean }) {
  const {id}=useParams(); const [params]=useSearchParams(); const navigate=useNavigate();
  const [families,setFamilies]=useState<Family[]>([]); const [members,setMembers]=useState<FamilyMember[]>([]); const [records,setRecords]=useState<CaseRecord[]>([]); const [record,setRecord]=useState<CaseRecord | null>(null); const [family,setFamily]=useState<FamilyProfile | null>(null); const [caseMembers,setCaseMembers]=useState<Member[]>([]);
@@ -39,7 +40,7 @@ export function CaseDetailsPage({ canWrite }: { canWrite: boolean }) {
  </section>;
  return <section className="page-card">
   <p><Link to="/cases">رجوع لقائمة الحالات</Link></p>
-  <header className="page-heading"><div><h1>{id==='new' ? 'إضافة حالة' : 'ملف الحالة'}</h1><p>{id==='new' ? 'اختار الأسرة وحدد نوع الحالة وارفق المستندات.' : 'بيانات الحالة والمستندات المرتبطة بيها.'}</p></div>{record && !editing && <div className="heading-actions"><button type="button" className="secondary" onClick={()=>window.print()}>طباعة الحالة</button>{canWrite && <button type="button" className="secondary" onClick={()=>setEditing(true)}>تعديل الحالة</button>}</div>}</header>
+  <header className="page-heading"><div><h1>{id==='new' ? 'إضافة حالة' : 'ملف الحالة'}</h1><p>{id==='new' ? 'سجّل ملف الأسرة والحالة مع بعض، خطوة بخطوة.' : 'بيانات الحالة والمستندات المرتبطة بيها.'}</p></div>{record && !editing && <div className="heading-actions"><button type="button" className="secondary" onClick={()=>window.print()}>طباعة الحالة</button>{canWrite && <button type="button" className="secondary" onClick={()=>setEditing(true)}>تعديل الحالة</button>}</div>}</header>
   {error && <p className="error-message" role="alert">{error}</p>}{loading && id!=='new' && <p role="status">جاري تحميل الحالة…</p>}{!loading && !error && id!=='new' && !record && <div className="empty-state"><strong>الحالة مش موجودة</strong><Link to="/cases">ارجع لقائمة الحالات</Link></div>}{!loading && id==='new' && !canWrite && <p className="error-message">معندكش صلاحية لإضافة حالة.</p>}
   {record && !editing && <>
    <div className="family-summary"><div><span className="muted-cell">ملف الأسرة</span><h2><Link to={`/cases/family/${record.family_id}`}>{family?.code} — {family?.name}</Link></h2></div><div><span className="muted-cell">نوع الحالة</span><div>{record.case_categories.map(c=><span className="category-label" key={c.category}>{c.category}</span>)}</div></div></div>
@@ -50,6 +51,7 @@ export function CaseDetailsPage({ canWrite }: { canWrite: boolean }) {
     {preview && <FilePreview key={previewId} file={preview} fileId={previewId} canWrite={canWrite}/>}
    </section>
   </>}
-  {!loading && canWrite && editing && (id==='new' || record) && <CaseForm key={id} families={families} record={id==='new' ? undefined : record ?? undefined} initialFamily={params.get('family') ?? undefined} onSaved={saved=>{setEditing(false); if(saved===id){void getCase(saved).then(async c=>{const [nextFamily,files,people]=await Promise.all([c ? getFamily(c.family_id) : Promise.resolve(null),listCaseFiles(saved),c ? listMembers(c.family_id):Promise.resolve([])]);setRecord(c);setFamily(nextFamily);setAttachments(files);setCaseMembers(people);}).catch(()=>setError('اتحفظت الحالة، بس تعذّر تحديث الملف.'));} else navigate(`/cases/${saved}`);}} />}
+  {!loading && canWrite && editing && id==='new' && !params.get('family') && <CaseIntakeForm onSaved={saved=>navigate(`/cases/${saved}`)} />}
+  {!loading && canWrite && editing && (id==='new' && params.get('family') || id!=='new' && record) && <CaseForm key={id} families={families} record={id==='new' ? undefined : record ?? undefined} initialFamily={params.get('family') ?? undefined} onSaved={saved=>{setEditing(false); if(saved===id){void getCase(saved).then(async c=>{const [nextFamily,files,people]=await Promise.all([c ? getFamily(c.family_id) : Promise.resolve(null),listCaseFiles(saved),c ? listMembers(c.family_id):Promise.resolve([])]);setRecord(c);setFamily(nextFamily);setAttachments(files);setCaseMembers(people);}).catch(()=>setError('اتحفظت الحالة، بس تعذّر تحديث الملف.'));} else navigate(`/cases/${saved}`);}} />}
  </section>;
 }

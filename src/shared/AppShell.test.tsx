@@ -47,7 +47,7 @@ describe('Arabic application shell', () => {
   it('shows the family workspace for signed-in managers', () => {
     render(<MemoryRouter initialEntries={['/families']}><Router session={{ id: 'synthetic', employeeCode: 'E1', displayName: 'Synthetic', role: 'manager', active: true, permissions: { casesRead: true, casesWrite: true, donationsRead: false, donationsWrite: false, assistantUse: false } }} /></MemoryRouter>);
     expect(screen.getByRole('heading', { name: 'الحالات' })).toBeVisible();
-    expect(screen.getByRole('button', { name: 'إضافة ملف أسرة' })).toBeVisible();
+    expect(screen.getByRole('link', { name: 'إضافة حالة جديدة' })).toHaveAttribute('href', '/cases/new');
   });
 
   it('exposes the employee login form', () => {

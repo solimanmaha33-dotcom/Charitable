@@ -29,16 +29,11 @@ describe('family directory', () => {
     expect(await screen.findByRole('heading', { name: 'الحالات' })).toBeVisible();
     expect(screen.getByText('خطوات الشغل')).toBeVisible();
     expect(screen.getAllByRole('link', { name: /فتح الملف/ })[0]).toHaveAttribute('href', '/cases/family/f1');
-    expect(screen.getByRole('link', { name: 'إضافة حالة' })).toHaveAttribute('href', '/cases/new');
-    expect(screen.getByRole('button', { name: 'إضافة ملف أسرة' })).toBeVisible();
+    expect(screen.getByRole('link', { name: 'إضافة حالة جديدة' })).toHaveAttribute('href', '/cases/new');
+    expect(screen.queryByRole('button', { name: 'إضافة ملف أسرة' })).not.toBeInTheDocument();
   });
 
-  it('opens the add-family form from the merged cases workspace shortcut', async () => {
-    render(<MemoryRouter initialEntries={['/cases?add=1']}><FamilyListPage canWrite /></MemoryRouter>);
-    expect(await screen.findByLabelText('اسم الأسرة')).toBeVisible();
-  });
-
-  it('searches by family member name and shows matching family record', async () => {
+    it('searches by family member name and shows matching family record', async () => {
     render(<MemoryRouter><FamilyListPage canWrite={false} /></MemoryRouter>);
     const search = await screen.findByRole('searchbox', { name: 'بحث عن حالة' });
     fireEvent.change(search, { target: { value: 'كريم' } });

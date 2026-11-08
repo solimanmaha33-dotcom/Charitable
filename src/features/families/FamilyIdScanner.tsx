@@ -29,7 +29,7 @@ export function FamilyIdScanner({family,onSaved}:{family:FamilyProfile;onSaved:(
   setBusy(true);setError('');setMessage('');
   const normalizedId=latinDigits(nationalId.trim());
   if(normalizedId&&!/^\d{14}$/.test(normalizedId)){setError('الرقم القومي لازم يكون ١٤ رقم.');setBusy(false);return;}
-  const input:FamilyProfileInput={name:family.name,contactName:family.contact_name??'',contactAge:family.contact_age,nationalId:normalizedId,nationalIdExpiresOn:expiresOn,phones:[family.phone??'',family.phone_2??'',family.phone_3??''],notes:family.notes};
+  const input:FamilyProfileInput={name:family.name,fatherName:family.father_name??'',motherName:family.mother_name??'',contactName:family.contact_name??'',contactRelationship:family.contact_relationship??'',contactAge:family.contact_age,nationalId:normalizedId,nationalIdExpiresOn:expiresOn,phones:[family.phone??'',family.phone_2??'',family.phone_3??''],notes:family.notes};
   try {
    await saveFamily(family.id,input);
   } catch {

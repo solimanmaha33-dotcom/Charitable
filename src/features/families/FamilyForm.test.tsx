@@ -11,9 +11,10 @@ it('saves primary contact, optional age and ID, three phones and a family note',
   const onSaved = vi.fn();
   render(<FamilyForm onSaved={onSaved} />);
   fireEvent.change(screen.getByLabelText('اسم الأسرة'), { target: { value: 'أسرة تجريبية' } });
-  fireEvent.change(screen.getByLabelText(/اسم مسؤول الأسرة/), { target: { value: 'أحمد' } });
-  fireEvent.change(screen.getByLabelText(/سن مسؤول الأسرة/), { target: { value: '42' } });
-  fireEvent.change(screen.getByLabelText(/الرقم القومي لمسؤول الأسرة/), { target: { value: '٢٩٠٠١٠١١٢٣٤٥٦٧' } });
+  fireEvent.change(screen.getByLabelText(/اسم المسؤول عن التربية/), { target: { value: 'أحمد' } });
+  fireEvent.change(screen.getByLabelText(/صلة قرابة المسؤول/), { target: { value: 'ابن' } });
+  fireEvent.change(screen.getByLabelText(/سن المسؤول عن التربية/), { target: { value: '42' } });
+  fireEvent.change(screen.getByLabelText(/الرقم القومي للمسؤول/), { target: { value: '٢٩٠٠١٠١١٢٣٤٥٦٧' } });
   fireEvent.change(screen.getByLabelText(/تاريخ انتهاء البطاقة/), { target: { value: '2027-01-15' } });
   fireEvent.change(screen.getByLabelText(/رقم التليفون ١/), { target: { value: '01000000001' } });
   fireEvent.change(screen.getByLabelText(/رقم التليفون ٢/), { target: { value: '01000000002' } });
@@ -21,7 +22,7 @@ it('saves primary contact, optional age and ID, three phones and a family note',
   fireEvent.change(screen.getByLabelText(/ملاحظات الأسرة/), { target: { value: 'ملاحظة تجريبية' } });
   fireEvent.click(screen.getByRole('button', { name: 'حفظ بيانات الأسرة' }));
   await waitFor(() => expect(save).toHaveBeenCalledWith(null, {
-    name: 'أسرة تجريبية', contactName: 'أحمد', contactAge: 42, nationalId: '29001011234567',
+    name: 'أسرة تجريبية', fatherName: '', motherName: '', contactName: 'أحمد', contactRelationship: 'ابن', contactAge: 42, nationalId: '29001011234567',
     nationalIdExpiresOn: '2027-01-15', phones: ['01000000001', '01000000002', '01000000003'], notes: 'ملاحظة تجريبية',
   }));
   expect(onSaved).toHaveBeenCalledWith('family-1');
@@ -30,7 +31,8 @@ it('saves primary contact, optional age and ID, three phones and a family note',
 it('keeps age and national ID optional but blocks invalid entered values', async () => {
   render(<FamilyForm onSaved={vi.fn()} />);
   fireEvent.change(screen.getByLabelText('اسم الأسرة'), { target: { value: 'أسرة تجريبية' } });
-  fireEvent.change(screen.getByLabelText(/سن مسؤول الأسرة/), { target: { value: '121' } });
+  fireEvent.change(screen.getByLabelText(/صلة قرابة المسؤول/), { target: { value: 'ابن' } });
+  fireEvent.change(screen.getByLabelText(/سن المسؤول عن التربية/), { target: { value: '121' } });
   fireEvent.click(screen.getByRole('button', { name: 'حفظ بيانات الأسرة' }));
   expect(await screen.findByText('السن لازم يكون من ٠ لحد ١٢٠ سنة.')).toBeVisible();
   expect(save).not.toHaveBeenCalled();
@@ -39,7 +41,7 @@ it('keeps age and national ID optional but blocks invalid entered values', async
 it('rejects a national ID unless it has 14 digits', async () => {
   render(<FamilyForm onSaved={vi.fn()} />);
   fireEvent.change(screen.getByLabelText('اسم الأسرة'), { target: { value: 'أسرة تجريبية' } });
-  fireEvent.change(screen.getByLabelText(/الرقم القومي لمسؤول الأسرة/), { target: { value: '12345' } });
+  fireEvent.change(screen.getByLabelText(/الرقم القومي للمسؤول/), { target: { value: '12345' } });
   fireEvent.click(screen.getByRole('button', { name: 'حفظ بيانات الأسرة' }));
   expect(await screen.findByText('الرقم القومي لازم يكون ١٤ رقم.')).toBeVisible();
   expect(save).not.toHaveBeenCalled();

@@ -19,8 +19,8 @@ test('manager creates an employee who signs in and creates a searchable family c
   if (!/^http:\/\/(127\.0\.0\.1|localhost):/.test(s.API_URL)) throw Error('Local Supabase required');
   const admin = createClient(s.API_URL, s.SERVICE_ROLE_KEY, { auth: { persistSession: false } });
   const sql = (input: string) => execFileSync('docker', ['exec', '-i', 'supabase_db_charitable-case-system', 'psql', '-U', 'postgres', '-d', 'postgres', '-v', 'ON_ERROR_STOP=1', '-At'], { input, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
-  const id = crypto.randomUUID(), managerCode = `M${id.slice(0, 8)}`, employeeCode = `E${id.slice(0, 8)}`, password = 'synthetic-password-123', email = `${id}@staff.invalid`;
-  let manager = '', employee = '', employeeAuth = '', family = '';
+  const id = crypto.randomUUID(), managerCode = `M${id.slice(0, 8)}`, employeeCode = `E${id.slice(0, 8)}`, familyName = `أسرة وهمية ${id.slice(0, 8)}`, password = 'synthetic-password-123', email = `${id}@staff.invalid`;
+  let manager = '', employee = '', employeeAuth = '', family = '', caseId = '';
   try {
     const u = await admin.auth.admin.createUser({ email, password, email_confirm: true }); if (u.error || !u.data.user) throw u.error; manager = u.data.user.id;
     sql(`insert into public.employees(id,employee_code,display_name,role) values ('${manager}','${managerCode}','Synthetic manager','manager'); insert into private.employee_auth values ('${manager}','${manager}');`);
@@ -33,14 +33,23 @@ test('manager creates an employee who signs in and creates a searchable family c
     await page.getByRole('button', {name:'تسجيل الخروج'}).click();
     await page.goto('/login'); await page.getByLabel('كود الموظف').fill(employeeCode); await page.getByLabel('كلمة السر').fill(password); await page.getByRole('button', { name: 'دخول', exact: true }).click();
     await expect(page.getByRole('button', { name: 'تسجيل الخروج' })).toBeVisible();
-    await page.goto('/cases'); await page.getByRole('button', { name: 'إضافة ملف أسرة' }).click(); await page.getByLabel('اسم الأسرة').fill(`أسرة وهمية ${id.slice(0, 8)}`); await page.getByRole('button', { name: 'حفظ بيانات الأسرة' }).click();
-    await expect(page).toHaveURL(/\/cases\/family\/[0-9a-f-]+$/); family = page.url().split('/').pop()!;
+    await page.goto('/cases'); await page.getByRole('link', { name: 'إضافة حالة جديدة' }).click();
+    await page.getByLabel('اسم الأسرة').fill(familyName);
+    await page.getByLabel('أرملة').check();
+    await page.getByLabel('اسم الأم').fill('أم وهمية');
+    await page.getByLabel('اسم المسؤول عن التربية').fill('أم وهمية');
+    await page.getByLabel('صلة قرابة المسؤول').fill('الأم');
+    await page.getByRole('button', { name: 'حفظ ملف الأسرة والحالة' }).click();
+    await expect(page).toHaveURL(/\/cases\/[0-9a-f-]+$/); caseId = page.url().split('/').pop()!;
+    const createdCase = await admin.from('cases').select('family_id').eq('id', caseId).single(); if (createdCase.error) throw createdCase.error; family = createdCase.data.family_id;
     const row = await admin.from('families').select('code').eq('id', family).single(); if (row.error) throw row.error;
     expect(row.data.code).toMatch(/^F-\d{4,}$/); await expect(page.getByText(row.data.code)).toBeVisible();
     await page.goto('/cases'); await page.getByLabel('بحث عن حالة').fill(row.data.code); await expect(page.getByRole('link', { name: new RegExp(row.data.code) })).toBeVisible();
   } finally {
     if (!employee) employee = sql(`select id from public.employees where employee_code='${employeeCode}'`);
     if (employee && !employeeAuth) employeeAuth = sql(`select auth_user_id from private.employee_auth where employee_id='${employee}'`);
+    if (!family) { const createdFamily = await admin.from('families').select('id').eq('name', familyName).maybeSingle(); family = createdFamily.data?.id ?? ''; }
+    if (caseId) await admin.from('cases').delete().eq('id', caseId);
     if (family) await admin.from('families').delete().eq('id', family);
     if (employee) sql(`delete from private.staff_audit where actor_id='${manager}' or employee_id='${employee}'; delete from private.employee_auth where employee_id='${employee}'; delete from public.employee_permissions where employee_id='${employee}'; delete from public.employees where id='${employee}';`);
     if (employeeAuth) await admin.auth.admin.deleteUser(employeeAuth);

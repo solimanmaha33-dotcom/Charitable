@@ -58,8 +58,7 @@ export function HomePage({ staff }: { staff: StaffProfile }) {
     actions.push({ label: 'الحالات', description: 'دور على حالة وافتح ملفها', to: '/cases' });
   }
   if (hasPermission(staff, 'casesWrite')) {
-    actions.unshift({ label: 'إضافة ملف حالة', description: 'سجّل ملف أسرة جديد وافتحه', to: '/cases?add=1', primary: true });
-    actions.push({ label: 'تسجيل حالة', description: 'أضف حالة وارفق صور أو ملفات', to: '/cases/new' });
+    actions.unshift({ label: 'إضافة حالة جديدة', description: 'سجّل الأسرة والحالة مع بعض', to: '/cases/new', primary: true });
   }
   if (canReadDonations) {
     actions.push({ label: 'التبرعات والكفالات', description: 'راجع التبرعات والدفعات الشهرية', to: '/donations' });

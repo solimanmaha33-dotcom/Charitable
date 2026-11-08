@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { getFamily, listAllMembers, listCases, listFamilies, listMembers, type Family, type FamilyProfile, type FamilyMember, type Member, type CaseRecord } from '../../services/cases';
 import { normalizeArabicSearch } from '../cases/arabicSearch';
 import { CASE_CATEGORIES, isCaseCategory } from '../cases/categories';
@@ -17,10 +17,7 @@ export function FamilyListPage({ canWrite }: { canWrite: boolean }) {
   const [category, setCategory] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
-  const [searchParams, setSearchParams] = useSearchParams();
-  const [adding, setAdding] = useState(searchParams.get('add') === '1');
   const tableWrap = useRef<HTMLDivElement>(null);
-  const navigate = useNavigate();
 
   useEffect(() => {
     let alive = true;
@@ -60,24 +57,14 @@ export function FamilyListPage({ canWrite }: { canWrite: boolean }) {
       tableWrap.current.scrollLeft = tableWrap.current.scrollWidth;
     }
   }, [loading, matches.length]);
-  useEffect(() => {
-    if (searchParams.get('add') === '1') {
-      setAdding(true);
-      searchParams.delete('add');
-      setSearchParams(searchParams, { replace: true });
-    }
-  }, [searchParams, setSearchParams]);
-
   return (
     <section className="page-card">
       <header className="page-heading">
         <div><h1>الحالات</h1><p>ابحث عن الأسرة وافتح ملفها لمراجعة أفرادها وحالاتها.</p></div>
-        <div className="heading-actions">{canWrite&&<Link className="primary-link" to="/cases/new">إضافة حالة</Link>}{canWrite ? <button type="button" className="secondary" onClick={() => setAdding((value) => !value)}>{adding ? 'إلغاء' : 'إضافة ملف أسرة'}</button> : null}</div>
+        {canWrite&&<Link className="primary-link" to="/cases/new">إضافة حالة جديدة</Link>}
       </header>
 
-      <aside className="staff-steps" aria-label="خطوات تسجيل الحالة"><strong>خطوات الشغل</strong><ol><li>لو الأسرة جديدة اضغط «إضافة ملف أسرة»، ولو مسجلة ابحث عنها.</li><li>افتح الملف وراجع بيانات الأسرة والأفراد.</li><li>أضف الحالة وارفع الصور أو ملفات PDF.</li><li>افتح الحالة واضغط «طباعة الحالة» عند الحاجة.</li></ol></aside>
-
-      {adding ? <div className="section-block"><FamilyForm onSaved={(id) => navigate(`/cases/family/${id}`)} /></div> : null}
+      <aside className="staff-steps" aria-label="خطوات تسجيل الحالة"><strong>خطوات الشغل</strong><ol><li>اضغط «إضافة حالة جديدة» وسجّل الأسرة والحالة مع بعض.</li><li>اكتب بيانات الأب والأم والمسؤول عن التربية.</li><li>أضف أرقام التليفون والملاحظات وارفع الصور أو ملفات PDF.</li><li>افتح الملف لمراجعة البيانات والطباعة.</li></ol></aside>
 
       <div className="toolbar">
         <label className="search-control">بحث عن حالة
@@ -153,7 +140,7 @@ export function FamilyDetailsPage({ canWrite }: { canWrite: boolean }) {
         <header className="page-heading family-detail-heading">
           <div><h1>ملف الحالة</h1><div className="family-summary">
             <div><span className="family-code">{family.code}</span><h2>{family.name}</h2>
-              <div className="family-contact-summary">{family.contact_name&&<p>مسؤول الأسرة: {family.contact_name}</p>}{family.contact_age!==null&&<p>السن: {new Intl.NumberFormat('ar-EG').format(family.contact_age)} سنة</p>}{family.national_id&&<p>الرقم القومي: <bdi dir="ltr">{family.national_id}</bdi></p>}{family.national_id_expires_on&&<p>انتهاء البطاقة: <time dateTime={family.national_id_expires_on}>{new Intl.DateTimeFormat('ar-EG',{dateStyle:'long'}).format(new Date(`${family.national_id_expires_on}T12:00:00`))}</time></p>}</div>
+              <div className="family-contact-summary">{family.father_name&&<p>الأب: {family.father_name}</p>}{family.mother_name&&<p>الأم: {family.mother_name}</p>}{family.contact_name&&<p>المسؤول عن التربية: {family.contact_name}{family.contact_relationship?` · صلة القرابة: ${family.contact_relationship}`:''}</p>}{family.contact_age!==null&&<p>سن المسؤول: {new Intl.NumberFormat('ar-EG').format(family.contact_age)} سنة</p>}{family.national_id&&<p>الرقم القومي للمسؤول: <bdi dir="ltr">{family.national_id}</bdi></p>}{family.national_id_expires_on&&<p>انتهاء البطاقة: <time dateTime={family.national_id_expires_on}>{new Intl.DateTimeFormat('ar-EG',{dateStyle:'long'}).format(new Date(`${family.national_id_expires_on}T12:00:00`))}</time></p>}</div>
               <div className="family-detail-phones">{[family.phone,family.phone_2,family.phone_3].map((phone,index)=>phone?<p key={index}>رقم التليفون {['١','٢','٣'][index]}: <bdi dir="ltr">{phone}</bdi></p>:null)}{![family.phone,family.phone_2,family.phone_3].some(Boolean)&&<p>مفيش رقم تليفون متسجل</p>}</div>
             </div>
           </div></div>

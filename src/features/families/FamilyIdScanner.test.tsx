@@ -6,7 +6,7 @@ const service=vi.hoisted(()=>({saveFamily:vi.fn(),uploadFamilyFile:vi.fn()}));
 vi.mock('../../services/cases',()=>service);
 vi.mock('../files/FilePreview',()=>({FilePreview:()=>null}));
 
-const profile=(national_id:string|null,national_id_expires_on:string|null)=>({id:'family-1',code:'F-0001',name:'أسرة',phone:null,phone_2:null,phone_3:null,contact_name:null,contact_age:null,national_id,national_id_expires_on,notes:''});
+const profile=(national_id:string|null,national_id_expires_on:string|null)=>({id:'family-1',code:'F-0001',name:'أسرة',phone:null,phone_2:null,phone_3:null,father_name:null,mother_name:null,contact_name:null,contact_relationship:null,contact_age:null,national_id,national_id_expires_on,notes:''});
 
 it('syncs scanner values when the saved family ID profile changes',()=>{
  const view=render(<FamilyIdScanner family={profile('29001011234567','2027-01-01')} onSaved={vi.fn()}/>);

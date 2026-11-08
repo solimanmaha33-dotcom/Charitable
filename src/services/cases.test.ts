@@ -41,8 +41,8 @@ it('loads only directory fields and all three phones, not national IDs',async()=
 });
 it('writes all supported family profile fields without replacing the family code',async()=>{
  rows.writes.length=0;
- await saveFamily(null,{name:'أسرة',contactName:'مسؤول',contactAge:42,nationalId:'29001011234567',nationalIdExpiresOn:'2027-01-15',phones:['0101','','0103'],notes:'ملاحظة'});
- expect(rows.writes).toEqual([{table:'families',mode:'insert',values:{name:'أسرة',phone:'0101',contact_name:'مسؤول',contact_age:42,national_id:'29001011234567',national_id_expires_on:'2027-01-15',phone_2:null,phone_3:'0103',notes:'ملاحظة'}}]);
+ await saveFamily(null,{name:'أسرة',fatherName:'أب',motherName:'أم',contactName:'مسؤول',contactRelationship:'الأم',contactAge:42,nationalId:'29001011234567',nationalIdExpiresOn:'2027-01-15',phones:['0101','','0103'],notes:'ملاحظة'});
+ expect(rows.writes).toEqual([{table:'families',mode:'insert',values:{name:'أسرة',phone:'0101',father_name:'أب',mother_name:'أم',contact_name:'مسؤول',contact_relationship:'الأم',contact_age:42,national_id:'29001011234567',national_id_expires_on:'2027-01-15',phone_2:null,phone_3:'0103',notes:'ملاحظة'}}]);
 });
 it('lists expiring families without requesting national ID numbers',async()=>{
  (rows.families as unknown as Record<string,unknown>[])[0]={id:'f0',code:'F-0',name:'أسرة قريبة الانتهاء',contact_name:'مسؤول',national_id_expires_on:'2027-01-15'};

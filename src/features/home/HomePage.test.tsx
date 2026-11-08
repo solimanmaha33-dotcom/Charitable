@@ -31,8 +31,7 @@ describe('home workspace', () => {
   it('shows practical family and case actions for a case worker without made-up counts', () => {
     render(<MemoryRouter><HomePage staff={staff} /></MemoryRouter>);
     expect(screen.getByRole('heading', { name: 'أهلاً بيك، سارة' })).toBeVisible();
-    expect(screen.getByRole('link', { name: /إضافة ملف حالة/ })).toHaveAttribute('href', '/cases?add=1');
-    expect(screen.getByRole('link', { name: /تسجيل حالة/ })).toHaveAttribute('href', '/cases/new');
+    expect(screen.getByRole('link', { name: /إضافة حالة جديدة/ })).toHaveAttribute('href', '/cases/new');
     expect(screen.queryByText(/أسرة مسجلة|حالة مفتوحة/)).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /التبرعات|المساعد/ })).not.toBeInTheDocument();
   });
@@ -102,7 +101,6 @@ describe('home workspace', () => {
   it('shows manager case creation shortcuts even when employee permission flags are unset', () => {
     const manager: StaffProfile = { ...staff, role: 'manager', permissions: { casesRead: false, casesWrite: false, donationsRead: false, donationsWrite: false, assistantUse: false } };
     render(<MemoryRouter><HomePage staff={manager} /></MemoryRouter>);
-    expect(screen.getByRole('link', { name: /إضافة ملف حالة/ })).toHaveAttribute('href', '/cases?add=1');
-    expect(screen.getByRole('link', { name: /تسجيل حالة/ })).toHaveAttribute('href', '/cases/new');
+    expect(screen.getByRole('link', { name: /إضافة حالة جديدة/ })).toHaveAttribute('href', '/cases/new');
   });
 });

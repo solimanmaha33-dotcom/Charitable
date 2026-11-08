@@ -3,8 +3,8 @@ import { validateDocument, openPdf } from '../features/files/documentText';
 import type { CaseCategory, StoredCaseCategory } from '../features/cases/categories';
 import type { MemberGender } from '../features/families/memberDemographics';
 export type Family = { id: string; code: string; name: string; phone: string | null; phone_2?: string | null; phone_3?: string | null };
-export type FamilyProfile = Family & { contact_name: string | null; contact_age: number | null; national_id: string | null; national_id_expires_on: string | null; notes: string };
-export type FamilyProfileInput = { name: string; contactName: string; contactAge: number | null; nationalId: string; nationalIdExpiresOn: string; phones: string[]; notes: string };
+export type FamilyProfile = Family & { father_name: string | null; mother_name: string | null; contact_name: string | null; contact_relationship: string | null; contact_age: number | null; national_id: string | null; national_id_expires_on: string | null; notes: string };
+export type FamilyProfileInput = { name: string; fatherName: string; motherName: string; contactName: string; contactRelationship: string; contactAge: number | null; nationalId: string; nationalIdExpiresOn: string; phones: string[]; notes: string };
 export type FamilyIdExpiry = { id:string; code:string; name:string; contact_name:string|null; national_id_expires_on:string };
 export type Member = { person_id: string; relationship: string; people: { name: string; gender:MemberGender|null; date_of_birth:string|null } };
 export type FamilyMember = Member & { family_id: string };
@@ -32,10 +32,10 @@ export async function listFamilies(): Promise<Family[]> {
 export const countFamilies=()=>countRows('families');
 export const countCases=()=>countRows('cases');
 export async function getFamily(id: string): Promise<FamilyProfile | null> {
- const {data,error}=await db().from('families').select('id,code,name,phone,phone_2,phone_3,contact_name,contact_age,national_id,national_id_expires_on,notes').eq('id',id).maybeSingle(); check(error); return data;
+ const {data,error}=await db().from('families').select('id,code,name,phone,phone_2,phone_3,father_name,mother_name,contact_name,contact_relationship,contact_age,national_id,national_id_expires_on,notes').eq('id',id).maybeSingle(); check(error); return data;
 }
 export async function saveFamily(id: string | null, input: FamilyProfileInput): Promise<string> {
- const values={name:input.name,phone:input.phones[0]||null,contact_name:input.contactName.trim()||null,contact_age:input.contactAge,national_id:input.nationalId||null,national_id_expires_on:input.nationalIdExpiresOn||null,phone_2:input.phones[1]||null,phone_3:input.phones[2]||null,notes:input.notes};
+ const values={name:input.name,phone:input.phones[0]||null,father_name:input.fatherName.trim()||null,mother_name:input.motherName.trim()||null,contact_name:input.contactName.trim()||null,contact_relationship:input.contactRelationship.trim()||null,contact_age:input.contactAge,national_id:input.nationalId||null,national_id_expires_on:input.nationalIdExpiresOn||null,phone_2:input.phones[1]||null,phone_3:input.phones[2]||null,notes:input.notes};
  const query = id ? db().from('families').update(values).eq('id',id) : db().from('families').insert(values);
  const {data,error}=await query.select('id').single(); check(error); if (!data) throw new Error('تعذّر حفظ الأسرة'); return data.id;
 }
