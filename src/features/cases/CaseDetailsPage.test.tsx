@@ -8,7 +8,8 @@ vi.mock('../../services/cases', () => ({
  listCaseFiles: vi.fn().mockResolvedValue([]),
  listCases: vi.fn().mockResolvedValue([{id:'c1',family_id:'f1',notes:'',case_categories:[{category:'أيتام'}]},{id:'c2',family_id:'f2',notes:'',case_categories:[{category:'وفاة'}]}]),
  getCase: vi.fn().mockResolvedValue({id:'c1',family_id:'f1',notes:'ملاحظة قديمة',case_categories:[{category:'أيتام'}]}),
- getFamily: vi.fn().mockResolvedValue({id:'f1',code:'F-0001',name:'إِبراهيم',phone:null}),
+ getFamily: vi.fn().mockResolvedValue({id:'f1',code:'F-0001',name:'إِبراهيم',phone:null,contact_name:null,contact_age:null,national_id:null,national_id_expires_on:null,notes:''}),
+ listMembers: vi.fn().mockResolvedValue([]),
  saveCase: vi.fn().mockResolvedValue('c2'),
  listAllMembers: vi.fn().mockResolvedValue([{family_id:'f1',person_id:'p1',relationship:'ابن',people:{name:'أَحمد'}}]),
 }));
@@ -36,12 +37,13 @@ it('shows case rows in an accessible directory and hides creation for read-only 
 function BackButton() { const navigate=useNavigate(); return <button onClick={()=>navigate(-1)}>رجوع</button>; }
 it('creates a blank case after navigating back from a loaded case', async () => {
  render(<MemoryRouter initialEntries={['/cases/new','/cases/c1']} initialIndex={1}><BackButton /><Routes><Route path="/cases/:id" element={<CaseDetailsPage canWrite />} /></Routes></MemoryRouter>);
- expect(await screen.findByText(/ملاحظة قديمة/)).toBeVisible();
+ expect((await screen.findAllByText(/ملاحظة قديمة/))[0]).toBeVisible();
+ expect(screen.getByRole('button',{name:'طباعة الحالة'})).toBeVisible();
  fireEvent.click(screen.getByRole('button',{name:'رجوع'}));
  const notes=await screen.findByLabelText('ملاحظات الحالة');
  expect(notes).toHaveValue('');
  expect(screen.getByLabelText('الأسرة')).toHaveValue('');
- expect(screen.getByLabelText('أيتام')).not.toBeChecked();
+ expect(screen.getByLabelText('يتيم الأم')).not.toBeChecked();
  fireEvent.change(screen.getByLabelText('الأسرة'),{target:{value:'f1'}});
  fireEvent.change(notes,{target:{value:'ملاحظة جديدة'}});
  fireEvent.click(screen.getByRole('button',{name:'حفظ الحالة'}));

@@ -1,21 +1,22 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { downloadCaseFile, listCaseFiles, type CaseFile, getCase, getFamily, listAllMembers, listCases, listFamilies, type CaseRecord, type Family, type FamilyMember } from '../../services/cases';
+import { downloadCaseFile, listCaseFiles, type CaseFile, getCase, getFamily, listAllMembers, listMembers, listCases, listFamilies, type CaseRecord, type FamilyProfile, type Family, type FamilyMember, type Member } from '../../services/cases';
 import { normalizeArabicSearch } from './arabicSearch';
 import { FilePreview } from '../files/FilePreview';
 import { CaseForm } from './CaseForm';
+import { CasePrintDocument } from './CasePrintDocument';
 export function CaseDetailsPage({ canWrite }: { canWrite: boolean }) {
  const {id}=useParams(); const [params]=useSearchParams(); const navigate=useNavigate();
- const [families,setFamilies]=useState<Family[]>([]); const [members,setMembers]=useState<FamilyMember[]>([]); const [records,setRecords]=useState<CaseRecord[]>([]); const [record,setRecord]=useState<CaseRecord | null>(null); const [family,setFamily]=useState<Family | null>(null);
+ const [families,setFamilies]=useState<Family[]>([]); const [members,setMembers]=useState<FamilyMember[]>([]); const [records,setRecords]=useState<CaseRecord[]>([]); const [record,setRecord]=useState<CaseRecord | null>(null); const [family,setFamily]=useState<FamilyProfile | null>(null); const [caseMembers,setCaseMembers]=useState<Member[]>([]);
  const [attachments,setAttachments]=useState<CaseFile[]>([]); const [preview,setPreview]=useState<File | null>(null); const [previewId,setPreviewId]=useState('');
  const [search,setSearch]=useState(''); const [error,setError]=useState(''); const [loading,setLoading]=useState(true); const [editing,setEditing]=useState(id==='new');
  const tableWrap=useRef<HTMLDivElement>(null);
  useEffect(()=>{
-  let alive=true; setLoading(true); setError(''); setRecord(null); setFamily(null); setAttachments([]); setPreview(null); setEditing(id==='new');
+  let alive=true; setLoading(true); setError(''); setRecord(null); setFamily(null); setCaseMembers([]); setAttachments([]); setPreview(null); setEditing(id==='new');
   async function load() {
    if (!id) { const [f,c,m]=await Promise.all([listFamilies(),listCases(),listAllMembers()]); if(alive){setFamilies(f);setRecords(c);setMembers(m);} }
    else if (id==='new') { const f=await listFamilies(); if(alive)setFamilies(f); }
-   else { const c=await getCase(id); const [f,options,files]=await Promise.all([c ? getFamily(c.family_id) : Promise.resolve(null),canWrite ? listFamilies() : Promise.resolve([]),c ? listCaseFiles(c.id) : Promise.resolve([])]); if(alive){setRecord(c);setFamily(f);setFamilies(options);setAttachments(files);} }
+   else { const c=await getCase(id); const [f,options,files,people]=await Promise.all([c ? getFamily(c.family_id) : Promise.resolve(null),canWrite ? listFamilies() : Promise.resolve([]),c ? listCaseFiles(c.id) : Promise.resolve([]),c ? listMembers(c.family_id) : Promise.resolve([])]); if(alive){setRecord(c);setFamily(f);setFamilies(options);setAttachments(files);setCaseMembers(people);} }
    if(alive)setLoading(false);
   }
   void load().catch(()=>{if(alive){setError('تعذّر تحميل الحالات.');setLoading(false);}}); return ()=>{alive=false;};
@@ -41,13 +42,15 @@ export function CaseDetailsPage({ canWrite }: { canWrite: boolean }) {
   <header className="page-heading"><div><h1>{id==='new' ? 'إضافة حالة' : 'ملف الحالة'}</h1><p>{id==='new' ? 'اختار الأسرة وحدد نوع الحالة وارفق المستندات.' : 'بيانات الحالة والمستندات المرتبطة بيها.'}</p></div>{record && canWrite && !editing && <button type="button" className="secondary" onClick={()=>setEditing(true)}>تعديل الحالة</button>}</header>
   {error && <p className="error-message" role="alert">{error}</p>}{loading && id!=='new' && <p role="status">جاري تحميل الحالة…</p>}{!loading && !error && id!=='new' && !record && <div className="empty-state"><strong>الحالة مش موجودة</strong><Link to="/cases">ارجع لقائمة الحالات</Link></div>}{!loading && id==='new' && !canWrite && <p className="error-message">معندكش صلاحية لإضافة حالة.</p>}
   {record && !editing && <>
-   <div className="family-summary"><div><span className="muted-cell">الأسرة</span><h2><Link to={`/families/${record.family_id}`}>{family?.code} — {family?.name}</Link></h2></div><div><span className="muted-cell">نوع الحالة</span><div>{record.case_categories.map(c=><span className="category-label" key={c.category}>{c.category}</span>)}</div></div></div>
+   <div className="family-summary"><div><span className="muted-cell">ملف الأسرة</span><h2><Link to={`/cases/family/${record.family_id}`}>{family?.code} — {family?.name}</Link></h2></div><div><span className="muted-cell">نوع الحالة</span><div>{record.case_categories.map(c=><span className="category-label" key={c.category}>{c.category}</span>)}</div></div></div>
+   <div className="print-actions"><button type="button" className="secondary" onClick={()=>window.print()}>طباعة الحالة</button></div>
+   {family&&<CasePrintDocument family={family} record={record} members={caseMembers} attachments={attachments}/>}
    <section className="section-block"><h2>ملاحظات الحالة</h2><p>{record.notes || 'مفيش ملاحظات متسجلة.'}</p></section>
    <section className="section-block"><div className="section-heading"><h2>الصور والمستندات</h2>{canWrite && <button type="button" className="secondary" onClick={()=>setEditing(true)}>إضافة مستند أو تعديل الحالة</button>}</div>
     {attachments.length ? <ul className="record-list">{attachments.map(file=><li key={file.id}><button type="button" className="secondary" onClick={()=>void downloadCaseFile(file).then(result=>{setPreview(result);setPreviewId(file.id);}).catch(()=>setError('تعذّر تحميل المرفق.'))}>{file.file_name}</button></li>)}</ul> : <div className="empty-state">مفيش صور أو مستندات مضافة للحالة.</div>}
     {preview && <FilePreview key={previewId} file={preview} fileId={previewId} canWrite={canWrite}/>}
    </section>
   </>}
-  {!loading && canWrite && editing && (id==='new' || record) && <CaseForm key={id} families={families} record={id==='new' ? undefined : record ?? undefined} initialFamily={params.get('family') ?? undefined} onSaved={saved=>{setEditing(false); if(saved===id){void getCase(saved).then(async c=>{setRecord(c);setFamily(c ? await getFamily(c.family_id) : null);setAttachments(await listCaseFiles(saved));}).catch(()=>setError('اتحفظت الحالة، بس تعذّر تحديث الملف.'));} else navigate(`/cases/${saved}`);}} />}
+  {!loading && canWrite && editing && (id==='new' || record) && <CaseForm key={id} families={families} record={id==='new' ? undefined : record ?? undefined} initialFamily={params.get('family') ?? undefined} onSaved={saved=>{setEditing(false); if(saved===id){void getCase(saved).then(async c=>{const [nextFamily,files,people]=await Promise.all([c ? getFamily(c.family_id) : Promise.resolve(null),listCaseFiles(saved),c ? listMembers(c.family_id):Promise.resolve([])]);setRecord(c);setFamily(nextFamily);setAttachments(files);setCaseMembers(people);}).catch(()=>setError('اتحفظت الحالة، بس تعذّر تحديث الملف.'));} else navigate(`/cases/${saved}`);}} />}
  </section>;
 }

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, Route, Routes } from 'react-router-dom';
+import { Link, Navigate, Route, Routes, useParams } from 'react-router-dom';
 import { StaffPage } from '../features/staff/StaffPage';
 import { HomePage } from '../features/home/HomePage';
 import { AssistantPanel } from '../features/assistant/AssistantPanel';
@@ -12,7 +12,7 @@ import {
   type EmployeePermission,
   type StaffProfile,
 } from '../features/auth/permissions';
-import { currentStaff, getSupabase, signOut } from '../services/supabase';
+import { currentStaff, getSupabase } from '../services/supabase';
 const applicationRoutes = [
   ['/', 'الرئيسية', null],
   ['/donations', 'التبرعات والكفالات', 'donationsRead'],
@@ -63,16 +63,6 @@ export function Router({ session, onStaffChange }: { session?: StaffProfile | nu
       window.clearInterval(timer);
     };
   }, [session]);
-  async function logout() {
-    try {
-      await signOut();
-      setVerified(null);
-      onStaffChange?.(null);
-      setError('');
-    } catch {
-      setError('تعذّر تسجيل الخروج. حاول تاني.');
-    }
-  }
   function allowed(path: string, permission: keyof EmployeePermission | null) {
     return (
       !!staff?.active &&
@@ -83,7 +73,6 @@ export function Router({ session, onStaffChange }: { session?: StaffProfile | nu
   }
   return (
     <>
-      {staff?.active ? <div className="session-actions"><button className="secondary" onClick={logout}>تسجيل الخروج</button></div> : null}
       {error ? <p className="error-message" role="alert">{error}</p> : null}
       <Routes>
         <Route
@@ -96,9 +85,12 @@ export function Router({ session, onStaffChange }: { session?: StaffProfile | nu
             />
           }
         />
-        {['/families', '/families/:id', '/cases', '/cases/:id'].map(path => (
-          <Route key={path} path={path} element={!staff?.active ? <SignInPrompt /> : !allowed(path, 'casesRead') ? <section className="page-card"><h1>معندكش صلاحية للصفحة دي</h1></section> : path === '/families' ? <FamilyListPage canWrite={hasPermission(staff, 'casesWrite')} /> : path === '/families/:id' ? <FamilyDetailsPage canWrite={hasPermission(staff, 'casesWrite')} /> : <CaseDetailsPage canWrite={hasPermission(staff, 'casesWrite')} />} />
-        ))}
+        <Route path="/families" element={<Navigate to="/cases" replace />} />
+        <Route path="/families/:id" element={<LegacyFamilyRedirect />} />
+        <Route path="/cases" element={!staff?.active ? <SignInPrompt /> : !allowed('/cases', 'casesRead') ? <section className="page-card"><h1>معندكش صلاحية للصفحة دي</h1></section> : <FamilyListPage canWrite={hasPermission(staff, 'casesWrite')} />} />
+        <Route path="/cases/family/:id" element={!staff?.active ? <SignInPrompt /> : !allowed('/cases', 'casesRead') ? <section className="page-card"><h1>معندكش صلاحية للصفحة دي</h1></section> : <FamilyDetailsPage canWrite={hasPermission(staff, 'casesWrite')} />} />
+        <Route path="/cases/new" element={!staff?.active ? <SignInPrompt /> : !allowed('/cases', 'casesRead') ? <section className="page-card"><h1>معندكش صلاحية للصفحة دي</h1></section> : <CaseDetailsPage canWrite={hasPermission(staff, 'casesWrite')} />} />
+        <Route path="/cases/:id" element={!staff?.active ? <SignInPrompt /> : !allowed('/cases', 'casesRead') ? <section className="page-card"><h1>معندكش صلاحية للصفحة دي</h1></section> : <CaseDetailsPage canWrite={hasPermission(staff, 'casesWrite')} />} />
         {applicationRoutes.map(([path, , permission]) => (
           <Route
             key={path}
@@ -128,4 +120,9 @@ export function Router({ session, onStaffChange }: { session?: StaffProfile | nu
       </Routes>
     </>
   );
+}
+
+function LegacyFamilyRedirect() {
+  const { id } = useParams();
+  return <Navigate to={`/cases/family/${id}`} replace />;
 }

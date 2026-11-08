@@ -16,7 +16,6 @@ function initialTheme(): Theme {
 
 const navigation = [
   ['/', 'الرئيسية', 'home'],
-  ['/families', 'الأسر', 'families'],
   ['/cases', 'الحالات', 'cases'],
   ['/donations', 'التبرعات والكفالات', 'donations'],
   ['/assistant', 'المساعد الذكي', 'assistant'],
@@ -26,7 +25,6 @@ const navigation = [
 function NavigationIcon({ name }: { name: (typeof navigation)[number][2] }) {
   const paths: Record<(typeof navigation)[number][2], ReactNode> = {
     home: <><path d="m3 10 9-7 9 7" /><path d="M5 9v11h14V9M9 20v-6h6v6" /></>,
-    families: <><circle cx="9" cy="8" r="3" /><path d="M3 20v-1a6 6 0 0 1 12 0v1" /><path d="M16 5a3 3 0 0 1 0 6m2 9v-1a6 6 0 0 0-3-5" /></>,
     cases: <><path d="M7 3h10v3h3v15H4V6h3z" /><path d="M8 11h8M8 15h8" /></>,
     donations: <><path d="M12 20s-8-4.6-8-10a4.5 4.5 0 0 1 8-2.8A4.5 4.5 0 0 1 20 10c0 5.4-8 10-8 10Z" /><path d="M3 21h18" /></>,
     assistant: <><path d="M4 4h7a4 4 0 0 1 4 4v12a4 4 0 0 0-4-4H4z" /><path d="M20 4h-1a4 4 0 0 0-4 4v12a4 4 0 0 1 4-4h1z" /></>,
@@ -35,7 +33,7 @@ function NavigationIcon({ name }: { name: (typeof navigation)[number][2] }) {
   return <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{paths[name]}</svg>;
 }
 
-export function AppShell({ children, staff }: { children: ReactNode; staff?: StaffProfile | null }) {
+export function AppShell({ children, staff, onSignOut, logoutError }: { children: ReactNode; staff?: StaffProfile | null; onSignOut?: () => void; logoutError?: string }) {
   const { pathname } = useLocation();
   const [theme, setTheme] = useState<Theme>(initialTheme);
   const loginPage = pathname === '/login';
@@ -52,7 +50,7 @@ export function AppShell({ children, staff }: { children: ReactNode; staff?: Sta
     : navigation.filter(([to]) => {
         if (!staff?.active) return false;
         if (to === '/') return true;
-        if (to === '/families' || to === '/cases') return hasPermission(staff, 'casesRead');
+        if (to === '/cases') return hasPermission(staff, 'casesRead');
         if (to === '/donations') return hasPermission(staff, 'donationsRead');
         if (to === '/assistant') return hasPermission(staff, 'assistantUse');
         if (to === '/staff') return staff.role !== 'employee';
@@ -72,10 +70,12 @@ export function AppShell({ children, staff }: { children: ReactNode; staff?: Sta
             <button type="button" className="theme-toggle secondary" aria-label={theme === 'dark' ? 'تفعيل الوضع النهاري' : 'تفعيل الوضع الليلي'} aria-pressed={theme === 'dark'} onClick={() => setTheme(value => value === 'dark' ? 'light' : 'dark')}>
               <span aria-hidden="true">{theme === 'dark' ? '☼' : '◐'}</span>{theme === 'dark' ? 'الوضع النهاري' : 'الوضع الليلي'}
             </button>
+            {staff?.active && onSignOut ? <button type="button" className="secondary sign-out-button" onClick={onSignOut}>تسجيل الخروج</button> : null}
             {!staff?.active ? <Link className="header-login" to="/login">تسجيل الدخول</Link> : null}
           </div>
         </div>
       </header>
+      {logoutError ? <p className="error-message header-error" role="alert">{logoutError}</p> : null}
       <div className={`app-layout${loginPage ? ' login-layout' : ''}${!loginPage && visibleNavigation.length === 0 ? ' no-navigation' : ''}`}>
         {!loginPage && visibleNavigation.length > 0 ? <nav className="app-navigation" aria-label="القائمة الرئيسية">
           <span className="navigation-caption">القائمة الرئيسية</span>

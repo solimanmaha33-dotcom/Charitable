@@ -12,6 +12,19 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals());
 
 describe('Arabic application shell', () => {
+  it('keeps one cases entry and places sign-out beside the theme control', () => {
+    const onSignOut = vi.fn();
+    const manager: StaffProfile={id:'gm',employeeCode:'GM-1',displayName:'مدير',role:'general_manager',active:true,permissions:{casesRead:true,casesWrite:true,donationsRead:false,donationsWrite:false,assistantUse:false}};
+    render(<MemoryRouter><AppShell staff={manager} onSignOut={onSignOut}><p>محتوى الصفحة</p></AppShell></MemoryRouter>);
+    const nav = screen.getByRole('navigation', { name: 'القائمة الرئيسية' });
+    expect(within(nav).getByRole('link', { name: 'الحالات' })).toBeVisible();
+    expect(within(nav).queryByRole('link', { name: 'الأسر' })).not.toBeInTheDocument();
+    const tools = screen.getByRole('button', { name: 'تسجيل الخروج' }).parentElement;
+    expect(within(tools!).getByRole('button', { name: /الوضع الليلي|الوضع النهاري/ })).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: 'تسجيل الخروج' }));
+    expect(onSignOut).toHaveBeenCalledOnce();
+  });
+
   it('gives its content Arabic language, RTL direction, and a named navigation', () => {
     render(<MemoryRouter><AppShell><p>محتوى الصفحة</p></AppShell></MemoryRouter>);
     const main = screen.getByRole('main');
@@ -19,7 +32,8 @@ describe('Arabic application shell', () => {
     expect(screen.getByText('مرام الخير')).toBeVisible();
     expect(within(main).getByText('محتوى الصفحة')).toBeVisible();
     const navigation = screen.getByRole('navigation', { name: 'القائمة الرئيسية' });
-    expect(within(navigation).getByRole('link', { name: 'الأسر' })).toHaveAttribute('href', '/families');
+    expect(within(navigation).getByRole('link', { name: 'الحالات' })).toHaveAttribute('href', '/cases');
+    expect(within(navigation).queryByRole('link', { name: 'الأسر' })).not.toBeInTheDocument();
     expect(within(navigation).queryByRole('link', { name: 'تسجيل الدخول' })).not.toBeInTheDocument();
   });
 
@@ -30,9 +44,9 @@ describe('Arabic application shell', () => {
   });
 
   it('shows the family workspace for signed-in managers', () => {
-    render(<MemoryRouter initialEntries={['/families']}><Router session={{ id: 'synthetic', employeeCode: 'E1', displayName: 'Synthetic', role: 'manager', active: true, permissions: { casesRead: false, casesWrite: false, donationsRead: false, donationsWrite: false, assistantUse: false } }} /></MemoryRouter>);
-    expect(screen.getByRole('heading', { name: 'الأسر' })).toBeVisible();
-    expect(screen.getByRole('button', { name: 'إضافة أسرة' })).toBeVisible();
+    render(<MemoryRouter initialEntries={['/families']}><Router session={{ id: 'synthetic', employeeCode: 'E1', displayName: 'Synthetic', role: 'manager', active: true, permissions: { casesRead: true, casesWrite: true, donationsRead: false, donationsWrite: false, assistantUse: false } }} /></MemoryRouter>);
+    expect(screen.getByRole('heading', { name: 'الحالات' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'إضافة ملف أسرة' })).toBeVisible();
   });
 
   it('exposes the employee login form', () => {
@@ -49,7 +63,8 @@ describe('Arabic application shell', () => {
     render(<MemoryRouter><AppShell staff={employee}><p>محتوى الصفحة</p></AppShell></MemoryRouter>);
     expect(screen.getByText('موظف')).toBeVisible();
     const navigation = screen.getByRole('navigation', { name: 'القائمة الرئيسية' });
-    expect(within(navigation).getByRole('link', { name: 'الأسر' })).toBeVisible();
+    expect(within(navigation).getByRole('link', { name: 'الحالات' })).toBeVisible();
+    expect(within(navigation).queryByRole('link', { name: 'الأسر' })).not.toBeInTheDocument();
     expect(within(navigation).getByRole('link', { name: 'المساعد الذكي' })).toBeVisible();
     expect(within(navigation).queryByRole('link', { name: 'التبرعات والكفالات' })).not.toBeInTheDocument();
     expect(within(navigation).queryByRole('link', { name: 'الموظفين' })).not.toBeInTheDocument();

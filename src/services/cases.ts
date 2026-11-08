@@ -1,6 +1,6 @@
 import { getSupabase } from './supabase';
 import { validateDocument, openPdf } from '../features/files/documentText';
-import type { CaseCategory } from '../features/cases/categories';
+import type { CaseCategory, StoredCaseCategory } from '../features/cases/categories';
 import type { MemberGender } from '../features/families/memberDemographics';
 export type Family = { id: string; code: string; name: string; phone: string | null; phone_2?: string | null; phone_3?: string | null };
 export type FamilyProfile = Family & { contact_name: string | null; contact_age: number | null; national_id: string | null; national_id_expires_on: string | null; notes: string };
@@ -9,7 +9,7 @@ export type FamilyIdExpiry = { id:string; code:string; name:string; contact_name
 export type Member = { person_id: string; relationship: string; people: { name: string; gender:MemberGender|null; date_of_birth:string|null } };
 export type FamilyMember = Member & { family_id: string };
 export type MemberAgeProfile=FamilyMember & {families:{name:string;code:string}};
-export type CaseRecord = { id: string; family_id: string; notes: string; case_categories: { category: CaseCategory }[] };
+export type CaseRecord = { id: string; family_id: string; notes: string; case_categories: { category: StoredCaseCategory }[] };
 function db() { const client = getSupabase(); if (!client) throw new Error('تعذّر الاتصال بقاعدة البيانات'); return client; }
 function check(error: { message: string } | null) { if (error) throw new Error(error.message); }
 async function countRows(table: 'families' | 'cases'): Promise<number> {

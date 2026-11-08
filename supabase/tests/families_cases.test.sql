@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(29);
+select plan(30);
 select has_table('public','families','families exist');
 select has_table('public','people','people exist');
 select has_table('public','family_members','members exist');
@@ -21,12 +21,13 @@ select throws_ok($$insert into public.families(name,code) values ('x','F-0001')$
 select throws_ok($$delete from public.families$$,'42501',null,'family code history cannot be deleted');
 select lives_ok($$select public.add_family_member((select id from public.families limit 1),'شخص وهمي','ابن')$$,'writer adds household member');
 select is((select count(*)::int from public.family_members),1,'membership saved');
-select lives_ok($$select public.save_case(null,(select id from public.families limit 1),'ملاحظات',array['هجر','أيتام'])$$,'writer adds case with multiple categories');
+select lives_ok($$select public.save_case(null,(select id from public.families limit 1),'ملاحظات',array['هجر','يتيم الأم'])$$,'writer adds case with multiple categories');
 select is((select count(*)::int from public.case_categories),2,'both categories persisted');
 select throws_ok($$select public.save_case(null,(select id from public.families limit 1),'',array['غير معروف'])$$,'23514',null,'unknown category rejected');
 select is((select count(*)::int from public.cases),1,'invalid case rolls back');
-select lives_ok($$select public.save_case((select id from public.cases limit 1),(select family_id from public.cases limit 1),'تم التعديل',array['وفاة','مطلقة'])$$,'writer updates a case');
-select is((select string_agg(category,',' order by category) from public.case_categories),'مطلقة,وفاة','case categories replaced together');
+select lives_ok($$select public.save_case((select id from public.cases limit 1),(select family_id from public.cases limit 1),'تم التعديل',array['يتيم الأب','مطلقة'])$$,'writer updates a case');
+select is((select string_agg(category,',' order by category) from public.case_categories),'مطلقة,يتيم الأب','case categories replaced together');
+select throws_ok($$select public.save_case(null,(select id from public.families limit 1),'',array['وفاة'])$$,'23514',null,'removed category rejected for new records');
 select throws_ok($$select public.save_case((select id from public.cases limit 1),(select family_id from public.cases limit 1),'lost',array['غير معروف'])$$,'23514',null,'invalid edit rejected');
 select is((select notes from public.cases limit 1),'تم التعديل','failed edit preserves original case');
 reset role;

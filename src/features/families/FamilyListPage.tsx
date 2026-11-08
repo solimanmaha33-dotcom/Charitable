@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { getFamily, listAllMembers, listCases, listFamilies, listMembers, type Family, type FamilyProfile, type FamilyMember, type Member, type CaseRecord } from '../../services/cases';
 import { normalizeArabicSearch } from '../cases/arabicSearch';
-import { CASE_CATEGORIES } from '../cases/categories';
+import { CASE_CATEGORIES, isCaseCategory } from '../cases/categories';
 import { FamilyForm } from './FamilyForm';
 import { FamilyFilesPanel } from './FamilyFilesPanel';
 import { FamilyMemberForm } from './FamilyMemberForm';
@@ -32,7 +32,7 @@ export function FamilyListPage({ canWrite }: { canWrite: boolean }) {
         setMembers(memberRows);
         setError('');
       })
-      .catch(() => { if (alive) setError('تعذّر تحميل الأسر. حاول تحدّث الصفحة.'); })
+      .catch(() => { if (alive) setError('تعذّر تحميل الحالات. حاول تحدّث الصفحة.'); })
       .finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
   }, []);
@@ -40,7 +40,7 @@ export function FamilyListPage({ canWrite }: { canWrite: boolean }) {
     const result = new Map<string, string[]>();
     for (const record of cases) {
       const values = result.get(record.family_id) ?? [];
-      for (const item of record.case_categories) if (!values.includes(item.category)) values.push(item.category);
+      for (const item of record.case_categories) if (isCaseCategory(item.category) && !values.includes(item.category)) values.push(item.category);
       result.set(record.family_id, values);
     }
     return result;
@@ -71,15 +71,17 @@ export function FamilyListPage({ canWrite }: { canWrite: boolean }) {
   return (
     <section className="page-card">
       <header className="page-heading">
-        <div><h1>الأسر</h1><p>دور على أسرة وافتح ملفها.</p></div>
-        {canWrite ? <button type="button" onClick={() => setAdding((value) => !value)}>{adding ? 'إلغاء الإضافة' : 'إضافة أسرة'}</button> : null}
+        <div><h1>الحالات</h1><p>ابحث عن الأسرة وافتح ملفها لمراجعة أفرادها وحالاتها.</p></div>
+        <div className="heading-actions">{canWrite&&<Link className="primary-link" to="/cases/new">إضافة حالة</Link>}{canWrite ? <button type="button" className="secondary" onClick={() => setAdding((value) => !value)}>{adding ? 'إلغاء' : 'إضافة ملف أسرة'}</button> : null}</div>
       </header>
 
-      {adding ? <div className="section-block"><FamilyForm onSaved={(id) => navigate(`/families/${id}`)} /></div> : null}
+      <aside className="staff-steps" aria-label="خطوات تسجيل الحالة"><strong>خطوات الشغل</strong><ol><li>لو الأسرة جديدة اضغط «إضافة ملف أسرة»، ولو مسجلة ابحث عنها.</li><li>افتح الملف وراجع بيانات الأسرة والأفراد.</li><li>أضف الحالة وارفع الصور أو ملفات PDF.</li><li>افتح الحالة واضغط «طباعة الحالة» عند الحاجة.</li></ol></aside>
+
+      {adding ? <div className="section-block"><FamilyForm onSaved={(id) => navigate(`/cases/family/${id}`)} /></div> : null}
 
       <div className="toolbar">
-        <label className="search-control">بحث عن أسرة
-          <input type="search" role="searchbox" aria-label="بحث عن أسرة" placeholder="اكتب الاسم أو الكود أو رقم التليفون" value={search} onChange={(event) => setSearch(event.target.value)} />
+        <label className="search-control">بحث عن حالة
+          <input type="search" role="searchbox" aria-label="بحث عن حالة" placeholder="اكتب اسم الأسرة أو الفرد أو الكود أو رقم التليفون" value={search} onChange={(event) => setSearch(event.target.value)} />
         </label>
         <label className="filter-control">نوع الحالة
           <select aria-label="نوع الحالة" value={category} onChange={(event) => setCategory(event.target.value)}>
@@ -90,22 +92,22 @@ export function FamilyListPage({ canWrite }: { canWrite: boolean }) {
       </div>
 
       {error ? <p className="error-message" role="alert">{error}</p> : null}
-      {loading ? <p className="empty-state" role="status">جاري تحميل الأسر…</p> : null}
-      {!loading && !error && families.length === 0 ? <div className="empty-state"><strong>لسه مفيش أسر مسجلة</strong>{canWrite ? 'ابدأ بإضافة أول أسرة.' : 'لما تتسجل أسر هتظهر هنا.'}</div> : null}
-      {!loading && !error && families.length > 0 && matches.length === 0 ? <div className="empty-state"><strong>ملقيناش أسر مطابقة</strong>جرّب كلمة تانية أو غيّر نوع الحالة.</div> : null}
+      {loading ? <p className="empty-state" role="status">جاري تحميل الحالات…</p> : null}
+      {!loading && !error && families.length === 0 ? <div className="empty-state"><strong>لسه مفيش ملفات حالات</strong>{canWrite ? 'ابدأ بإضافة ملف أسرة جديد.' : 'الملفات الجديدة هتظهر هنا.'}</div> : null}
+      {!loading && !error && families.length > 0 && matches.length === 0 ? <div className="empty-state"><strong>ملقيناش حالات مطابقة</strong>جرّب كلمة تانية أو غيّر نوع الحالة.</div> : null}
       {!loading && !error && matches.length > 0 ? (
         <>
-          <div className="table-caption">الأسر المعروضة: {matches.length}</div>
+          <div className="table-caption">ملفات الحالات المعروضة: {matches.length}</div>
           <div className="data-table-wrap" ref={tableWrap}>
-            <table className="data-table" aria-label="قائمة الأسر">
+            <table className="data-table" aria-label="قائمة الحالات">
               <thead><tr><th scope="col">كود الأسرة</th><th scope="col">اسم الأسرة</th><th scope="col">رقم التليفون</th><th scope="col">نوع الحالة</th><th scope="col"><span className="sr-only">فتح الملف</span></th></tr></thead>
               <tbody>{matches.map((family) => (
                 <tr key={family.id}>
                   <td><span className="family-code">{family.code}</span></td>
-                  <td><Link to={`/families/${family.id}`}>{family.name}</Link></td>
+                  <td><Link to={`/cases/family/${family.id}`}>{family.name}</Link></td>
                   <td>{[family.phone,family.phone_2,family.phone_3].filter((phone):phone is string=>!!phone).length ? <span className="family-list-phones">{[family.phone,family.phone_2,family.phone_3].filter((phone):phone is string=>!!phone).map(phone=><bdi dir="ltr" key={phone}>{phone}</bdi>)}</span> : <span className="muted-cell">مش متسجل</span>}</td>
                   <td>{(categoriesByFamily.get(family.id) ?? []).length ? (categoriesByFamily.get(family.id) ?? []).map((item) => <span className="category-label" key={item}>{item}</span>) : <span className="muted-cell">مفيش تصنيف</span>}</td>
-                  <td><Link className="table-action" to={`/families/${family.id}`}>فتح الملف</Link></td>
+                  <td><Link className="table-action" to={`/cases/family/${family.id}`}>فتح الملف</Link></td>
                 </tr>
               ))}</tbody>
             </table>
@@ -143,13 +145,13 @@ export function FamilyDetailsPage({ canWrite }: { canWrite: boolean }) {
 
   return (
     <section className="page-card">
-      <p><Link to="/families">رجوع لقائمة الأسر</Link></p>
+      <p><Link to="/cases">رجوع لقائمة الحالات</Link></p>
       {loading ? <p role="status">جاري تحميل ملف الأسرة…</p> : null}
       {error ? <p className="error-message" role="alert">{error}</p> : null}
-      {!loading && !family && !error ? <div className="empty-state"><strong>ملف الأسرة مش موجود</strong><Link to="/families">ارجع لقائمة الأسر</Link></div> : null}
+      {!loading && !family && !error ? <div className="empty-state"><strong>ملف الأسرة مش موجود</strong><Link to="/cases">ارجع لقائمة الحالات</Link></div> : null}
       {family ? <>
         <header className="page-heading family-detail-heading">
-          <div><h1>ملف الأسرة</h1><div className="family-summary">
+          <div><h1>ملف الحالة</h1><div className="family-summary">
             <div><span className="family-code">{family.code}</span><h2>{family.name}</h2>
               <div className="family-contact-summary">{family.contact_name&&<p>مسؤول الأسرة: {family.contact_name}</p>}{family.contact_age!==null&&<p>السن: {new Intl.NumberFormat('ar-EG').format(family.contact_age)} سنة</p>}{family.national_id&&<p>الرقم القومي: <bdi dir="ltr">{family.national_id}</bdi></p>}{family.national_id_expires_on&&<p>انتهاء البطاقة: <time dateTime={family.national_id_expires_on}>{new Intl.DateTimeFormat('ar-EG',{dateStyle:'long'}).format(new Date(`${family.national_id_expires_on}T12:00:00`))}</time></p>}</div>
               <div className="family-detail-phones">{[family.phone,family.phone_2,family.phone_3].map((phone,index)=>phone?<p key={index}>رقم التليفون {['١','٢','٣'][index]}: <bdi dir="ltr">{phone}</bdi></p>:null)}{![family.phone,family.phone_2,family.phone_3].some(Boolean)&&<p>مفيش رقم تليفون متسجل</p>}</div>

@@ -16,7 +16,7 @@ beforeEach(() => {
   ]);
   service.listCases.mockResolvedValue([
     { id: 'c1', family_id: 'f1', notes: '', case_categories: [{ category: 'أرملة' }] },
-    { id: 'c2', family_id: 'f2', notes: '', case_categories: [{ category: 'أيتام' }] },
+    { id: 'c2', family_id: 'f2', notes: '', case_categories: [{ category: 'يتيم الأب' }] },
   ]);
   service.listAllMembers.mockResolvedValue([
     { family_id: 'f1', person_id: 'p1', relationship: 'ابن', people: { name: 'كريم' } },
@@ -24,16 +24,25 @@ beforeEach(() => {
 });
 
 describe('family directory', () => {
-  it('opens the add-family form when opened from the home shortcut', async () => {
-    render(<MemoryRouter initialEntries={['/families?add=1']}><FamilyListPage canWrite /></MemoryRouter>);
+  it('shows the family and case work together under the cases section with simple steps', async () => {
+    render(<MemoryRouter initialEntries={['/cases']}><FamilyListPage canWrite /></MemoryRouter>);
+    expect(await screen.findByRole('heading', { name: 'الحالات' })).toBeVisible();
+    expect(screen.getByText('خطوات الشغل')).toBeVisible();
+    expect(screen.getAllByRole('link', { name: /فتح الملف/ })[0]).toHaveAttribute('href', '/cases/family/f1');
+    expect(screen.getByRole('link', { name: 'إضافة حالة' })).toHaveAttribute('href', '/cases/new');
+    expect(screen.getByRole('button', { name: 'إضافة ملف أسرة' })).toBeVisible();
+  });
+
+  it('opens the add-family form from the merged cases workspace shortcut', async () => {
+    render(<MemoryRouter initialEntries={['/cases?add=1']}><FamilyListPage canWrite /></MemoryRouter>);
     expect(await screen.findByLabelText('اسم الأسرة')).toBeVisible();
   });
 
   it('searches by family member name and shows matching family record', async () => {
     render(<MemoryRouter><FamilyListPage canWrite={false} /></MemoryRouter>);
-    const search = await screen.findByRole('searchbox', { name: 'بحث عن أسرة' });
+    const search = await screen.findByRole('searchbox', { name: 'بحث عن حالة' });
     fireEvent.change(search, { target: { value: 'كريم' } });
-    expect(await screen.findByRole('link', { name: 'أسرة أم أحمد' })).toHaveAttribute('href', '/families/f1');
+    expect(await screen.findByRole('link', { name: 'أسرة أم أحمد' })).toHaveAttribute('href', '/cases/family/f1');
     expect(screen.queryByText('أسرة محمود')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'إضافة أسرة' })).not.toBeInTheDocument();
   });
@@ -41,28 +50,28 @@ describe('family directory', () => {
   it('filters by a current case category', async () => {
     render(<MemoryRouter><FamilyListPage canWrite /></MemoryRouter>);
     const filter = await screen.findByRole('combobox', { name: 'نوع الحالة' });
-    fireEvent.change(filter, { target: { value: 'أيتام' } });
+    fireEvent.change(filter, { target: { value: 'يتيم الأب' } });
     expect(await screen.findByText('أسرة محمود')).toBeVisible();
     await waitFor(() => expect(screen.queryByText('أسرة أم أحمد')).not.toBeInTheDocument());
-    const table = screen.getByRole('table', { name: 'قائمة الأسر' });
-    expect(within(table).getByText('أيتام')).toBeVisible();
+    const table = screen.getByRole('table', { name: 'قائمة الحالات' });
+    expect(within(table).getByText('يتيم الأب')).toBeVisible();
   });
 
   it('finds families by their unique code and phone number', async () => {
     render(<MemoryRouter><FamilyListPage canWrite={false} /></MemoryRouter>);
-    const search = await screen.findByRole('searchbox', { name: 'بحث عن أسرة' });
+    const search = await screen.findByRole('searchbox', { name: 'بحث عن حالة' });
     fireEvent.change(search, { target: { value: 'F-1002' } });
-    expect(await screen.findByRole('link', { name: 'أسرة محمود' })).toHaveAttribute('href', '/families/f2');
+    expect(await screen.findByRole('link', { name: 'أسرة محمود' })).toHaveAttribute('href', '/cases/family/f2');
     fireEvent.change(search, { target: { value: '0100 111' } });
-    expect(await screen.findByRole('link', { name: 'أسرة أم أحمد' })).toHaveAttribute('href', '/families/f1');
+    expect(await screen.findByRole('link', { name: 'أسرة أم أحمد' })).toHaveAttribute('href', '/cases/family/f1');
     expect(screen.queryByText('أسرة محمود')).not.toBeInTheDocument();
   });
 
   it('finds a family by its third phone number', async () => {
     render(<MemoryRouter><FamilyListPage canWrite={false} /></MemoryRouter>);
-    const search = await screen.findByRole('searchbox', { name: 'بحث عن أسرة' });
+    const search = await screen.findByRole('searchbox', { name: 'بحث عن حالة' });
     fireEvent.change(search, { target: { value: '0100 555' } });
-    expect(await screen.findByRole('link', { name: 'أسرة محمود' })).toHaveAttribute('href', '/families/f2');
+    expect(await screen.findByRole('link', { name: 'أسرة محمود' })).toHaveAttribute('href', '/cases/family/f2');
     expect(screen.queryByText('أسرة أم أحمد')).not.toBeInTheDocument();
   });
 });

@@ -1,13 +1,14 @@
 import { expect, test } from '@playwright/test';
 
-test('desktop navigation remains usable and fits the viewport', async ({ page }) => {
+test('desktop signed-out shell fits the viewport and protects the cases page', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/');
   await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
-  await expect(page.getByRole('link', { name: 'الأسر', exact: true })).toBeVisible();
+  await expect(page.getByRole('navigation')).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'تسجيل الدخول', exact: true })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(1440);
-  await page.getByRole('link', { name: 'الأسر', exact: true }).click();
-  await expect(page).toHaveURL('/families');
+  await page.goto('/cases');
+  await expect(page.getByRole('heading', { name: 'سجّل دخولك الأول' })).toBeVisible();
 });
 
 import { createClient } from '@supabase/supabase-js';
@@ -32,11 +33,11 @@ test('manager creates an employee who signs in and creates a searchable family c
     await page.getByRole('button', {name:'تسجيل الخروج'}).click();
     await page.goto('/login'); await page.getByLabel('كود الموظف').fill(employeeCode); await page.getByLabel('كلمة السر').fill(password); await page.getByRole('button', { name: 'دخول', exact: true }).click();
     await expect(page.getByRole('button', { name: 'تسجيل الخروج' })).toBeVisible();
-    await page.goto('/families'); await page.getByRole('button', { name: 'إضافة أسرة' }).click(); await page.getByLabel('اسم الأسرة').fill(`أسرة وهمية ${id.slice(0, 8)}`); await page.getByRole('button', { name: 'حفظ بيانات الأسرة' }).click();
-    await expect(page).toHaveURL(/\/families\/[0-9a-f-]+$/); family = page.url().split('/').pop()!;
+    await page.goto('/cases'); await page.getByRole('button', { name: 'إضافة ملف أسرة' }).click(); await page.getByLabel('اسم الأسرة').fill(`أسرة وهمية ${id.slice(0, 8)}`); await page.getByRole('button', { name: 'حفظ بيانات الأسرة' }).click();
+    await expect(page).toHaveURL(/\/cases\/family\/[0-9a-f-]+$/); family = page.url().split('/').pop()!;
     const row = await admin.from('families').select('code').eq('id', family).single(); if (row.error) throw row.error;
-    expect(row.data.code).toMatch(/^F-\d{4,}$/); await expect(page.getByRole('heading', { name: new RegExp(row.data.code) })).toBeVisible();
-    await page.goto('/families'); await page.getByLabel('بحث بالاسم أو الكود').fill(row.data.code); await expect(page.getByRole('link', { name: new RegExp(row.data.code) })).toBeVisible();
+    expect(row.data.code).toMatch(/^F-\d{4,}$/); await expect(page.getByText(row.data.code)).toBeVisible();
+    await page.goto('/cases'); await page.getByLabel('بحث عن حالة').fill(row.data.code); await expect(page.getByRole('link', { name: new RegExp(row.data.code) })).toBeVisible();
   } finally {
     if (!employee) employee = sql(`select id from public.employees where employee_code='${employeeCode}'`);
     if (employee && !employeeAuth) employeeAuth = sql(`select auth_user_id from private.employee_auth where employee_id='${employee}'`);
