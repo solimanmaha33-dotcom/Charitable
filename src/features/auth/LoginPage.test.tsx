@@ -28,3 +28,15 @@ it('submits employee code and password and shows a generic failure', async () =>
   });
   expect(screen.getByRole('alert')).toHaveTextContent('تعذّر تسجيل الدخول');
 });
+
+it('shows the server lockout instructions after too many attempts for one employee code', async () => {
+  vi.stubGlobal('fetch', async () => Response.json(
+    { error: 'محاولات دخول كتير غلط للحساب ده.. استنى شوية أو ارجع لمدير النظام' },
+    { status: 429 },
+  ));
+  render(<MemoryRouter><LoginPage onSignedIn={() => {}} /></MemoryRouter>);
+  fireEvent.change(screen.getByLabelText('كود الموظف'), { target: { value: 'E0001' } });
+  fireEvent.change(screen.getByLabelText('كلمة السر'), { target: { value: 'wrong-password' } });
+  fireEvent.click(screen.getByRole('button', { name: 'دخول' }));
+  await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('محاولات دخول كتير غلط للحساب ده'));
+});

@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(5);
+select plan(6);
 insert into auth.users(id) values ('62000000-0000-0000-0000-000000000001');
 insert into auth.sessions(id,user_id,created_at,updated_at) values ('72000000-0000-0000-0000-000000000001','62000000-0000-0000-0000-000000000001',now(),now());
 insert into public.employees(id,employee_code,display_name,role) values ('82000000-0000-0000-0000-000000000001','ARSEARCH','Synthetic','employee');
@@ -10,12 +10,14 @@ insert into public.families(id,name,phone) values ('92000000-0000-0000-0000-0000
 insert into public.case_file_categories(family_id,category) values ('92000000-0000-0000-0000-000000000001','أرملة');
 insert into public.donations(id,donation_type,kind,amount,description,received_on) values ('92000000-0000-0000-0000-000000000003','cash','cash',1234.56,'','2026-01-02');
 insert into public.donations(id,donation_type,kind,quantity,unit,description,received_on) values ('92000000-0000-0000-0000-000000000004','in_kind_food','in_kind',1,'كجم','وهمي','2026-01-02');
+insert into public.donations(id,donation_type,kind,amount,description,received_on,voided_at,voided_by,void_reason) values ('92000000-0000-0000-0000-000000000005','cash','cash',765.43,'تبرع ملغي','2026-01-03',now(),'82000000-0000-0000-0000-000000000001','اتلغى للاختبار');
 select set_config('request.jwt.claims','{"sub":"62000000-0000-0000-0000-000000000001","session_id":"72000000-0000-0000-0000-000000000001","role":"authenticated"}',true);
 set local role authenticated;
 select is((select count(*)::int from public.assistant_search_cases('أرملة') where id='92000000-0000-0000-0000-000000000001'),1,'Arabic category question finds its case file');
 select ok((select count(*)<=10 from public.assistant_search_cases('أرملة')),'general search stays bounded');
 select is((select count(*)::int from public.assistant_search_donations('ما التبرعات النقدية؟') where kind='cash' and amount=1234.56),1,'Arabic cash matches empty-description cash');
 select is((select count(*)::int from public.assistant_search_donations('ما التبرعات النقدية؟') where kind='in_kind'),0,'cash question excludes unrelated in-kind donations');
+select is((select count(*)::int from public.assistant_search_donations('ما التبرعات النقدية؟') where amount=765.43),0,'assistant donation search excludes canceled records');
 reset role;
 update public.employee_permissions set cases_read=false,donations_read=false where employee_id='82000000-0000-0000-0000-000000000001';
 set local role authenticated;

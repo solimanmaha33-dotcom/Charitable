@@ -10,6 +10,12 @@ import {
 const failure = {
   error: 'تعذّر تسجيل الدخول. راجع الكود وكلمة السر وحاول تاني.',
 };
+const lockout = {
+  error: 'محاولات دخول كتير غلط للحساب ده.. استنى شوية أو ارجع لمدير النظام',
+};
+const sourceLockout = {
+  error: 'محاولات دخول كتير من نفس الشبكة.. استنى شوية وحاول تاني',
+};
 async function digest(value: string) {
   const bytes = await crypto.subtle.digest(
     'SHA-256',
@@ -32,20 +38,26 @@ export async function onRequestPost({
     return json(failure, 400);
   try {
     const admin = adminClient(env);
-    // PostgreSQL counters are atomic across Pages isolates; code and trusted Cloudflare IP are independent buckets.
+    // Keep both limits: one account cannot be guessed repeatedly, and cycling
+    // through employee codes cannot bypass the aggregate source limit.
     const ip = request.headers.get('CF-Connecting-IP') || 'local';
+    const [codeHash, ipHash] = await Promise.all([
+      digest(input.employeeCode),
+      digest(ip),
+    ]);
     const limits = await Promise.all([
       admin.rpc('consume_login_attempt', {
-        bucket: `code:${await digest(input.employeeCode)}`,
+        bucket: `code:${codeHash}`,
         maximum: 10,
       }),
       admin.rpc('consume_login_attempt', {
-        bucket: `ip:${await digest(ip)}`,
+        bucket: `ip:${ipHash}`,
         maximum: 100,
       }),
     ]);
-    if (limits.some((result) => result.error)) return json(failure, 503);
-    if (limits.some((result) => !result.data)) return json(failure, 429);
+    if (limits.some((limit) => limit.error)) return json(failure, 503);
+    if (!limits[1].data) return json(sourceLockout, 429);
+    if (!limits[0].data) return json(lockout, 429);
     const lookup = await admin.rpc('lookup_staff_login', {
       code: input.employeeCode,
     });

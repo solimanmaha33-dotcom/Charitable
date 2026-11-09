@@ -13,12 +13,12 @@ test('signed-in employee without case access is denied by the page and direct AP
   const user=await admin.auth.admin.createUser({email,password,email_confirm:true}); if(user.error || !user.data.user) throw user.error ?? new Error('missing user'); userId=user.data.user.id;
   const sql=`insert into public.employees(id,employee_code,display_name,role) values ('${userId}','N${userId.slice(0,8)}','Synthetic no access','employee'); insert into private.employee_auth(employee_id,auth_user_id) values ('${userId}','${userId}');`;
   execFileSync('docker',['exec','-i','supabase_db_charitable-case-system','psql','-U','postgres','-d','postgres','-v','ON_ERROR_STOP=1'],{input:sql,stdio:['pipe','pipe','pipe']});
-  const family=await admin.from('families').insert({name:'أسرة سرية وهمية'}).select('id').single(); if(family.error) throw family.error; familyId=family.data.id;
+  const family=await admin.from('families').insert({name:'أسرة سرية وهمية',phone:'01010000005'}).select('id').single(); if(family.error) throw family.error; familyId=family.data.id;
   const record=await admin.from('cases').insert({family_id:familyId,notes:'ملاحظة سرية وهمية'}).select('id').single(); if(record.error) throw record.error; caseId=record.data.id;
   const signedIn=await auth.auth.signInWithPassword({email,password}); if(signedIn.error || !signedIn.data.session) throw signedIn.error ?? new Error('missing session');
   const token=signedIn.data.session.access_token;
   const api=await fetch(`${status.API_URL}/rest/v1/cases?id=eq.${caseId}&select=id,notes`,{headers:{apikey:status.ANON_KEY,authorization:`Bearer ${token}`}});
-  expect(api.status).toBe(200); expect(await api.json()).toEqual([]);
+  expect(api.status).toBe(403);
   const key=`sb-${new URL(status.API_URL).hostname.split('.')[0]}-auth-token`;
   await page.addInitScript(({key,session})=>localStorage.setItem(key,JSON.stringify(session)),{key,session:signedIn.data.session});
   await page.goto(`/cases/${caseId}`);

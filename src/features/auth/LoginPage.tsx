@@ -17,8 +17,8 @@ export function LoginPage({ onSignedIn }: { onSignedIn: () => void }) {
       );
       onSignedIn();
       navigate('/');
-    } catch {
-      setError('تعذّر تسجيل الدخول. راجع الكود وكلمة السر وحاول تاني.');
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'تعذّر تسجيل الدخول. راجع الكود وكلمة السر وحاول تاني.');
     } finally {
       setPending(false);
     }

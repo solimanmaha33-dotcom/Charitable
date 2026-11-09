@@ -53,10 +53,11 @@ it('saves the complete profile and categories through one atomic RPC', async () 
       father_name: 'أب', mother_name: 'أم', contact_name: 'المسؤولة', contact_relationship: 'الأم', contact_age: 40,
       national_id: '29001011234567', national_id_expires_on: '2027-01-01', phone: '01012345678', phone_2: '01098765432', phone_3: '1234567890',
       notes: 'ملاحظات', address: 'عنوان', monthly_income: 1200, health_condition: 'متابعة', branch_area: 'الفرع',
-      file_status: 'موقوف', status_reason: 'مراجعة الأوراق',
+      file_status: 'موقوف', status_reason: 'مراجعة الأوراق', next_review_date: null,
       father_national_id: null, mother_national_id: null, father_health_condition: null, mother_health_condition: null,
       father_health_status: null, mother_health_status: null,
       father_employment_status: null, mother_employment_status: 'يعمل', father_occupation: null, mother_occupation: 'خياطة',
+      father_date_of_birth: null, father_gender: null, mother_date_of_birth: null, mother_gender: null, contact_date_of_birth: null, contact_gender: null,
     },
     p_categories: ['هجر'],
   } }]);

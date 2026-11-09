@@ -1,5 +1,18 @@
 import { getSupabase } from './supabase';
 
+export type CaseBranch = { id: string; name: string };
+
+const firstBranches = ['القاهرة - المرج', 'الفيوم - جبل النجار'];
+
+function sortBranches(branches: CaseBranch[]): CaseBranch[] {
+  return branches.sort((left, right) => {
+    const leftIndex = firstBranches.indexOf(left.name);
+    const rightIndex = firstBranches.indexOf(right.name);
+    if (leftIndex >= 0 || rightIndex >= 0) return (leftIndex < 0 ? Number.MAX_SAFE_INTEGER : leftIndex) - (rightIndex < 0 ? Number.MAX_SAFE_INTEGER : rightIndex);
+    return left.name.localeCompare(right.name, 'ar');
+  });
+}
+
 function db() {
   const client = getSupabase();
   if (!client) throw new Error('تعذّر الاتصال بقاعدة البيانات');
@@ -12,16 +25,16 @@ function check(error: { message: string; code?: string } | null) {
   throw new Error(error.message || 'تعذّر حفظ الفرع');
 }
 
-export async function listBranches(): Promise<string[]> {
-  const { data, error } = await db().from('case_branches').select('name').order('name');
+export async function listBranches(): Promise<CaseBranch[]> {
+  const { data, error } = await db().from('case_branches').select('id,name').eq('is_active', true).order('name');
   check(error);
-  const firstBranches = ['القاهرة - المرج', 'الفيوم - جبل النجار'];
-  return (data ?? []).map((row) => row.name as string).sort((left, right) => {
-    const leftIndex = firstBranches.indexOf(left);
-    const rightIndex = firstBranches.indexOf(right);
-    if (leftIndex >= 0 || rightIndex >= 0) return (leftIndex < 0 ? Number.MAX_SAFE_INTEGER : leftIndex) - (rightIndex < 0 ? Number.MAX_SAFE_INTEGER : rightIndex);
-    return left.localeCompare(right, 'ar');
-  });
+  return sortBranches((data ?? []) as CaseBranch[]);
+}
+
+export async function listInactiveBranches(): Promise<CaseBranch[]> {
+  const { data, error } = await db().from('case_branches').select('id,name').eq('is_active', false).order('name');
+  check(error);
+  return sortBranches((data ?? []) as CaseBranch[]);
 }
 
 export async function addBranch(name: string): Promise<void> {
@@ -32,7 +45,14 @@ export async function addBranch(name: string): Promise<void> {
   check(error);
 }
 
-export async function removeBranch(name: string): Promise<void> {
-  const { error } = await db().from('case_branches').delete().eq('name', name);
+export async function deactivateBranch(branchId: string): Promise<void> {
+  const { data, error } = await db().from('case_branches').update({ is_active: false }).eq('id', branchId).eq('is_active', true).select('id').maybeSingle();
   check(error);
+  if (!data) throw new Error('الفرع مش موجود أو متوقف بالفعل');
+}
+
+export async function reactivateBranch(branchId: string): Promise<void> {
+  const { data, error } = await db().from('case_branches').update({ is_active: true }).eq('id', branchId).eq('is_active', false).select('id').maybeSingle();
+  check(error);
+  if (!data) throw new Error('الفرع مش موجود أو شغال بالفعل');
 }

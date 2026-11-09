@@ -13,6 +13,9 @@ vi.mock('../../services/cases', () => ({
   listCaseFileHistory: vi.fn().mockResolvedValue([{id:'h1',family_id:'f1',legacy_case_id:'old',notes:'متابعة سابقة',created_at:'2025-01-01',source:'قديم'}]),
   listAllMembers: vi.fn().mockResolvedValue([]), saveCaseFile: vi.fn().mockResolvedValue('f1'), archiveCaseFile: vi.fn().mockResolvedValue(undefined),
 }));
+vi.mock('../../services/disbursements',()=>({DISBURSEMENT_TYPES:['كفالة شهرية','مساعدة موسمية','علاج','عيني','طوارئ'],listCaseDisbursements:vi.fn().mockResolvedValue([])}));
+const branchServiceState = vi.hoisted(() => ({ reactivateBranch: vi.fn().mockResolvedValue(undefined) }));
+vi.mock('../../services/branches',()=>({listBranches:vi.fn().mockResolvedValue([{id:'branch-1',name:'فرع وسط البلد'}]),listInactiveBranches:vi.fn().mockResolvedValue([{id:'branch-old',name:'فرع محفوظ'}]),reactivateBranch:branchServiceState.reactivateBranch}));
 beforeEach(() => vi.clearAllMocks());
 function route(path='/cases/f1', canWrite=true) { return <MemoryRouter initialEntries={[path]}><Routes><Route path="/cases/:id" element={<CaseDetailsPage canWrite={canWrite} />} /></Routes></MemoryRouter>; }
 
@@ -26,7 +29,22 @@ it('shows one canonical case file with status, profile fields, members, attachme
   expect(screen.getByText('28001011234567')).toBeVisible();expect(screen.getByText('29001011234567')).toBeVisible();
   expect(screen.getAllByText('يعمل — خياطة')[0]).toBeVisible();expect(screen.getByText(/حالة العمل: يعمل — تمريض/)).toBeVisible();
   expect(screen.getByRole('button', { name: 'طباعة الحالة' })).toBeVisible();
+  expect(await screen.findByRole('heading',{name:'سجل المساعدات المنصرفة'})).toBeVisible();
   expect(document.querySelector('.case-print-document')).toHaveTextContent('مكان ختم الجمعية');
+});
+
+it('highlights the member matched from case search and scrolls their row into view',async()=>{
+ render(route('/cases/f1?matchedMember=p1#member-p1',false));
+ const match=await screen.findByText('مطابقة البحث');
+ expect(match.closest('li')).toHaveAttribute('id','member-p1');
+ expect(match.closest('li')).toHaveClass('matched-member');
+});
+
+it('highlights the parent matched by a case search',async()=>{
+ render(route('/cases/f1?matchedContact=mother#contact-mother',false));
+ const match=await screen.findByText('مطابقة البحث');
+ expect(match.closest('div')).toHaveAttribute('id','contact-mother');
+ expect(match.closest('div')).toHaveClass('matched-member');
 });
 
 it('requires a reason when changing a file to held or rejected', async () => {
@@ -36,6 +54,15 @@ it('requires a reason when changing a file to held or rejected', async () => {
   fireEvent.submit(screen.getByRole('button', { name: 'حفظ التعديلات' }).closest('form')!);
   expect(await screen.findByRole('alert')).toHaveTextContent('اكتب سبب إيقاف أو رفض الملف.');
   expect(saveCaseFile).not.toHaveBeenCalled();
+});
+
+it('does not change an existing case file branch when a branch is reactivated', async () => {
+  render(route());
+  fireEvent.click(await screen.findByRole('button', { name: 'تعديل الملف' }));
+  fireEvent.change(await screen.findByLabelText('الفرع أو المنطقة'), { target: { value: '__manage_branches__' } });
+  fireEvent.click(await screen.findByRole('button', { name: 'إعادة تشغيل فرع فرع محفوظ' }));
+  await waitFor(() => expect(branchServiceState.reactivateBranch).toHaveBeenCalledWith('branch-old'));
+  expect(screen.getByLabelText('الفرع أو المنطقة')).toHaveValue('فرع وسط البلد');
 });
 
 it('redirects an old case ID to its current single file', async () => {

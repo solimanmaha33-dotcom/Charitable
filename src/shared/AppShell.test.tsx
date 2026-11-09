@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { StaffProfile } from '../features/auth/permissions';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -75,6 +75,14 @@ describe('Arabic application shell', () => {
     render(<MemoryRouter initialEntries={['/login']}><AppShell staff={null}><p>تسجيل الدخول</p></AppShell></MemoryRouter>);
     expect(screen.queryByRole('navigation', { name: 'القائمة الرئيسية' })).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'تسجيل الدخول' })).toHaveAttribute('href', '/login');
+  });
+
+  it('shows the global offline warning and hides it again when connection returns',()=>{
+    render(<MemoryRouter><AppShell staff={null}><p>سجّل دخولك</p></AppShell></MemoryRouter>);
+    act(()=>window.dispatchEvent(new Event('offline')));
+    expect(screen.getByRole('status')).toHaveTextContent('النت فاصل دلوقتي.. ما تقفلش الصفحة واستنى لما يرجع عشان البيانات اللي كتبتها ما تضيعش');
+    act(()=>window.dispatchEvent(new Event('online')));
+    expect(screen.queryByText('النت فاصل دلوقتي.. ما تقفلش الصفحة واستنى لما يرجع عشان البيانات اللي كتبتها ما تضيعش')).not.toBeInTheDocument();
   });
 
   it('uses the full content width when a signed-out visitor has no navigation rail', () => {

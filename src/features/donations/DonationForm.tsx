@@ -1,10 +1,11 @@
 import { useState, type FormEvent } from 'react';
-import { saveDonation, utcToday, type Donor } from '../../services/donations';
+import { saveDonation, type Donor } from '../../services/donations';
+import { cairoToday } from '../../shared/cairoDate';
 import { donationTypes } from './donationTypes';
 export function DonationForm({donors,onSaved}:{donors:Donor[];onSaved:()=>Promise<void>}) {
  const [donor,setDonor]=useState('');const [type,setType]=useState('cash');const [kind,setKind]=useState<'cash'|'in_kind'>('cash');
  const [amount,setAmount]=useState('');const [quantity,setQuantity]=useState('');const [unit,setUnit]=useState('');const [description,setDescription]=useState('');
- const [date,setDate]=useState(utcToday);const [busy,setBusy]=useState(false);const [error,setError]=useState('');
+ const [date,setDate]=useState(cairoToday);const [busy,setBusy]=useState(false);const [error,setError]=useState('');
  async function submit(e:FormEvent) {
   e.preventDefault();setBusy(true);setError('');
   try {await saveDonation({donor_id:donor||null,donation_type:type,kind,amount:kind==='cash'?Number(amount):null,quantity:kind==='in_kind'?Number(quantity):null,unit:kind==='in_kind'?unit.trim():null,description:description.trim(),received_on:date});setAmount('');setQuantity('');setDescription('');await onSaved();}

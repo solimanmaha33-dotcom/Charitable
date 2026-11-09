@@ -2,6 +2,7 @@ import {act,fireEvent,render,screen} from '@testing-library/react';
 import {expect,it,vi} from 'vitest';
 import {FieldSuggestions} from './FieldSuggestions';
 it('requires a separate explicit action to apply a suggestion',async()=>{const apply=vi.fn();render(<FieldSuggestions text="أسرة تحتاج علاج" onApply={apply}/>);expect(apply).not.toHaveBeenCalled();expect(screen.getByText('أسرة تحتاج علاج')).toBeInTheDocument();fireEvent.click(screen.getByRole('button',{name:'اقتراح حقول'}));expect(apply).not.toHaveBeenCalled();});
+it('shows the Arabic review guidance above extracted field suggestions',()=>{render(<FieldSuggestions text="الرقم القومي 29001011234567" onApply={()=>true}/>);expect(screen.getByText('دي البيانات اللي اتقرت من المستند.. راجعها وعدل أي حاجة غلط قبل الحفظ')).toBeVisible();});
 it('clears suggestions after the draft changes and ignores late results',async()=>{
  let resolve!:(value:unknown)=>void; const api=await import('./api');const spy=vi.spyOn(api,'postAssistant');spy.mockResolvedValueOnce({suggestions:[{field:'notes',value:'قديم',evidence:'علاج'}]}).mockImplementationOnce(()=>new Promise(r=>{resolve=r}));
  const apply=vi.fn();const {rerender}=render(<FieldSuggestions text="أسرة تحتاج علاج" onApply={apply}/>);fireEvent.click(screen.getByRole('button',{name:'اقتراح حقول'}));expect(await screen.findByDisplayValue('قديم')).toBeInTheDocument();rerender(<FieldSuggestions text="نص جديد" onApply={apply}/>);expect(screen.queryByDisplayValue('قديم')).not.toBeInTheDocument();

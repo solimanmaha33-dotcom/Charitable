@@ -7,11 +7,11 @@ const service = vi.hoisted(() => ({ listCaseFiles: vi.fn(), listAllMembers: vi.f
 vi.mock('../../services/cases', () => service);
 beforeEach(() => {
   service.listCaseFiles.mockResolvedValue([
-    { id:'f1',code:'F-1001',phone:'0100 111 2222',phone_2:null,phone_3:null,father_name:'أحمد',mother_name:'منى',contact_name:null,address:'شارع النيل',branch_area:'فرع الجيزة',file_status:'نشط',status_reason:null,case_file_categories:[{category:'أرملة'}] },
+    { id:'f1',code:'F-1001',phone:'0100 111 2222',phone_2:null,phone_3:null,father_name:'أحمد',father_national_id:'28001011234567',mother_name:'منى',mother_national_id:'29001011234567',contact_name:null,address:'شارع النيل',branch_area:'فرع الجيزة',file_status:'نشط',status_reason:null,case_file_categories:[{category:'أرملة'}] },
     { id:'f2',code:'F-1002',phone:'0100 333 4444',phone_2:null,phone_3:'0100 555 6666',father_name:'محمود',mother_name:'سعاد',contact_name:null,address:'شارع آخر',branch_area:'فرع القاهرة',file_status:'موقوف',status_reason:'مراجعة',case_file_categories:[{category:'يتيم الأب'},{category:'كبار السن (٦٠ سنة فأكثر)'}] },
   ]);
   service.listAllMembers.mockResolvedValue([
-    {family_id:'f1',person_id:'p1',relationship:'ابن',people:{name:'كريم',gender:'male',date_of_birth:'2010-01-01'}},
+    {family_id:'f1',person_id:'p1',relationship:'ابن',people:{name:'كريم',national_id:'32402291234577',gender:'male',date_of_birth:'2010-01-01'}},
     {family_id:'f2',person_id:'p2',relationship:'بنت',people:{name:'مريم',gender:'female',date_of_birth:'2012-01-01'}},
     {family_id:'f2',person_id:'p3',relationship:'أب',people:{name:'محمود',gender:'male',date_of_birth:'1960-01-01'}},
   ]);
@@ -39,6 +39,22 @@ describe('one-file case directory', () => {
       fireEvent.change(search,{target:{value:term}}); expect(screen.getByRole('link',{name:/F-1001/})).toBeVisible();
       expect(screen.queryByRole('link',{name:/F-1002/})).not.toBeInTheDocument();
     }
+  });
+  it('searches parent and child national IDs and links the matched child row for highlighting',async()=>{
+    render(<MemoryRouter><CaseListPage canWrite={false}/></MemoryRouter>);
+    const search=await screen.findByRole('searchbox',{name:'بحث عن حالة'});
+    fireEvent.change(search,{target:{value:'٢٩٠٠١٠١١٢٣٤٥٦٧'}});
+    expect(screen.getByRole('link',{name:/F-1001/})).toBeVisible();
+    fireEvent.change(search,{target:{value:'٣٢٤٠٢٢٩١٢٣٤٥٧٧'}});
+    expect(screen.getByRole('link',{name:/فتح الملف/})).toHaveAttribute('href','/cases/f1?matchedMember=p1#member-p1');
+  });
+  it('links parent and spouse searches to the matching profile row for highlighting',async()=>{
+    render(<MemoryRouter><CaseListPage canWrite={false}/></MemoryRouter>);
+    const search=await screen.findByRole('searchbox',{name:'بحث عن حالة'});
+    fireEvent.change(search,{target:{value:'أحمد'}});
+    expect(screen.getByRole('link',{name:/F-1001/})).toHaveAttribute('href','/cases/f1?matchedContact=father#contact-father');
+    fireEvent.change(search,{target:{value:'29001011234567'}});
+    expect(screen.getByRole('link',{name:/F-1001/})).toHaveAttribute('href','/cases/f1?matchedContact=mother#contact-mother');
   });
   it('filters by profile category and file status', async () => {
     render(<MemoryRouter><CaseListPage canWrite /></MemoryRouter>);

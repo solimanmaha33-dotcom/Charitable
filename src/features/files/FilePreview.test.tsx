@@ -13,3 +13,11 @@ it('ignores OCR completed for a previously selected attachment',async()=>{
 it('invalidates pending OCR even if the same file is selected again',async()=>{
  let resolve!:(v:never)=>void;vi.mocked(extractDocumentText).mockImplementation(()=>new Promise(r=>{resolve=r}));const a=new File(['a'],'a.png',{type:'image/png'}),b=new File(['b'],'b.png',{type:'image/png'});const onText=vi.fn();const {rerender}=render(<FilePreview file={a} fileId="a" onText={onText}/>);fireEvent.click(screen.getByRole('button',{name:'استخراج النص'}));rerender(<FilePreview file={b} fileId="b" onText={onText}/>);rerender(<FilePreview file={a} fileId="a" onText={onText}/>);await act(async()=>resolve({pages:[{page:1,text:'قديم'}]} as never));expect(onText).not.toHaveBeenCalled();expect(screen.queryByLabelText('النص المستخرج للمراجعة')).not.toBeInTheDocument();
 });
+
+it('shows staff the Arabic review guidance before using OCR text',async()=>{
+ vi.mocked(extractDocumentText).mockResolvedValueOnce({pages:[{page:1,text:'الرقم القومي 29001011234567',confidence:90}],source:'ocr'});
+ render(<FilePreview file={new File(['image'],'id.png',{type:'image/png'})}/>);
+ fireEvent.click(screen.getByRole('button',{name:'استخراج النص'}));
+ expect(await screen.findByLabelText('النص المستخرج للمراجعة')).toBeVisible();
+ expect(screen.getByText('دي البيانات اللي اتقرت من المستند.. راجعها وعدل أي حاجة غلط قبل الحفظ')).toBeVisible();
+});

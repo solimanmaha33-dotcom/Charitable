@@ -12,7 +12,7 @@ test('field suggestions: reviewed text stays unsaved until staff applies and sav
  try {
   const user=await admin.auth.admin.createUser({email,password,email_confirm:true});if(user.error || !user.data.user)throw user.error;uid=user.data.user.id;
   sql(`insert into public.employees(id,employee_code,display_name,role) values ('${uid}','Q${uid.slice(0,8)}','Synthetic','employee'); insert into private.employee_auth(employee_id,auth_user_id) values ('${uid}','${uid}'); insert into public.employee_permissions(employee_id,cases_write,assistant_use) values ('${uid}',true,true);`);
-  const family=await admin.from('families').insert({name:'أسرة وهمية'}).select('id').single();if(family.error)throw family.error;familyId=family.data.id;
+  const family=await admin.from('families').insert({name:'أسرة وهمية',phone:'01010000006'}).select('id').single();if(family.error)throw family.error;familyId=family.data.id;
   const login=await auth.auth.signInWithPassword({email,password});if(login.error || !login.data.session)throw login.error;
   const key=`sb-${new URL(status.API_URL).hostname.split('.')[0]}-auth-token`;await page.addInitScript(({key,session})=>localStorage.setItem(key,JSON.stringify(session)),{key,session:login.data.session});
   await page.route('**/api/extract-fields',route=>route.fulfill({json:{suggestions:[{field:'notes',value:'ملاحظة وهمية',evidence:'تجريبية'}]}}));

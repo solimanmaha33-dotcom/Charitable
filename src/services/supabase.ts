@@ -30,8 +30,14 @@ export async function signIn(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ employeeCode, password }),
   });
-  if (!response.ok)
+  if (!response.ok) {
+    if (response.status === 429) {
+      const result: unknown = await response.json().catch(() => null);
+      if (result && typeof result === 'object' && 'error' in result && typeof result.error === 'string')
+        throw new Error(result.error);
+    }
     throw new Error('تعذّر تسجيل الدخول. راجع الكود وكلمة السر وحاول تاني.');
+  }
   const { session } = await response.json();
   const supabase = getSupabase();
   if (!supabase) throw new Error('تعذّر تسجيل الدخول.');
@@ -45,10 +51,22 @@ export async function signOut(): Promise<void> {
     data: { session },
   } = await supabase.auth.getSession();
   if (!session) return;
-  const response = await fetch('/api/auth/logout', {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${session.access_token}` },
-  });
-  if (!response.ok) throw new Error('تعذّر تسجيل الخروج. حاول تاني.');
-  await supabase.auth.signOut({ scope: 'local' });
+  let requestFailed = false;
+  try {
+    const response = await fetch('/api/auth/logout', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    });
+    requestFailed = !response.ok;
+  } catch {
+    requestFailed = true;
+  } finally {
+    // Local scope clears the stored session before its best-effort Auth request.
+    try {
+      await supabase.auth.signOut({ scope: 'local' });
+    } catch {
+      // The local session is removed before the SDK tries to contact Auth.
+    }
+  }
+  if (requestFailed) throw new Error('تعذّر تسجيل الخروج من الخادم. تم إغلاق الجلسة على هذا الجهاز.');
 }

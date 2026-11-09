@@ -39,3 +39,11 @@ test('case print sheet appears in print media', async ({ page }) => {
   await expect(sheet).toHaveCSS('visibility', 'visible');
   await expect(page.locator('.app-header')).toHaveCSS('visibility', 'hidden');
 });
+
+test('shows the shared offline warning until the browser reports a connection again',async({page})=>{
+ await page.goto('/');
+ await page.evaluate(()=>window.dispatchEvent(new Event('offline')));
+ await expect(page.getByRole('status')).toContainText('النت فاصل دلوقتي.. ما تقفلش الصفحة واستنى لما يرجع عشان البيانات اللي كتبتها ما تضيعش');
+ await page.evaluate(()=>window.dispatchEvent(new Event('online')));
+ await expect(page.getByText('النت فاصل دلوقتي.. ما تقفلش الصفحة واستنى لما يرجع عشان البيانات اللي كتبتها ما تضيعش')).toHaveCount(0);
+});

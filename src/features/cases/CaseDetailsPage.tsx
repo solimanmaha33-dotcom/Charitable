@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { archiveCaseFile, findCaseFileForLegacyId, getCaseFile, listCaseAttachments, listCaseFileHistory, listMembers, type CaseAttachment, type CaseFile, type CaseFileHistory, type Member } from '../../services/cases';
 import { CaseAttachmentsPanel } from './CaseAttachmentsPanel';
 import { CaseMemberForm } from './CaseMemberForm';
@@ -7,6 +7,8 @@ import { ageOn } from './memberAge';
 import { cairoToday } from './idExpiry';
 import { CasePrintDocument } from './CasePrintDocument';
 import { CaseIntakeForm } from './CaseIntakeForm';
+import { CaseDisbursementsPanel } from './CaseDisbursementsPanel';
+import { listCaseDisbursements, type CaseDisbursement } from '../../services/disbursements';
 
 const formatCount = new Intl.NumberFormat('ar-EG').format;
 const statusClass = { 'نشط':'case-status-active','موقوف':'case-status-hold','تحت المراجعة':'case-status-review','مرفوض':'case-status-rejected' };
@@ -16,11 +18,15 @@ function householdCount(file: CaseFile, members: Member[]) {
 }
 
 export function CaseDetailsPage({ canWrite, canArchive=false }: { canWrite: boolean; canArchive?:boolean }) {
-  const { id } = useParams(); const navigate = useNavigate();
+  const { id } = useParams(); const navigate = useNavigate(); const [searchParams] = useSearchParams();
+  const matchedMember = searchParams.get('matchedMember');
+  const contactMatch = searchParams.get('matchedContact');
+  const matchedContact = contactMatch === 'father' || contactMatch === 'mother' ? contactMatch : null;
   const [file, setFile] = useState<CaseFile | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
   const [attachments, setAttachments] = useState<CaseAttachment[]>([]);
   const [history, setHistory] = useState<CaseFileHistory[]>([]);
+  const [disbursements,setDisbursements]=useState<CaseDisbursement[]>([]);
   const [error, setError] = useState(''); const [loading, setLoading] = useState(true); const [editing, setEditing] = useState(id === 'new'); const [addingMember, setAddingMember] = useState(false); const [confirmArchive,setConfirmArchive]=useState(false);const [archiving,setArchiving]=useState(false);
   const today = cairoToday();
 
@@ -32,8 +38,8 @@ export function CaseDetailsPage({ canWrite, canArchive=false }: { canWrite: bool
       if (canonicalId) { navigate(`/cases/${canonicalId}`, { replace: true }); return; }
       setFile(null); return;
     }
-    const [people, files, oldRecords] = await Promise.all([listMembers(found.id), listCaseAttachments(found.id), listCaseFileHistory(found.id)]);
-    setFile(found); setMembers(people); setAttachments(files); setHistory(oldRecords);
+    const [people, files, oldRecords,aidRecords] = await Promise.all([listMembers(found.id), listCaseAttachments(found.id), listCaseFileHistory(found.id),listCaseDisbursements(found.id)]);
+    setFile(found); setMembers(people); setAttachments(files); setHistory(oldRecords);setDisbursements(aidRecords);
   }
   async function confirmArchiveCase() {
     if(!id||id==='new')return;
@@ -47,6 +53,12 @@ export function CaseDetailsPage({ canWrite, canArchive=false }: { canWrite: bool
     void refresh().catch(() => { if (alive) setError('تعذّر تحميل ملف الحالة. حاول تحدّث الصفحة.'); }).finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
   }, [id]);
+
+  useEffect(() => {
+    const target = matchedContact ? `contact-${matchedContact}` : matchedMember ? `member-${matchedMember}` : null;
+    if (!target) return;
+    document.getElementById(target)?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+  }, [matchedContact, matchedMember, members]);
 
   if (!id) return <section className="page-card"><h1>افتح ملف الحالة من القائمة</h1><Link to="/cases">قائمة الحالات</Link></section>;
   if (id === 'new') return <section className="page-card">
@@ -71,10 +83,11 @@ export function CaseDetailsPage({ canWrite, canArchive=false }: { canWrite: bool
       {editing && canWrite ? <CaseIntakeForm initial={file} initialMembers={members} onSaved={async (savedId) => { setEditing(false); try { await refresh(savedId); } catch { setError('اتحفظ الملف بس تعذّر تحديث العرض.'); } }} /> : <>
         <section className="section-block"><h2>بيانات الملف</h2><dl className="profile-details">
           <div><dt>أنواع الحالة</dt><dd>{file.case_file_categories.map((item) => item.category).join('، ') || 'غير محدد'}</dd></div>
+          <div><dt>ميعاد إعادة البحث</dt><dd>{file.next_review_date ? new Intl.DateTimeFormat('ar-EG',{dateStyle:'medium'}).format(new Date(`${file.next_review_date}T12:00:00`)) : 'مش متحدد'}</dd></div>
           <div><dt>العنوان</dt><dd>{file.address || 'مش متسجل'}</dd></div>
           <div><dt>الدخل الشهري</dt><dd>{file.monthly_income === null ? 'مش متسجل' : `${new Intl.NumberFormat('ar-EG').format(file.monthly_income)} جنيه`}</dd></div>
-          <div><dt>الرقم القومي للأب</dt><dd>{file.father_national_id || 'مش متسجل'}</dd></div>
-          <div><dt>الرقم القومي للأم</dt><dd>{file.mother_national_id || 'مش متسجل'}</dd></div>
+          <div id="contact-father" className={matchedContact === 'father' ? 'matched-member' : undefined}><dt>بيانات الأب</dt><dd>{file.father_name || 'مش متسجل'} — الرقم القومي: <bdi dir="ltr">{file.father_national_id || 'مش متسجل'}</bdi>{matchedContact === 'father' && <span className="member-match-label">مطابقة البحث</span>}</dd></div>
+          <div id="contact-mother" className={matchedContact === 'mother' ? 'matched-member' : undefined}><dt>بيانات الأم</dt><dd>{file.mother_name || 'مش متسجل'} — الرقم القومي: <bdi dir="ltr">{file.mother_national_id || 'مش متسجل'}</bdi>{matchedContact === 'mother' && <span className="member-match-label">مطابقة البحث</span>}</dd></div>
           <div><dt>الحالة الصحية للأب</dt><dd>{[file.father_health_status,file.father_health_condition].filter(Boolean).join(' — ') || 'مش متسجل'}</dd></div>
           <div><dt>الحالة الصحية للأم</dt><dd>{[file.mother_health_status,file.mother_health_condition].filter(Boolean).join(' — ') || 'مش متسجل'}</dd></div>
           <div><dt>الحالة الصحية العامة للأسرة</dt><dd>{file.health_condition || 'مش متسجل'}</dd></div>
@@ -89,12 +102,13 @@ export function CaseDetailsPage({ canWrite, canArchive=false }: { canWrite: bool
           <div><dt>ملاحظات الملف</dt><dd>{file.notes || 'مفيش ملاحظات'}</dd></div>
         </dl></section>
         <section className="section-block" aria-labelledby="case-members-title"><div className="section-heading"><h2 id="case-members-title">أفراد الأسرة</h2><span>{formatCount(members.length)} أفراد مسجلين</span></div>
-          {members.length ? <ul className="record-list">{members.map((member) => <li key={member.person_id}><div><strong>{member.people.name}</strong><small>{member.relationship}{member.people.gender ? ` · ${member.people.gender === 'female' ? 'بنت' : 'ولد'}` : ''}{member.people.date_of_birth ? ` · العمر: ${formatCount(ageOn(member.people.date_of_birth, today))} سنة` : ''}</small>{(member.people.health_status||member.people.health_details||member.people.health_condition)&&<small>الحالة الصحية: {[member.people.health_status,member.people.health_details||member.people.health_condition].filter(Boolean).join(' — ')}</small>}{member.people.employment_status&&<small>حالة العمل: {[member.people.employment_status,member.people.employment_status==='يعمل'?member.people.occupation:null].filter(Boolean).join(' — ')}</small>}</div></li>)}</ul> : <div className="empty-state">لسه مفيش أفراد مضافين للملف.</div>}
+          {members.length ? <ul className="record-list">{members.map((member) => {const matched=matchedMember===member.person_id;return <li key={member.person_id} id={`member-${member.person_id}`} className={matched?'matched-member':undefined} tabIndex={matched? -1:undefined}><div><strong>{member.people.name}</strong>{matched&&<span className="member-match-label">مطابقة البحث</span>}<small>{member.relationship}{member.people.gender ? ` · ${member.people.gender === 'female' ? 'بنت' : 'ولد'}` : ''}{member.people.date_of_birth ? ` · العمر: ${formatCount(ageOn(member.people.date_of_birth, today))} سنة` : ''}</small>{(member.people.health_status||member.people.health_details||member.people.health_condition)&&<small>الحالة الصحية: {[member.people.health_status,member.people.health_details||member.people.health_condition].filter(Boolean).join(' — ')}</small>}{member.people.employment_status&&<small>حالة العمل: {[member.people.employment_status,member.people.employment_status==='يعمل'?member.people.occupation:null].filter(Boolean).join(' — ')}</small>}</div></li>})}</ul> : <div className="empty-state">لسه مفيش أفراد مضافين للملف.</div>}
           {canWrite && <><button className="secondary" type="button" onClick={() => setAddingMember((value) => !value)}>{addingMember ? 'إلغاء' : 'إضافة فرد للأسرة'}</button>{addingMember && <CaseMemberForm caseFileId={file.id} onAdded={async () => { setAddingMember(false); await refresh(file.id); }} />}</>}
         </section>
+        <CaseDisbursementsPanel caseFile={file} records={disbursements} canWrite={canWrite} onChanged={()=>refresh(file.id)} />
         <CaseAttachmentsPanel caseFile={file} canWrite={canWrite} onCaseFileUpdated={() => { void refresh(file.id); }} />
         <section className="section-block"><h2>ملاحظات الحالة القديمة</h2>{history.length ? <ul className="record-list">{history.map((item) => <li key={item.id}><div><strong>{item.notes || 'مفيش ملاحظات'}</strong><small><time dateTime={item.created_at}>{new Intl.DateTimeFormat('ar-EG', { dateStyle: 'medium' }).format(new Date(item.created_at))}</time></small></div></li>)}</ul> : <p>مفيش ملاحظات قديمة محفوظة.</p>}</section>
-        <CasePrintDocument caseFile={file} members={members} attachments={attachments} />
+        <CasePrintDocument caseFile={file} members={members} attachments={attachments} disbursements={disbursements} />
       </>}
     </>}
   </section>;

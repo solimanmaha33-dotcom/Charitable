@@ -1,9 +1,10 @@
 import { useState, type FormEvent } from 'react';
-import { saveSponsorship, utcToday, type Donor } from '../../services/donations';
+import { saveSponsorship, type Donor } from '../../services/donations';
+import { cairoToday } from '../../shared/cairoDate';
 import type { CaseFileSummary } from '../../services/cases';
 export function SponsorshipForm({donors,families,onSaved}:{donors:Donor[];families:CaseFileSummary[];onSaved:()=>Promise<void>}) {
  const [donor,setDonor]=useState('');const [family,setFamily]=useState('');const [amount,setAmount]=useState('');
- const [start,setStart]=useState(utcToday);const [end,setEnd]=useState('');const [busy,setBusy]=useState(false);const [error,setError]=useState('');
+ const [start,setStart]=useState(cairoToday);const [end,setEnd]=useState('');const [busy,setBusy]=useState(false);const [error,setError]=useState('');
  async function submit(e:FormEvent) {
   e.preventDefault();setBusy(true);setError('');
   try {await saveSponsorship({donor_id:donor,family_id:family,monthly_amount:Number(amount),start_date:start,end_date:end||null});setAmount('');await onSaved();}

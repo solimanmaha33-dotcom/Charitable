@@ -75,7 +75,7 @@ select ok((select bool_and(amount_due=450 and received_on is null and amount_rec
 select throws_ok($$select public.generate_sponsorship_installments('2099-01-31')$$,'23514',null,'reader cannot create installments beyond current UTC month');
 select throws_ok($$insert into public.sponsorship_payments(sponsorship_id,installment_month,due_date,amount_due) values('a8000000-0000-0000-0000-000000000002','2024-03-01','2024-03-31',450)$$,'42501',null,'reader cannot insert arbitrary payment rows');
 with changed as (update public.sponsorships set end_date='2024-01-31' returning id) select is(count(*)::int,0,'reader cannot change schedule through generation permission') from changed;
-with changed as (update public.sponsorship_payments set amount_due=999 returning id) select is(count(*)::int,0,'reader cannot change expected amounts') from changed;
+select throws_ok($$update public.sponsorship_payments set amount_due=999$$,'42501',null,'reader has no direct update grant for expected amounts');
 with changed as (update public.sponsorship_payments set amount_received=999,received_on='2024-02-02' returning id) select is(count(*)::int,0,'reader cannot mark received') from changed;
 reset role;
 select set_config('request.jwt.claims','{"sub":"a3000000-0000-0000-0000-000000000003","session_id":"a4000000-0000-0000-0000-000000000003","role":"authenticated"}',true);
@@ -86,7 +86,7 @@ select throws_ok($$insert into public.donations(donation_type,kind,amount,receiv
 select throws_ok($$insert into public.sponsorships(donor_id,family_id,monthly_amount,start_date) values('a7000000-0000-0000-0000-000000000001','a6000000-0000-0000-0000-000000000001',10,'2026-01-01')$$,'42501',null,'cases-only cannot create sponsorship');
 select throws_ok($$insert into public.sponsorship_payments(sponsorship_id,installment_month,due_date,amount_due) values('a8000000-0000-0000-0000-000000000001','2024-02-01','2024-02-29',350)$$,'42501',null,'cases-only cannot insert payment');
 with changed as (update public.donors set name='denied' returning id) select is(count(*)::int,0,'cases-only cannot update donors') from changed;
-with changed as (update public.donations set amount=999 returning id) select is(count(*)::int,0,'cases-only cannot update donations') from changed;
+select throws_ok($$update public.donations set amount=999$$,'42501',null,'cases-only has no direct donation update grant');
 with changed as (update public.sponsorships set end_date='2024-01-31' returning id) select is(count(*)::int,0,'cases-only cannot update sponsorships') from changed;
 with changed as (update public.sponsorship_payments set amount_received=999 returning id) select is(count(*)::int,0,'cases-only cannot update payments') from changed;
 reset role;

@@ -5,3 +5,8 @@ it('matches common alef variants and diacritics without mutating the input', () 
   expect(normalizeArabicSearch(original)).toBe(normalizeArabicSearch('ابراهيم احمد'));
   expect(original).toBe('إِبْرَاهِيم أَحْمَد');
 });
+
+it('matches Egyptian national IDs regardless of Arabic or Persian digit input',()=>{
+ expect(normalizeArabicSearch('٢٩٠٠١٠١١٢٣٤٥٦٧')).toBe('29001011234567');
+ expect(normalizeArabicSearch('۲۹۰۰۱۰۱۱۲۳۴۵۶۷')).toBe('29001011234567');
+});

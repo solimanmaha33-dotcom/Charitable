@@ -1,11 +1,11 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DonationListPage } from './DonationListPage';
 
 const service = vi.hoisted(() => ({
-  endSponsorship: vi.fn(), generateInstallments: vi.fn(), listDonations: vi.fn(), listDonors: vi.fn(), listCaseFilesByIds: vi.fn(),
-  listPayments: vi.fn(), listSponsorships: vi.fn(), receivePayment: vi.fn(), saveDonor: vi.fn(), utcToday: vi.fn(),
+  cancelDonation:vi.fn(),voidPayment:vi.fn(),endSponsorship: vi.fn(), generateInstallments: vi.fn(), listDonations: vi.fn(), listDonors: vi.fn(), listCaseFilesByIds: vi.fn(),
+  listPayments: vi.fn(), listSponsorships: vi.fn(), receivePayment: vi.fn(), saveDonor: vi.fn(),
 }));
 vi.mock('../../services/donations', () => ({
   ...service,
@@ -25,6 +25,21 @@ beforeEach(() => {
 });
 
 describe('donation workspace', () => {
+  it('keeps a canceled donation visible and requires a reason before canceling another',async()=>{
+    service.listDonations.mockResolvedValue([
+      {id:'d-1',donor_id:null,donation_type:'cash',kind:'cash',amount:100,quantity:null,unit:null,description:'',received_on:'2026-11-01',voided_at:'2026-11-02T00:00:00Z',voided_by:'staff',void_reason:'تسجيل مكرر'},
+      {id:'d-2',donor_id:null,donation_type:'cash',kind:'cash',amount:200,quantity:null,unit:null,description:'',received_on:'2026-11-02',voided_at:null,voided_by:null,void_reason:null},
+    ]);
+    service.cancelDonation.mockResolvedValue(undefined);
+    render(<MemoryRouter><DonationListPage canWrite canReadCases={false}/></MemoryRouter>);
+    expect(await screen.findByText('ملغي')).toBeVisible();
+    expect(screen.getByText('سبب الإلغاء: تسجيل مكرر')).toBeVisible();
+    expect(screen.getByText('1 نشطة · 2 في السجل')).toBeVisible();
+    fireEvent.click(screen.getByRole('button',{name:'إلغاء التبرع'}));
+    fireEvent.change(screen.getByLabelText('سبب إلغاء التبرع'),{target:{value:'اتسجل بالغلط'}});
+    fireEvent.click(screen.getByRole('button',{name:'تأكيد إلغاء التبرع'}));
+    await waitFor(()=>expect(service.cancelDonation).toHaveBeenCalledWith('d-2','اتسجل بالغلط'));
+  });
   it('opens the donation form when opened from the home shortcut', async () => {
     service.listDonations.mockResolvedValue([]);
     render(<MemoryRouter initialEntries={['/donations?add=donation']}><DonationListPage canWrite canReadCases={false} /></MemoryRouter>);

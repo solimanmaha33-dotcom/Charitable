@@ -1,14 +1,16 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { hasPermission, type StaffProfile } from '../auth/permissions';
-import { countCaseFiles, listAgeThresholdMembers, listAllMembers, listCaseFiles, listCaseFileIdExpirationsBy, type CaseFileIdExpiry, type MemberAgeProfile } from '../../services/cases';
-import { countDonations } from '../../services/donations';
+import { countCaseFiles, listAgeThresholdMembers, listAllMembers, listCaseFiles, listCaseFilesByIds, listCaseFileIdExpirationsBy, listCaseReviewDatesBy, type CaseFileIdExpiry, type MemberAgeProfile } from '../../services/cases';
+import { countDonations, generateInstallments, listPayments, listSponsorships } from '../../services/donations';
+import { getSponsorshipFollowups, type SponsorshipFollowup } from '../../services/disbursements';
 import { addDateOnlyDays, cairoToday, groupIdExpirations } from '../cases/idExpiry';
 import { findMemberAgeAlerts, type MemberAgeAlert } from '../cases/memberAge';
 import { countCaseMembers } from '../cases/caseMetrics';
+import { groupCaseReviewReminders, type CaseReviewRecord } from '../cases/reviewReminder';
 
 const formatCount = new Intl.NumberFormat('ar-EG').format;
-const caseFileLabel = (row: CaseFileIdExpiry) => [row.father_name && `الأب: ${row.father_name}`, row.mother_name && `الأم: ${row.mother_name}`].filter(Boolean).join(' · ') || 'ملف حالة';
+const caseFileLabel = (row: {father_name:string|null;mother_name:string|null}) => [row.father_name && `الأب: ${row.father_name}`, row.mother_name && `الأم: ${row.mother_name}`].filter(Boolean).join(' · ') || 'ملف حالة';
 
 type Action = { label: string; description: string; to: string; primary?: boolean };
 
@@ -23,6 +25,12 @@ export function HomePage({ staff }: { staff: StaffProfile }) {
   const [memberAgeAlerts,setMemberAgeAlerts]=useState<MemberAgeAlert[]>([]);
   const [loadingMemberAgeAlerts,setLoadingMemberAgeAlerts]=useState(true);
   const [memberAgeError,setMemberAgeError]=useState(false);
+  const [reviewRows,setReviewRows]=useState<CaseReviewRecord[]>([]);
+  const [loadingReviews,setLoadingReviews]=useState(true);
+  const [reviewError,setReviewError]=useState(false);
+  const [sponsorshipFollowups,setSponsorshipFollowups]=useState<SponsorshipFollowup[]>([]);
+  const [loadingSponsorshipFollowups,setLoadingSponsorshipFollowups]=useState(true);
+  const [sponsorshipFollowupError,setSponsorshipFollowupError]=useState(false);
 
   useEffect(() => {
     let active = true;
@@ -50,6 +58,26 @@ export function HomePage({ staff }: { staff: StaffProfile }) {
 
   useEffect(()=>{
     let active=true;
+    if(!canReadCases){setReviewRows([]);setReviewError(false);setLoadingReviews(false);return()=>{active=false;};}
+    setLoadingReviews(true);setReviewError(false);
+    void listCaseReviewDatesBy(addDateOnlyDays(cairoToday(),30)).then(rows=>{if(active)setReviewRows(rows);}).catch(()=>{if(active)setReviewError(true);}).finally(()=>{if(active)setLoadingReviews(false);});
+    return()=>{active=false;};
+  },[staff.id,canReadCases]);
+
+  useEffect(()=>{
+    let active=true;
+    if(!canReadCases||!canReadDonations){setSponsorshipFollowups([]);setSponsorshipFollowupError(false);setLoadingSponsorshipFollowups(false);return()=>{active=false;};}
+    setLoadingSponsorshipFollowups(true);setSponsorshipFollowupError(false);
+    void generateInstallments().then(()=>Promise.all([listPayments(),listSponsorships()])).then(async([payments,sponsorships])=>{
+      const caseIds=[...new Set(sponsorships.map(sponsorship=>sponsorship.family_id))];
+      const cases=caseIds.length?await listCaseFilesByIds(caseIds):[];
+      if(active)setSponsorshipFollowups(getSponsorshipFollowups(payments,sponsorships,cases,cairoToday()));
+    }).catch(()=>{if(active)setSponsorshipFollowupError(true);}).finally(()=>{if(active)setLoadingSponsorshipFollowups(false);});
+    return()=>{active=false;};
+  },[staff.id,canReadCases,canReadDonations]);
+
+  useEffect(()=>{
+    let active=true;
     if(!canReadCases){setMemberAgeAlerts([]);setMemberAgeError(false);setLoadingMemberAgeAlerts(false);return()=>{active=false;};}
     setLoadingMemberAgeAlerts(true);setMemberAgeError(false);
     void listAgeThresholdMembers().then(rows=>{if(active)setMemberAgeAlerts(findMemberAgeAlerts(toAgeCandidates(rows),cairoToday()));}).catch(()=>{if(active)setMemberAgeError(true);}).finally(()=>{if(active)setLoadingMemberAgeAlerts(false);});
@@ -57,6 +85,11 @@ export function HomePage({ staff }: { staff: StaffProfile }) {
   },[staff.id,canReadCases]);
 
   const expiryGroups=groupIdExpirations(idExpiryRows,cairoToday());
+  const reviewGroups=groupCaseReviewReminders(reviewRows,cairoToday());
+  const reviewReminders=[
+    ...reviewGroups.overdue.map(row=>({...row,overdue:true,daysUntil:row.daysOverdue})),
+    ...reviewGroups.upcoming.map(row=>({...row,overdue:false,daysUntil:row.daysLeft})),
+  ];
   const formatDate=(date:string)=>new Intl.DateTimeFormat('ar-EG',{dateStyle:'medium'}).format(new Date(`${date}T12:00:00`));
 
   const actions: Action[] = [];
@@ -130,6 +163,21 @@ export function HomePage({ staff }: { staff: StaffProfile }) {
         {!loadingMemberAgeAlerts&&!memberAgeError&&!memberAgeAlerts.length&&<div className="empty-state home-followup-empty">مفيش أفراد هيكملوا السن المحدد خلال ٣٠ يوم من بيانات الميلاد المسجلة.</div>}
         {!loadingMemberAgeAlerts&&!memberAgeError&&memberAgeAlerts.length>0&&<ul className="record-list">{memberAgeAlerts.map(alert=><li key={alert.personId}><div><Link to={`/cases/${alert.caseFileId}`}>{alert.name} · {alert.caseFileLabel} <span className="family-code">{alert.caseFileCode}</span></Link><small>العمر الحالي {new Intl.NumberFormat('ar-EG').format(alert.age)} سنة · هيكمل {new Intl.NumberFormat('ar-EG').format(alert.targetAge)} سنة يوم {formatDate(alert.thresholdDate)}</small></div><strong className="expiry-status">{alert.daysUntilThreshold===0?'النهارده':`خلال ${new Intl.NumberFormat('ar-EG').format(alert.daysUntilThreshold)} يوم`}</strong></li>)}</ul>}
       </section>
+      <section className="home-followup-card case-review-alerts" aria-labelledby="case-review-title">
+        <div className="section-heading"><h2 id="case-review-title">حالات محتاجة إعادة بحث</h2><span>خلال ٣٠ يوم أو متأخرة</span></div>
+        <p className="form-help">حدد ميعاد إعادة البحث في ملف الحالة عشان تتابعها هنا.</p>
+        {loadingReviews&&<p role="status">جاري تحميل مواعيد إعادة البحث…</p>}
+        {reviewError&&<p className="error-message" role="alert">تعذّر تحميل مواعيد إعادة البحث. حاول تحدّث الصفحة.</p>}
+        {!loadingReviews&&!reviewError&&!reviewGroups.overdue.length&&!reviewGroups.upcoming.length&&<div className="empty-state home-followup-empty">مفيش حالات ميعاد إعادة بحثها خلال ٣٠ يوم أو متأخر.</div>}
+        {!loadingReviews&&!reviewError&&reviewReminders.length>0&&<ul className="record-list">{reviewReminders.map(row=><li key={row.id}><div><Link to={`/cases/${row.id}`}>{caseFileLabel(row)} <span className="family-code">{row.code}</span></Link><small>ميعاد إعادة البحث {formatDate(row.next_review_date)}</small></div><strong className={`expiry-status${row.overdue?' expiry-status-expired':''}`}>{row.overdue?`متأخرة ${new Intl.NumberFormat('ar-EG').format(row.daysUntil)} يوم`:row.daysUntil===0?'ميعادها النهارده':`خلال ${new Intl.NumberFormat('ar-EG').format(row.daysUntil)} يوم`}</strong></li>)}</ul>}
+      </section>
+      {canReadDonations&&<section className="home-followup-card sponsorship-alerts" aria-labelledby="sponsorship-followup-title">
+        <div className="section-heading"><h2 id="sponsorship-followup-title">متابعة الكفالات الشهرية</h2><span>المتأخر واللي ميعاده خلال ٣٠ يوم</span></div>
+        {loadingSponsorshipFollowups&&<p role="status">جاري تحميل دفعات الكفالات…</p>}
+        {sponsorshipFollowupError&&<p className="error-message" role="alert">تعذّر تحميل دفعات الكفالات. حاول تحدّث الصفحة.</p>}
+        {!loadingSponsorshipFollowups&&!sponsorshipFollowupError&&!sponsorshipFollowups.length&&<div className="empty-state home-followup-empty">مفيش دفعات كفالة متأخرة أو مستحقة خلال ٣٠ يوم.</div>}
+        {!loadingSponsorshipFollowups&&!sponsorshipFollowupError&&sponsorshipFollowups.length>0&&<ul className="record-list">{sponsorshipFollowups.map(row=><li key={row.paymentId}><div><Link to="/donations">{row.caseCode} — {[row.fatherName&&`الأب: ${row.fatherName}`,row.motherName&&`الأم: ${row.motherName}`].filter(Boolean).join(' · ')||'ملف حالة'}</Link><small>استحقاق {formatDate(row.dueDate)} · {new Intl.NumberFormat('ar-EG').format(row.amount)} جنيه</small></div><strong className={`expiry-status${row.status==='late'?' expiry-status-expired':''}`}>{row.status==='late'?`متأخرة ${new Intl.NumberFormat('ar-EG').format(-row.daysUntilDue)} يوم`:row.daysUntilDue===0?'ميعادها النهارده':`خلال ${new Intl.NumberFormat('ar-EG').format(row.daysUntilDue)} يوم`}</strong></li>)}</ul>}
+      </section>}
       </div></section> : null}
     </section>
   );

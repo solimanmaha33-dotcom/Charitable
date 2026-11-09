@@ -1,5 +1,6 @@
 export type MemberGender='female'|'male';
 export type MemberIdSuggestions={nationalId:string|null;birthDate:string|null;gender:MemberGender|null};
+import { normalizeEgyptianNationalIdInput, parseEgyptianNationalId } from './nationalIdScan';
 
 const arabic='٠١٢٣٤٥٦٧٨٩';const persian='۰۱۲۳۴۵۶۷۸۹';
 function latinDigits(text:string):string{return [...text].map(char=>{const a=arabic.indexOf(char);if(a>=0)return String(a);const p=persian.indexOf(char);return p>=0?String(p):char;}).join('');}
@@ -20,11 +21,9 @@ function labeledBirthDate(text:string):string|null{
 export function parseMemberIdText(rawText:string):MemberIdSuggestions{
  const text=latinDigits(rawText);
  const found=text.match(/(?:^|\D)(\d(?:[\s-]*\d){13})(?!\d)/u)?.[1].replace(/[\s-]/gu,'');
- if(found&&(found[0]==='2'||found[0]==='3')){
-  const year=Number(found.slice(1,3))+(found[0]==='2'?1900:2000);
-  const birthDate=validDate(year,Number(found.slice(3,5)),Number(found.slice(5,7)));
-  const sexDigit=Number(found[12]);
-  if(birthDate&&Number.isInteger(sexDigit))return {nationalId:found,birthDate,gender:sexDigit%2===0?'female':'male'};
- }
+ const parsed=found?parseEgyptianNationalId(found):null;
+ if(parsed)return {nationalId:parsed.nationalId,birthDate:parsed.birthDate,gender:parsed.gender};
  return {nationalId:null,birthDate:labeledBirthDate(text),gender:null};
 }
+
+export { normalizeEgyptianNationalIdInput };

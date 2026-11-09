@@ -1,5 +1,5 @@
 import { beforeEach, expect, it, vi } from 'vitest';
-import { addMember, archiveCaseFile, countCaseFiles, getCaseFile, listAgeThresholdMembers, listAllMembers, listArchivedCaseFiles, listCaseAttachments, listCaseFileHistory, listCaseFiles, listCaseFilesByIds, listCaseFileIdExpirationsBy, restoreCaseFile, saveCaseFile, updateCaseFileIdentity, updateMemberDemographics, type CaseFileInput } from './cases';
+import { addMember, archiveCaseFile, countCaseFiles, getCaseFile, listAgeThresholdMembers, listAllMembers, listArchivedCaseFiles, listCaseAttachments, listCaseFileHistory, listCaseFiles, listCaseFilesByIds, listCaseFileIdExpirationsBy, listCaseReviewDatesBy, restoreCaseFile, saveCaseFile, updateCaseFileIdentity, updateMemberDemographics, type CaseFileInput } from './cases';
 
 const rows = vi.hoisted(() => ({
   selects: [] as {table:string;columns:string;options:unknown}[],
@@ -28,10 +28,11 @@ it('retrieves case-file lists beyond the API row limit and counts the same unifi
 it('loads one file with new fields but excludes national ID from list queries',async()=>{
  rows.selects.length=0; await listCaseFiles();
  expect(rows.selects[0]?.table).toBe('families');expect(rows.selects[0]?.columns).toContain('case_file_categories(category)');
+ expect(rows.selects[0]?.columns).toContain('next_review_date');
  expect(rows.selects[0]?.columns).toContain('file_status');expect(rows.selects[0]?.columns).toContain('address');expect(rows.selects[0]?.columns).not.toContain(',name,');expect(rows.selects[0]?.columns).not.toContain(',national_id,');
- expect(rows.selects[0]?.columns).not.toContain('father_national_id');
+ expect(rows.selects[0]?.columns).toContain('father_national_id');expect(rows.selects[0]?.columns).toContain('mother_national_id');expect(rows.selects[0]?.columns).not.toContain(',national_id,');
  expect((await getCaseFile('f1'))?.id).toBe('f1');
- expect(rows.selects.at(-1)?.columns).toContain('father_national_id');expect(rows.selects.at(-1)?.columns).toContain('mother_health_condition');expect(rows.selects.at(-1)?.columns).toContain('father_employment_status');
+ expect(rows.selects.at(-1)?.columns).toContain('father_date_of_birth');expect(rows.selects.at(-1)?.columns).toContain('contact_gender');expect(rows.selects.at(-1)?.columns).toContain('mother_health_condition');expect(rows.selects.at(-1)?.columns).toContain('father_employment_status');expect(rows.selects.at(-1)?.columns).toContain('national_id');
 });
 it('keeps archived files out of details and active lists but resolves existing links by ID',async()=>{
  expect(await getCaseFile('archived')).toBeNull();
@@ -41,8 +42,8 @@ it('keeps archived files out of details and active lists but resolves existing l
  expect(rows.selects.at(-1)?.columns).toContain('archived_at');
 });
 it('saves one unified profile and its categories through the atomic RPC',async()=>{
- const id=await saveCaseFile(null,{fatherName:'أب',motherName:'أم',contactName:'مسؤول',contactRelationship:'الأم',contactAge:42,nationalId:'29001011234567',nationalIdExpiresOn:'2027-01-15',phones:['01012345678','','1234567890'],notes:'ملاحظة',address:'عنوان',monthlyIncome:500,healthCondition:'مستقرة',branchArea:'فرع',fileStatus:'موقوف',statusReason:'مراجعة الأوراق',categories:['هجر']});
- expect(id).toBe('file-new');expect(rows.rpc.at(-1)?.name).toBe('save_case_file');expect(rows.rpc.at(-1)?.args).toMatchObject({p_id:null,p_categories:['هجر'],p_profile:{father_name:'أب',mother_name:'أم',phone:'01012345678',phone_2:null,phone_3:'1234567890',address:'عنوان',monthly_income:500,health_condition:'مستقرة',branch_area:'فرع',file_status:'موقوف',status_reason:'مراجعة الأوراق'}});
+ const id=await saveCaseFile(null,{fatherName:'أب',motherName:'أم',contactName:'مسؤول',contactRelationship:'الأم',contactAge:42,nationalId:'29001011234567',nationalIdExpiresOn:'2027-01-15',fatherDateOfBirth:'1980-01-01',fatherGender:'male',motherDateOfBirth:'1990-01-01',motherGender:'female',contactDateOfBirth:'1980-01-01',contactGender:'male',phones:['01012345678','','1234567890'],notes:'ملاحظة',address:'عنوان',monthlyIncome:500,healthCondition:'مستقرة',branchArea:'فرع',fileStatus:'موقوف',statusReason:'مراجعة الأوراق',categories:['هجر']});
+ expect(id).toBe('file-new');expect(rows.rpc.at(-1)?.name).toBe('save_case_file');expect(rows.rpc.at(-1)?.args).toMatchObject({p_id:null,p_categories:['هجر'],p_profile:{father_name:'أب',mother_name:'أم',phone:'01012345678',phone_2:null,phone_3:'1234567890',father_date_of_birth:'1980-01-01',father_gender:'male',mother_date_of_birth:'1990-01-01',mother_gender:'female',contact_date_of_birth:'1980-01-01',contact_gender:'male',address:'عنوان',monthly_income:500,health_condition:'مستقرة',branch_area:'فرع',file_status:'موقوف',status_reason:'مراجعة الأوراق',next_review_date:null}});
 });
 it('rejects a new file without a mother name and a negative income before the database call',async()=>{
  const base={fatherName:'',motherName:'أم',contactName:'',contactRelationship:'',contactAge:null,nationalId:'',nationalIdExpiresOn:'',phones:[],notes:'',address:'',monthlyIncome:null,healthCondition:'',branchArea:'',fileStatus:'تحت المراجعة' as const,statusReason:'',categories:[]};
@@ -82,10 +83,14 @@ it('updates scanned identity fields without resaving the rest of the profile',as
  rows.rpc.length=0;await updateCaseFileIdentity('f1','29001011234567','2027-01-01');
  expect(rows.rpc).toEqual([{name:'update_case_file_identity',args:{p_id:'f1',p_national_id:'29001011234567',p_expires_on:'2027-01-01'}}]);
 });
+it('sends explicit null demographics through the profile RPC so staff can clear saved details',async()=>{
+ rows.rpc.length=0;await updateCaseFileIdentity('f1','29001011234567','2027-01-01',{birthDate:null,gender:null,age:null});
+ expect(rows.rpc).toEqual([{name:'update_case_file_identity_profile',args:{p_id:'f1',p_national_id:'29001011234567',p_expires_on:'2027-01-01',p_birth_date:null,p_gender:null,p_age:null}}]);
+});
 it('adds and updates member health and employment details',async()=>{
  rows.rpc.length=0;await addMember('f1','ريم','بنت','female','2008-12-31','مرض','ربو','يعمل','مدرسة');
- expect(rows.rpc).toEqual([{name:'add_family_member_profile',args:{p_family_id:'f1',p_name:'ريم',p_relationship:'بنت',p_gender:'female',p_date_of_birth:'2008-12-31',p_health_status:'مرض',p_health_details:'ربو',p_employment_status:'يعمل',p_occupation:'مدرسة'}}]);
- rows.writes.length=0;await updateMemberDemographics('p1','female','2008-12-31','مرض','حساسية صدر','يعمل','مدرسة');expect(rows.writes).toEqual([{table:'people',mode:'update',values:{gender:'female',date_of_birth:'2008-12-31',health_status:'مرض',health_details:'حساسية صدر',health_condition:'حساسية صدر',employment_status:'يعمل',occupation:'مدرسة'}}]);
+ expect(rows.rpc).toEqual([{name:'add_family_member_profile',args:{p_family_id:'f1',p_name:'ريم',p_relationship:'بنت',p_gender:'female',p_date_of_birth:'2008-12-31',p_health_status:'مرض',p_health_details:'ربو',p_employment_status:'يعمل',p_occupation:'مدرسة',p_national_id:null}}]);
+ rows.writes.length=0;await updateMemberDemographics('p1','female','2008-12-31','مرض','حساسية صدر','يعمل','مدرسة','29001011234567');expect(rows.writes).toEqual([{table:'people',mode:'update',values:{gender:'female',date_of_birth:'2008-12-31',health_status:'مرض',health_details:'حساسية صدر',health_condition:'حساسية صدر',employment_status:'يعمل',occupation:'مدرسة',national_id:'29001011234567'}}]);
  expect(await listAllMembers()).toHaveLength(1);
  expect(rows.selects.some(selection=>selection.columns.includes('health_status,health_details'))).toBe(true);
  expect(rows.filters).toContainEqual({table:'family_members',method:'is',column:'case_file.archived_at',value:null});
@@ -94,6 +99,12 @@ it('excludes archived members from age threshold reminders',async()=>{
  await listAgeThresholdMembers();
  expect(rows.selects.at(-1)?.columns).toContain('families!inner');
  expect(rows.filters).toContainEqual({table:'family_members',method:'is',column:'case_file.archived_at',value:null});
+});
+it('queries only active case files with review dates due by the requested cutoff',async()=>{
+ rows.selects.length=0;rows.filters.length=0;await listCaseReviewDatesBy('2026-12-09');
+ expect(rows.selects.at(-1)?.columns).toContain('next_review_date');
+ expect(rows.filters).toContainEqual({table:'families',method:'is',column:'archived_at',value:null});
+ expect(rows.filters).toContainEqual({table:'families',method:'not',column:'next_review_date',value:null});
 });
 it('lists archived case summaries and calls the protected archive and restore RPCs',async()=>{
  const archived=await listArchivedCaseFiles();

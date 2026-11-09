@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CaseFile, CaseFileMember } from '../../services/cases';
-import { countCaseMembers, matchesCaseDirectoryFilter } from './caseMetrics';
+import { calculatePerCapitaNetIncome, countCaseMembers, matchesCaseDirectoryFilter } from './caseMetrics';
 
 function file(id:string,categories:string[]=[]):CaseFile{return {id,code:`F-${id}`,archived_at:null,phone:null,phone_2:null,phone_3:null,father_name:null,mother_name:null,contact_name:null,contact_relationship:null,contact_age:null,notes:'',address:null,monthly_income:null,health_condition:null,branch_area:null,file_status:'نشط',status_reason:null,national_id_expires_on:null,case_file_categories:categories.map(category=>({category:category as CaseFile['case_file_categories'][number]['category']}))};}
 const files=[file('f1',['يتيم الأم','أرملة']),file('f2',['كبار السن (٦٠ سنة فأكثر)'])];
@@ -14,6 +14,13 @@ const members:CaseFileMember[]=[
  {family_id:'f2',person_id:'p6',relationship:'ابن',people:{name:'يوسف',gender:'male',date_of_birth:null}},
 ];
 describe('case file metrics',()=>{
+ it('estimates net income per household member without rounding away cents',()=>{
+  expect(calculatePerCapitaNetIncome(12000,3000,3)).toBe(3000);
+  expect(calculatePerCapitaNetIncome(1000,1200,2)).toBe(-100);
+  expect(calculatePerCapitaNetIncome(null,300,2)).toBeNull();
+  expect(calculatePerCapitaNetIncome(1000,0,0)).toBeNull();
+  expect(calculatePerCapitaNetIncome(-1,0,2)).toBeNull();
+ });
  it('counts children but excludes the retired maternal orphan category',()=>expect(countCaseMembers(files,members,'2026-11-08')).toEqual({children:2,orphans:0}));
  it('counts a person linked to multiple case files once without treating the retired category as an orphan',()=>{const shared=members[0]!;expect(countCaseMembers(files,[shared,{...shared,family_id:'f2'}],'2026-11-08')).toEqual({children:1,orphans:0});});
  it('filters by age and orphan status',()=>{

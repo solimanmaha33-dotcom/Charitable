@@ -3,6 +3,10 @@ import { ageOn } from './memberAge';
 
 export type CaseAgeFilter = 'all' | 'orphans' | 'under18' | 'under21' | 'elderly';
 const ORPHAN_CATEGORIES = new Set(['يتيم الأب']);
+export function calculatePerCapitaNetIncome(totalIncome:number|null,fixedExpenses:number,memberCount:number):number|null {
+  if(totalIncome===null||!Number.isFinite(totalIncome)||totalIncome<0||!Number.isFinite(fixedExpenses)||fixedExpenses<0||!Number.isInteger(memberCount)||memberCount<1)return null;
+  return Math.round(((totalIncome-fixedExpenses)/memberCount)*100)/100;
+}
 function memberAge(member: CaseFileMember, today: string): number | null {
   const birthDate = member.people.date_of_birth;
   if (!birthDate) return null;

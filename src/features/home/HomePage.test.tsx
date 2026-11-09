@@ -5,9 +5,9 @@ import { HomePage } from './HomePage';
 import type { StaffProfile } from '../auth/permissions';
 import {addDateOnlyDays,cairoToday} from '../cases/idExpiry';
 
-const counts = vi.hoisted(() => ({ caseFiles: vi.fn(), fileRows: vi.fn(), members: vi.fn(), donations: vi.fn(), expirations: vi.fn(), ageMembers:vi.fn() }));
-vi.mock('../../services/cases', () => ({ countCaseFiles: counts.caseFiles, listCaseFiles: counts.fileRows, listAllMembers: counts.members, listCaseFileIdExpirationsBy: counts.expirations,listAgeThresholdMembers:counts.ageMembers }));
-vi.mock('../../services/donations', () => ({ countDonations: counts.donations }));
+const counts = vi.hoisted(() => ({ caseFiles: vi.fn(), fileRows: vi.fn(), members: vi.fn(), donations: vi.fn(), expirations: vi.fn(), ageMembers:vi.fn(), reviews:vi.fn(), sponsorships:vi.fn(), payments:vi.fn(), generateInstallments:vi.fn() }));
+vi.mock('../../services/cases', () => ({ countCaseFiles: counts.caseFiles, listCaseFiles: counts.fileRows, listAllMembers: counts.members, listCaseFilesByIds:counts.fileRows, listCaseFileIdExpirationsBy: counts.expirations,listAgeThresholdMembers:counts.ageMembers,listCaseReviewDatesBy:counts.reviews }));
+vi.mock('../../services/donations', () => ({ countDonations: counts.donations,listSponsorships:counts.sponsorships,listPayments:counts.payments,generateInstallments:counts.generateInstallments }));
 
 const staff: StaffProfile = {
   id: 'test-id', employeeCode: 'E1', displayName: 'سارة', role: 'employee', active: true,
@@ -27,12 +27,20 @@ beforeEach(() => {
   counts.donations.mockResolvedValue(2);
   counts.expirations.mockResolvedValue([]);
   counts.ageMembers.mockResolvedValue([]);
+  counts.reviews.mockResolvedValue([]);
+  counts.sponsorships.mockResolvedValue([]);
+  counts.payments.mockResolvedValue([]);
+  counts.generateInstallments.mockResolvedValue(undefined);
   counts.caseFiles.mockClear();
   counts.fileRows.mockClear();
   counts.members.mockClear();
   counts.donations.mockClear();
   counts.expirations.mockClear();
   counts.ageMembers.mockClear();
+  counts.reviews.mockClear();
+  counts.sponsorships.mockClear();
+  counts.payments.mockClear();
+  counts.generateInstallments.mockClear();
 });
 
 describe('home workspace', () => {
@@ -123,5 +131,45 @@ describe('home workspace', () => {
     const actions = screen.getByRole('heading', { name: 'ابدأ من هنا' });
     const reminders = screen.getByRole('heading', { name: 'متابعة انتهاء بطاقات الرقم القومي' });
     expect(actions.compareDocumentPosition(reminders) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('shows case re-search reminders and unpaid sponsorship followups only to staff who can read both areas',async()=>{
+    const today=cairoToday();const donor:StaffProfile={...staff,permissions:{casesRead:true,casesWrite:false,donationsRead:true,donationsWrite:false,assistantUse:false}};
+    counts.reviews.mockResolvedValue([{id:'f1',code:'F-1',father_name:'أحمد',mother_name:'منى',next_review_date:today}]);
+    counts.sponsorships.mockResolvedValue([{id:'s1',family_id:'f1'}]);
+    counts.payments.mockResolvedValue([{id:'p1',sponsorship_id:'s1',due_date:addDateOnlyDays(today,6),amount_due:300,received_on:null,voided_at:null}]);
+    counts.fileRows.mockResolvedValue([{id:'f1',code:'F-1',father_name:'أحمد',mother_name:'منى',case_file_categories:[]}]);
+    render(<MemoryRouter><HomePage staff={donor}/></MemoryRouter>);
+    expect(await screen.findByRole('heading',{name:'حالات محتاجة إعادة بحث'})).toBeVisible();
+    expect(await screen.findByText('ميعادها النهارده')).toBeVisible();
+    expect(screen.getByRole('link',{name:/F-1 — الأب: أحمد/})).toHaveAttribute('href','/donations');
+    expect(screen.getByRole('heading',{name:'متابعة الكفالات الشهرية'})).toBeVisible();
+    expect(await screen.findByText('خلال ٦ يوم')).toBeVisible();
+    expect(counts.reviews).toHaveBeenCalledWith(addDateOnlyDays(today,30));
+    expect(counts.sponsorships).toHaveBeenCalledOnce();expect(counts.payments).toHaveBeenCalledOnce();
+    expect(counts.generateInstallments).toHaveBeenCalledOnce();
+    expect(counts.generateInstallments.mock.invocationCallOrder[0]).toBeLessThan(counts.payments.mock.invocationCallOrder[0]!);
+  });
+
+  it('materializes a next-month sponsorship due within 30 days before loading dashboard reminders',async()=>{
+    const today=cairoToday();const donor:StaffProfile={...staff,permissions:{casesRead:true,casesWrite:false,donationsRead:true,donationsWrite:false,assistantUse:false}};
+    const futureDue=addDateOnlyDays(today,25);
+    counts.generateInstallments.mockImplementationOnce(async()=>{
+      counts.payments.mockResolvedValue([{id:'future-payment',sponsorship_id:'future-sponsorship',due_date:futureDue,amount_due:400,received_on:null,voided_at:null}]);
+    });
+    counts.sponsorships.mockResolvedValue([{id:'future-sponsorship',family_id:'future-case'}]);
+    counts.fileRows.mockResolvedValue([{id:'future-case',code:'F-FUTURE',father_name:'أحمد',mother_name:'منى',case_file_categories:[]}]);
+    render(<MemoryRouter><HomePage staff={donor}/></MemoryRouter>);
+    expect(await screen.findByRole('link',{name:/F-FUTURE — الأب: أحمد/})).toBeVisible();
+    expect(await screen.findByText('خلال ٢٥ يوم')).toBeVisible();
+    expect(counts.generateInstallments).toHaveBeenCalledOnce();
+    expect(counts.payments.mock.invocationCallOrder[0]).toBeGreaterThan(counts.generateInstallments.mock.invocationCallOrder[0]!);
+  });
+
+  it('does not query sponsorship followups when case-read permission is missing',()=>{
+    const donor:StaffProfile={...staff,permissions:{casesRead:false,casesWrite:false,donationsRead:true,donationsWrite:false,assistantUse:false}};
+    render(<MemoryRouter><HomePage staff={donor}/></MemoryRouter>);
+    expect(counts.sponsorships).not.toHaveBeenCalled();expect(counts.payments).not.toHaveBeenCalled();
+    expect(screen.queryByRole('heading',{name:'متابعة الكفالات الشهرية'})).not.toBeInTheDocument();
   });
 });

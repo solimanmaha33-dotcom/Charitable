@@ -32,21 +32,32 @@ export function CaseListPage({ canWrite, canArchive=false }: { canWrite: boolean
   }, []);
 
   const today = cairoToday();
-  const memberNamesByFile = useMemo(() => {
-    const result = new Map<string, string[]>();
-    for (const member of members) result.set(member.family_id, [...(result.get(member.family_id) ?? []), member.people.name]);
+  const membersByFile = useMemo(() => {
+    const result = new Map<string, CaseFileMember[]>();
+    for (const member of members) result.set(member.family_id, [...(result.get(member.family_id) ?? []), member]);
     return result;
   }, [members]);
   const memberCounts = useMemo(() => countCaseMembers(files, members, today), [files, members, today]);
   const term = normalizeArabicSearch(search);
   const matches = useMemo(() => files.filter((file) => {
-    const text = [file.code, file.father_name ?? '', file.mother_name ?? '', file.contact_name ?? '', file.phone ?? '', file.phone_2 ?? '', file.phone_3 ?? '', file.address ?? '', file.branch_area ?? '', ...(memberNamesByFile.get(file.id) ?? [])].map(normalizeArabicSearch);
+    const fileMembers = membersByFile.get(file.id) ?? [];
+    const text = [file.code, file.father_name ?? '', file.father_national_id ?? '', file.mother_name ?? '', file.mother_national_id ?? '', file.contact_name ?? '', file.phone ?? '', file.phone_2 ?? '', file.phone_3 ?? '', file.address ?? '', file.branch_area ?? '', ...fileMembers.flatMap((member) => [member.people.name, member.people.national_id ?? ''])].map(normalizeArabicSearch);
     const kinds = file.case_file_categories.map((item) => item.category);
     return (!term || text.some((value) => value.includes(term))) &&
       (!category || kinds.includes(category)) &&
       (!statusFilter || file.file_status === statusFilter) &&
       matchesCaseDirectoryFilter(file.id, files, members, ageFilter, today);
-  }), [files, memberNamesByFile, term, category, statusFilter, members, ageFilter, today]);
+  }), [files, membersByFile, term, category, statusFilter, members, ageFilter, today]);
+
+  function caseHref(file: CaseFile) {
+    const matchedContact = term ? ([
+      ['father', [file.father_name ?? '', file.father_national_id ?? '']],
+      ['mother', [file.mother_name ?? '', file.mother_national_id ?? '']],
+    ] as const).find(([, values]) => values.map(normalizeArabicSearch).some((value) => value.includes(term)))?.[0] : undefined;
+    if (matchedContact) return `/cases/${file.id}?matchedContact=${matchedContact}#contact-${matchedContact}`;
+    const matchedMember = term ? (membersByFile.get(file.id) ?? []).find((member) => [member.people.name, member.people.national_id ?? ''].map(normalizeArabicSearch).some((value) => value.includes(term))) : undefined;
+    return matchedMember ? `/cases/${file.id}?matchedMember=${encodeURIComponent(matchedMember.person_id)}#member-${encodeURIComponent(matchedMember.person_id)}` : `/cases/${file.id}`;
+  }
 
   useEffect(() => {
     if (!loading && window.matchMedia?.('(max-width: 680px)').matches && tableWrap.current) tableWrap.current.scrollLeft = tableWrap.current.scrollWidth;
@@ -73,12 +84,13 @@ export function CaseListPage({ canWrite, canArchive=false }: { canWrite: boolean
       <thead><tr><th scope="col">كود الملف</th><th scope="col">الأب والأم</th><th scope="col">التليفونات</th><th scope="col">نوع الحالة</th><th scope="col">حالة الملف</th><th scope="col"><span className="sr-only">فتح الملف</span></th></tr></thead>
       <tbody>{matches.map((file) => {
         const kinds = file.case_file_categories.map((item) => item.category);
-        return <tr key={file.id}><td><Link to={`/cases/${file.id}`}><span className="family-code">{file.code}</span></Link></td>
-          <td><Link to={`/cases/${file.id}`}>{[file.father_name && `الأب: ${file.father_name}`, file.mother_name && `الأم: ${file.mother_name}`].filter(Boolean).join(' · ') || <span className="muted-cell">الأسماء مش متسجلة</span>}</Link></td>
+        const href=caseHref(file);
+        return <tr key={file.id}><td><Link to={href}><span className="family-code">{file.code}</span></Link></td>
+          <td><Link to={href}>{[file.father_name && `الأب: ${file.father_name}`, file.mother_name && `الأم: ${file.mother_name}`].filter(Boolean).join(' · ') || <span className="muted-cell">الأسماء مش متسجلة</span>}</Link></td>
           <td>{[file.phone,file.phone_2,file.phone_3].filter((phone):phone is string=>!!phone).length ? <span className="family-list-phones">{[file.phone,file.phone_2,file.phone_3].filter((phone):phone is string=>!!phone).map((phone,index)=><bdi dir="ltr" key={index}>{phone}</bdi>)}</span> : <span className="muted-cell">مش متسجل</span>}</td>
           <td>{kinds.length ? kinds.map((item) => <span className="category-label" key={item}>{item}</span>) : <span className="muted-cell">مفيش تصنيف</span>}</td>
           <td><span className={`status-label case-file-status ${statusClass[file.file_status]}`}>{file.file_status}</span>{file.status_reason && <small className="status-reason">{file.status_reason}</small>}</td>
-          <td><Link className="table-action" to={`/cases/${file.id}`}>فتح الملف</Link></td></tr>;
+          <td><Link className="table-action" to={href}>فتح الملف</Link></td></tr>;
       })}</tbody>
     </table></div></>}
   </section>;

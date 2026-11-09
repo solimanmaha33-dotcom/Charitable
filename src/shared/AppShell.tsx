@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import { hasPermission, type StaffProfile } from '../features/auth/permissions';
+import { OfflineBanner } from './OfflineBanner';
 
 type Theme = 'light' | 'dark';
 
@@ -58,6 +59,7 @@ export function AppShell({ children, staff, onSignOut, logoutError }: { children
       });
   return (
     <div className="app-shell" lang="ar" dir="rtl">
+      <OfflineBanner />
       <a className="skip-link" href="#main-content">روح لمحتوى الصفحة</a>
       <header className="app-header">
         <div className="header-content">

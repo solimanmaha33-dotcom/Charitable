@@ -14,7 +14,7 @@ test('general manager archives and restores a case without losing its records or
   try {
     const created=await admin.auth.admin.createUser({email,password,email_confirm:true});if(created.error||!created.data.user)throw created.error;employee=created.data.user.id;
     sql(`insert into public.employees(id,employee_code,display_name,role) values ('${employee}','${employeeCode}','Synthetic general manager','general_manager'); insert into private.employee_auth(employee_id,auth_user_id) values ('${employee}','${employee}');`);
-    const saved=await admin.from('families').insert({name:'',father_name:'أب أرشيف',mother_name:`أم أرشيف ${id.slice(0,8)}`,notes:'سجل محفوظ للاختبار'}).select('id,code').single();if(saved.error)throw saved.error;caseFile=saved.data.id;
+    const saved=await admin.from('families').insert({name:'',phone:'01010000001',father_name:'أب أرشيف',mother_name:`أم أرشيف ${id.slice(0,8)}`,notes:'سجل محفوظ للاختبار'}).select('id,code').single();if(saved.error)throw saved.error;caseFile=saved.data.id;
     const personRow=await admin.from('people').insert({id:person,name:'طفل للاختبار',gender:'male',date_of_birth:'2018-01-01'});if(personRow.error)throw personRow.error;
     const memberRow=await admin.from('family_members').insert({family_id:caseFile,person_id:person,relationship:'ابن'});if(memberRow.error)throw memberRow.error;
     const historyRow=await admin.from('case_file_history').insert({family_id:caseFile,legacy_case_id:history,notes:'تاريخ محفوظ للاختبار',created_at:'2025-01-01T00:00:00Z'});if(historyRow.error)throw historyRow.error;
