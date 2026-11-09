@@ -2,7 +2,7 @@ import type { CaseFile, CaseFileMember } from '../../services/cases';
 import { ageOn } from './memberAge';
 
 export type CaseAgeFilter = 'all' | 'orphans' | 'under18' | 'under21' | 'elderly';
-const ORPHAN_CATEGORIES = new Set(['يتيم الأم', 'يتيم الأب']);
+const ORPHAN_CATEGORIES = new Set(['يتيم الأب']);
 function memberAge(member: CaseFileMember, today: string): number | null {
   const birthDate = member.people.date_of_birth;
   if (!birthDate) return null;

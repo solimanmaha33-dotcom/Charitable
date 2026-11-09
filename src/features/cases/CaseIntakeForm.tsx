@@ -57,6 +57,7 @@ export function CaseIntakeForm({ onSaved, initial, initialMembers = [] }: { onSa
   const [error, setError] = useState('');
   const householdCount = new Set([fatherName, motherName, ...initialMembers.map((member) => member.people.name)].map((name) => name.trim().toLocaleLowerCase()).filter(Boolean)).size;
   const widowCase = categories.includes('أرملة');
+  const hideGuardianFields = categories.some((category) => ['أرملة', 'هجر', 'مطلقة'].includes(category));
 
   async function refreshBranchOptions() {
     const options = await listBranches();
@@ -156,7 +157,7 @@ export function CaseIntakeForm({ onSaved, initial, initialMembers = [] }: { onSa
         {motherEmploymentStatus === 'يعمل' && <label>نوع عمل الأم<input aria-label="نوع عمل الأم" maxLength={200} value={motherOccupation} onChange={(event) => setMotherOccupation(event.target.value)} /></label>}
       </div>
     </section>
-    <section className="form-section">
+    {!hideGuardianFields && <section className="form-section">
       <h2>٣. المسؤول عن التربية</h2>
       <div className="form-grid">
         <label>اسم المسؤول<input maxLength={200} value={guardianName} onChange={(event) => setGuardianName(event.target.value)} /></label>
@@ -165,7 +166,7 @@ export function CaseIntakeForm({ onSaved, initial, initialMembers = [] }: { onSa
         <label>الرقم القومي <span className="muted-cell">(اختياري)</span><input inputMode="numeric" maxLength={14} value={nationalId} onChange={(event) => setNationalId(digitsOnly(event.target.value))} /></label>
         <label>انتهاء البطاقة <span className="muted-cell">(اختياري)</span><input type="date" value={nationalIdExpiresOn} onChange={(event) => setNationalIdExpiresOn(event.target.value)} /></label>
       </div>
-    </section>
+    </section>}
     <section className="form-section">
       <h2>٤. العنوان والتواصل</h2>
       <label>العنوان<input maxLength={1000} value={address} onChange={(event) => setAddress(event.target.value)} /></label>

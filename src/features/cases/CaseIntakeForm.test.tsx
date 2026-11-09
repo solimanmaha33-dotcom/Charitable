@@ -55,6 +55,20 @@ it('restores father name and national ID fields when widow category is removed w
  expect(screen.getByLabelText('الرقم القومي للأب')).toHaveValue('28001011234567');
 });
 
+it.each(['أرملة', 'هجر', 'مطلقة'])('hides the whole guardian section for %s and restores entered values when removed', (category) => {
+ render(<CaseIntakeForm onSaved={vi.fn()}/>);
+ fireEvent.change(screen.getByLabelText('اسم المسؤول'), {target:{value:'الجدة'}});
+ fireEvent.change(screen.getByLabelText('صلة القرابة'), {target:{value:'الجدة'}});
+ fireEvent.click(screen.getByLabelText(category));
+ expect(screen.queryByLabelText('اسم المسؤول')).not.toBeInTheDocument();
+ expect(screen.queryByLabelText('صلة القرابة')).not.toBeInTheDocument();
+ expect(screen.queryByLabelText('سن المسؤول (اختياري)')).not.toBeInTheDocument();
+ expect(screen.queryByLabelText('الرقم القومي (اختياري)')).not.toBeInTheDocument();
+ fireEvent.click(screen.getByLabelText(category));
+ expect(screen.getByLabelText('اسم المسؤول')).toHaveValue('الجدة');
+ expect(screen.getByLabelText('صلة القرابة')).toHaveValue('الجدة');
+});
+
 it('saves employment status and shows work type only for employed parents',async()=>{
  render(<CaseIntakeForm onSaved={vi.fn()}/>);
  fireEvent.change(screen.getByLabelText('اسم الأم (مطلوب)'),{target:{value:'منى'}});
@@ -136,14 +150,22 @@ it('requires a category and makes a reason mandatory for hold or rejection', asy
 });
 
 it('edits the current file instead of creating a second one', async () => {
-  const initial = { id:'f1',code:'F-0001',archived_at:null,phone:null,phone_2:null,phone_3:null,father_name:null,mother_name:null,contact_name:null,contact_relationship:null,contact_age:null,national_id:null,national_id_expires_on:null,notes:'',address:null,monthly_income:null,health_condition:null,branch_area:null,file_status:'تحت المراجعة' as const,status_reason:null,case_file_categories:[{category:'يتيم الأم' as const}] };
+  const initial = { id:'f1',code:'F-0001',archived_at:null,phone:null,phone_2:null,phone_3:null,father_name:null,mother_name:null,contact_name:null,contact_relationship:null,contact_age:null,national_id:null,national_id_expires_on:null,notes:'',address:null,monthly_income:null,health_condition:null,branch_area:null,file_status:'تحت المراجعة' as const,status_reason:null,case_file_categories:[{category:'يتيم الأب' as const}] };
   const onSaved = vi.fn(); render(<CaseIntakeForm initial={initial} onSaved={onSaved} />);
   fireEvent.change(screen.getByLabelText('حالة الملف'), { target: { value: 'مرفوض' } });
   fireEvent.change(screen.getByLabelText('سبب الرفض'), { target: { value: 'مستند ناقص' } });
   fireEvent.change(screen.getByLabelText('رقم الموبايل 1'), { target: { value: '01012345678' } });
   fireEvent.click(screen.getByRole('button', { name: 'حفظ التعديلات' }));
-  await waitFor(() => expect(saveCaseFile).toHaveBeenCalledWith('f1', expect.objectContaining({ fileStatus:'مرفوض',statusReason:'مستند ناقص',categories:['يتيم الأم'] })));
+  await waitFor(() => expect(saveCaseFile).toHaveBeenCalledWith('f1', expect.objectContaining({ fileStatus:'مرفوض',statusReason:'مستند ناقص',categories:['يتيم الأب'] })));
   expect(onSaved).toHaveBeenCalledWith('file-1');
+});
+
+it('shows the retired maternal orphan label as historical and does not submit it as a new choice', async () => {
+  const initial = { id:'f1',code:'F-0001',archived_at:null,phone:'01012345678',phone_2:null,phone_3:null,father_name:null,mother_name:'منى',contact_name:null,contact_relationship:null,contact_age:null,national_id:null,national_id_expires_on:null,notes:'',address:null,monthly_income:null,health_condition:null,branch_area:null,file_status:'نشط' as const,status_reason:null,case_file_categories:[{category:'يتيم الأم' as const}] };
+  render(<CaseIntakeForm initial={initial} onSaved={vi.fn()} />);
+  expect(screen.getByText('تصنيف قديم محفوظ: يتيم الأم')).toBeVisible();
+  fireEvent.click(screen.getByRole('button', {name:'حفظ التعديلات'}));
+  await waitFor(() => expect(saveCaseFile).toHaveBeenCalledWith('f1', expect.objectContaining({categories:[]})));
 });
 
 it('keeps removed historical categories visible but never resubmits them as new choices', async () => {
