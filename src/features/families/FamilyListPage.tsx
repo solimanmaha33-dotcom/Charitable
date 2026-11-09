@@ -3,18 +3,23 @@ import { Link, useParams } from 'react-router-dom';
 import { getFamily, listAllMembers, listCases, listFamilies, listMembers, type Family, type FamilyProfile, type FamilyMember, type Member, type CaseRecord } from '../../services/cases';
 import { normalizeArabicSearch } from '../cases/arabicSearch';
 import { CASE_CATEGORIES, isCaseCategory } from '../cases/categories';
+import type { CaseCategory } from '../cases/categories';
+import { countCaseMembers, matchesCaseDirectoryFilter, type CaseAgeFilter } from './caseMetrics';
 import { FamilyForm } from './FamilyForm';
 import { FamilyFilesPanel } from './FamilyFilesPanel';
 import { FamilyMemberForm } from './FamilyMemberForm';
 import { ageOn } from './memberAge';
 import { cairoToday } from './idExpiry';
 
+const formatCount = new Intl.NumberFormat('ar-EG').format;
+
 export function FamilyListPage({ canWrite }: { canWrite: boolean }) {
   const [families, setFamilies] = useState<Family[]>([]);
   const [cases, setCases] = useState<CaseRecord[]>([]);
   const [members, setMembers] = useState<FamilyMember[]>([]);
   const [search, setSearch] = useState('');
-  const [category, setCategory] = useState('');
+  const [category, setCategory] = useState<CaseCategory | ''>('');
+  const [ageFilter, setAgeFilter] = useState<CaseAgeFilter>('all');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const tableWrap = useRef<HTMLDivElement>(null);
@@ -47,11 +52,14 @@ export function FamilyListPage({ canWrite }: { canWrite: boolean }) {
     for (const member of members) result.set(member.family_id, [...(result.get(member.family_id) ?? []), member.people.name]);
     return result;
   }, [members]);
+  const today = cairoToday();
+  const memberCounts = useMemo(() => countCaseMembers(cases, members, today), [cases, members, today]);
   const term = normalizeArabicSearch(search);
-  const matches = families.filter((family) => {
+  const matches = useMemo(() => families.filter((family) => {
     const text = [family.name, family.code, family.phone ?? '', family.phone_2 ?? '', family.phone_3 ?? '', ...(memberNamesByFamily.get(family.id) ?? [])].map(normalizeArabicSearch);
-    return (!term || text.some((value) => value.includes(term))) && (!category || (categoriesByFamily.get(family.id) ?? []).includes(category));
-  });
+    return (!term || text.some((value) => value.includes(term))) &&
+      matchesCaseDirectoryFilter(family.id, cases, members, ageFilter, category, today);
+  }), [families, memberNamesByFamily, term, cases, members, ageFilter, category, today]);
   useEffect(() => {
     if (!loading && window.matchMedia?.('(max-width: 680px)').matches && tableWrap.current) {
       tableWrap.current.scrollLeft = tableWrap.current.scrollWidth;
@@ -71,13 +79,27 @@ export function FamilyListPage({ canWrite }: { canWrite: boolean }) {
           <input type="search" role="searchbox" aria-label="بحث عن حالة" placeholder="اكتب اسم الأسرة أو الفرد أو الكود أو رقم التليفون" value={search} onChange={(event) => setSearch(event.target.value)} />
         </label>
         <label className="filter-control">نوع الحالة
-          <select aria-label="نوع الحالة" value={category} onChange={(event) => setCategory(event.target.value)}>
+          <select aria-label="نوع الحالة" value={category} onChange={(event) => setCategory(isCaseCategory(event.target.value) ? event.target.value : '')}>
             <option value="">كل الحالات</option>
             {CASE_CATEGORIES.map((item) => <option key={item} value={item}>{item}</option>)}
           </select>
         </label>
+        <label className="filter-control">سن أفراد الحالة
+          <select aria-label="فلترة حسب سن أفراد الحالة" value={ageFilter} onChange={(event) => setAgeFilter(event.target.value as CaseAgeFilter)}>
+            <option value="all">كل الحالات</option>
+            <option value="orphans">الأيتام</option>
+            <option value="under18">أقل من ١٨ سنة</option>
+            <option value="under21">أقل من ٢١ سنة</option>
+            <option value="elderly">كبار السن (٦٠ سنة فأكثر)</option>
+          </select>
+        </label>
       </div>
 
+      {!loading && !error ? <div className="workspace-summary case-directory-summary" aria-label="ملخص الحالات">
+        <article className="summary-card"><span>عدد الحالات</span><strong data-testid="case-directory-cases">{formatCount(families.length)}</strong></article>
+        <article className="summary-card"><span>عدد الأطفال أقل من ١٨</span><strong data-testid="case-directory-children">{formatCount(memberCounts.children)}</strong></article>
+        <article className="summary-card"><span>عدد الأيتام أقل من ١٨</span><strong data-testid="case-directory-orphans">{formatCount(memberCounts.orphans)}</strong></article>
+      </div> : null}
       {error ? <p className="error-message" role="alert">{error}</p> : null}
       {loading ? <p className="empty-state" role="status">جاري تحميل الحالات…</p> : null}
       {!loading && !error && families.length === 0 ? <div className="empty-state"><strong>لسه مفيش ملفات حالات</strong>{canWrite ? 'ابدأ بإضافة ملف أسرة جديد.' : 'الملفات الجديدة هتظهر هنا.'}</div> : null}

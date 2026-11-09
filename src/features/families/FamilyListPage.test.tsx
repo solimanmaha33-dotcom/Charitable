@@ -16,10 +16,12 @@ beforeEach(() => {
   ]);
   service.listCases.mockResolvedValue([
     { id: 'c1', family_id: 'f1', notes: '', case_categories: [{ category: 'أرملة' }] },
-    { id: 'c2', family_id: 'f2', notes: '', case_categories: [{ category: 'يتيم الأب' }] },
+    { id: 'c2', family_id: 'f2', notes: '', case_categories: [{ category: 'يتيم الأب' }, { category: 'كبار السن (٦٠ سنة فأكثر)' }] },
   ]);
   service.listAllMembers.mockResolvedValue([
-    { family_id: 'f1', person_id: 'p1', relationship: 'ابن', people: { name: 'كريم' } },
+    { family_id: 'f1', person_id: 'p1', relationship: 'ابن', people: { name: 'كريم', gender: 'male', date_of_birth: '2010-01-01' } },
+    { family_id: 'f2', person_id: 'p2', relationship: 'بنت', people: { name: 'مريم', gender: 'female', date_of_birth: '2012-01-01' } },
+    { family_id: 'f2', person_id: 'p3', relationship: 'أب', people: { name: 'محمود', gender: 'male', date_of_birth: '1960-01-01' } },
   ]);
 });
 
@@ -50,6 +52,35 @@ describe('family directory', () => {
     await waitFor(() => expect(screen.queryByText('أسرة أم أحمد')).not.toBeInTheDocument());
     const table = screen.getByRole('table', { name: 'قائمة الحالات' });
     expect(within(table).getByText('يتيم الأب')).toBeVisible();
+  });
+
+  it('shows one count for each family case, all children, and orphan children', async () => {
+    render(<MemoryRouter><FamilyListPage canWrite /></MemoryRouter>);
+    expect(await screen.findByTestId('case-directory-cases')).toHaveTextContent('٢');
+    expect(screen.getByTestId('case-directory-children')).toHaveTextContent('٢');
+    expect(screen.getByTestId('case-directory-orphans')).toHaveTextContent('١');
+  });
+
+  it('filters cases by age and orphan status while preserving one row per family', async () => {
+    render(<MemoryRouter><FamilyListPage canWrite /></MemoryRouter>);
+    const filter = await screen.findByRole('combobox', { name: 'فلترة حسب سن أفراد الحالة' });
+    fireEvent.change(filter, { target: { value: 'orphans' } });
+    expect(await screen.findByRole('link', { name: 'أسرة محمود' })).toBeVisible();
+    expect(screen.queryByRole('link', { name: 'أسرة أم أحمد' })).not.toBeInTheDocument();
+    fireEvent.change(filter, { target: { value: 'elderly' } });
+    expect(await screen.findByRole('link', { name: 'أسرة محمود' })).toBeVisible();
+    fireEvent.change(filter, { target: { value: 'under18' } });
+    expect(await screen.findByRole('link', { name: 'أسرة أم أحمد' })).toBeVisible();
+    expect(await screen.findByRole('link', { name: 'أسرة محمود' })).toBeVisible();
+  });
+
+  it('combines text search, age filter, and case category filters', async () => {
+    render(<MemoryRouter><FamilyListPage canWrite /></MemoryRouter>);
+    fireEvent.change(await screen.findByRole('combobox', { name: 'فلترة حسب سن أفراد الحالة' }), { target: { value: 'under18' } });
+    fireEvent.change(screen.getByRole('combobox', { name: 'نوع الحالة' }), { target: { value: 'أرملة' } });
+    fireEvent.change(screen.getByRole('searchbox', { name: 'بحث عن حالة' }), { target: { value: 'كريم' } });
+    expect(await screen.findByRole('link', { name: 'أسرة أم أحمد' })).toBeVisible();
+    expect(screen.queryByRole('link', { name: 'أسرة محمود' })).not.toBeInTheDocument();
   });
 
   it('finds families by their unique code and phone number', async () => {

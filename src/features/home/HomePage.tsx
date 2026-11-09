@@ -1,17 +1,20 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { hasPermission, type StaffProfile } from '../auth/permissions';
-import { countCases, countFamilies, listAgeThresholdMembers, listFamilyIdExpirationsBy, type FamilyIdExpiry, type MemberAgeProfile } from '../../services/cases';
+import { countFamilies, listAgeThresholdMembers, listAllMembers, listCases, listFamilyIdExpirationsBy, type FamilyIdExpiry, type MemberAgeProfile } from '../../services/cases';
 import { countDonations } from '../../services/donations';
 import { addDateOnlyDays, cairoToday, groupIdExpirations } from '../families/idExpiry';
 import { findMemberAgeAlerts, type MemberAgeAlert } from '../families/memberAge';
+import { countCaseMembers } from '../families/caseMetrics';
+
+const formatCount = new Intl.NumberFormat('ar-EG').format;
 
 type Action = { label: string; description: string; to: string; primary?: boolean };
 
 export function HomePage({ staff }: { staff: StaffProfile }) {
   const canReadCases = hasPermission(staff, 'casesRead');
   const canReadDonations = hasPermission(staff, 'donationsRead');
-  const [counts, setCounts] = useState<{families: number|null; cases: number|null; donations: number|null}>({families:null,cases:null,donations:null});
+  const [counts, setCounts] = useState<{cases: number|null; children: number|null; orphans: number|null; donations: number|null}>({cases:null,children:null,orphans:null,donations:null});
   const [loadingCounts, setLoadingCounts] = useState(true);
   const [idExpiryRows,setIdExpiryRows]=useState<FamilyIdExpiry[]>([]);
   const [loadingIdExpiry,setLoadingIdExpiry]=useState(true);
@@ -26,10 +29,12 @@ export function HomePage({ staff }: { staff: StaffProfile }) {
     const unavailable = Promise.resolve(undefined);
     Promise.all([
       canReadCases ? countFamilies().catch(() => null) : unavailable,
-      canReadCases ? countCases().catch(() => null) : unavailable,
+      canReadCases ? listCases().catch(() => null) : unavailable,
+      canReadCases ? listAllMembers().catch(() => null) : unavailable,
       canReadDonations ? countDonations().catch(() => null) : unavailable,
-    ]).then(([families,cases,donations]) => {
-      if (active) setCounts({families:families ?? null,cases:cases ?? null,donations:donations ?? null});
+    ]).then(([cases,caseRows,members,donations]) => {
+      const memberTotals = caseRows && members ? countCaseMembers(caseRows, members, cairoToday()) : null;
+      if (active) setCounts({cases:cases ?? null,children:memberTotals?.children ?? null,orphans:memberTotals?.orphans ?? null,donations:donations ?? null});
     }).finally(() => { if (active) setLoadingCounts(false); });
     return () => { active = false; };
   }, [staff.id, canReadCases, canReadDonations]);
@@ -83,10 +88,11 @@ export function HomePage({ staff }: { staff: StaffProfile }) {
       </header>
       {(canReadCases || canReadDonations) ? <section className="workspace-summary" aria-label="ملخص السجلات">
         {canReadCases ? <>
-          <article className="summary-card"><span>الأسر المسجلة</span><strong data-testid="summary-families">{loadingCounts ? 'جاري التحميل…' : counts.families ?? 'تعذّر التحميل'}</strong></article>
-          <article className="summary-card"><span>الحالات المسجلة</span><strong data-testid="summary-cases">{loadingCounts ? 'جاري التحميل…' : counts.cases ?? 'تعذّر التحميل'}</strong></article>
+          <article className="summary-card"><span>الحالات المسجلة</span><strong data-testid="summary-cases">{loadingCounts ? 'جاري التحميل…' : counts.cases === null ? 'تعذّر التحميل' : formatCount(counts.cases)}</strong></article>
+          <article className="summary-card"><span>الأطفال أقل من ١٨ سنة</span><strong data-testid="summary-children">{loadingCounts ? 'جاري التحميل…' : counts.children === null ? 'تعذّر التحميل' : formatCount(counts.children)}</strong></article>
+          <article className="summary-card"><span>الأيتام أقل من ١٨ سنة</span><strong data-testid="summary-orphans">{loadingCounts ? 'جاري التحميل…' : counts.orphans === null ? 'تعذّر التحميل' : formatCount(counts.orphans)}</strong></article>
         </> : null}
-        {canReadDonations ? <article className="summary-card"><span>التبرعات المسجلة</span><strong data-testid="summary-donations">{loadingCounts ? 'جاري التحميل…' : counts.donations ?? 'تعذّر التحميل'}</strong></article> : null}
+        {canReadDonations ? <article className="summary-card"><span>التبرعات المسجلة</span><strong data-testid="summary-donations">{loadingCounts ? 'جاري التحميل…' : counts.donations === null ? 'تعذّر التحميل' : formatCount(counts.donations)}</strong></article> : null}
       </section> : null}
       {canReadCases?<section className="section-block id-expiry-alerts" aria-labelledby="id-expiry-title">
         <div className="section-heading"><h2 id="id-expiry-title">متابعة انتهاء بطاقات الرقم القومي</h2><span>خلال ٩٠ يوم</span></div>

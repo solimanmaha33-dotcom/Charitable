@@ -5,8 +5,8 @@ import { HomePage } from './HomePage';
 import type { StaffProfile } from '../auth/permissions';
 import {addDateOnlyDays,cairoToday} from '../families/idExpiry';
 
-const counts = vi.hoisted(() => ({ families: vi.fn(), cases: vi.fn(), donations: vi.fn(), expirations: vi.fn(), ageMembers:vi.fn() }));
-vi.mock('../../services/cases', () => ({ countFamilies: counts.families, countCases: counts.cases, listFamilyIdExpirationsBy: counts.expirations,listAgeThresholdMembers:counts.ageMembers }));
+const counts = vi.hoisted(() => ({ families: vi.fn(), cases: vi.fn(), caseRows: vi.fn(), members: vi.fn(), donations: vi.fn(), expirations: vi.fn(), ageMembers:vi.fn() }));
+vi.mock('../../services/cases', () => ({ countFamilies: counts.families, countCases: counts.cases, listCases: counts.caseRows, listAllMembers: counts.members, listFamilyIdExpirationsBy: counts.expirations,listAgeThresholdMembers:counts.ageMembers }));
 vi.mock('../../services/donations', () => ({ countDonations: counts.donations }));
 
 const staff: StaffProfile = {
@@ -17,11 +17,21 @@ const staff: StaffProfile = {
 beforeEach(() => {
   counts.families.mockResolvedValue(3);
   counts.cases.mockResolvedValue(5);
+  counts.caseRows.mockResolvedValue([
+    { id: 'c1', family_id: 'f1', notes: '', case_categories: [{ category: 'يتيم الأب' }] },
+    { id: 'c2', family_id: 'f2', notes: '', case_categories: [{ category: 'أرملة' }] },
+  ]);
+  counts.members.mockResolvedValue([
+    { family_id: 'f1', person_id: 'p1', relationship: 'ابن', people: { name: 'علي', gender: 'male', date_of_birth: '2018-01-01' } },
+    { family_id: 'f2', person_id: 'p2', relationship: 'بنت', people: { name: 'سلمى', gender: 'female', date_of_birth: '2019-01-01' } },
+  ]);
   counts.donations.mockResolvedValue(2);
   counts.expirations.mockResolvedValue([]);
   counts.ageMembers.mockResolvedValue([]);
   counts.families.mockClear();
   counts.cases.mockClear();
+  counts.caseRows.mockClear();
+  counts.members.mockClear();
   counts.donations.mockClear();
   counts.expirations.mockClear();
   counts.ageMembers.mockClear();
@@ -38,11 +48,15 @@ describe('home workspace', () => {
 
   it('shows only exact totals for records the employee can read', async () => {
     render(<MemoryRouter><HomePage staff={staff} /></MemoryRouter>);
-    expect(await screen.findByTestId('summary-families')).toHaveTextContent('3');
-    expect(screen.getByTestId('summary-cases')).toHaveTextContent('5');
+    expect(await screen.findByTestId('summary-cases')).toHaveTextContent('٣');
+    expect(screen.getByTestId('summary-children')).toHaveTextContent('٢');
+    expect(screen.getByTestId('summary-orphans')).toHaveTextContent('١');
+    expect(screen.queryByTestId('summary-families')).not.toBeInTheDocument();
     expect(screen.queryByTestId('summary-donations')).not.toBeInTheDocument();
     expect(counts.families).toHaveBeenCalledOnce();
-    expect(counts.cases).toHaveBeenCalledOnce();
+    expect(counts.cases).not.toHaveBeenCalled();
+    expect(counts.caseRows).toHaveBeenCalledOnce();
+    expect(counts.members).toHaveBeenCalledOnce();
     expect(counts.donations).not.toHaveBeenCalled();
   });
 
@@ -73,8 +87,7 @@ describe('home workspace', () => {
   it('does not turn a failed count request into a zero total', async () => {
     counts.families.mockRejectedValueOnce(new Error('offline'));
     render(<MemoryRouter><HomePage staff={staff} /></MemoryRouter>);
-    expect(await screen.findByTestId('summary-families')).toHaveTextContent('تعذّر التحميل');
-    expect(screen.getByTestId('summary-cases')).toHaveTextContent('5');
+    expect(await screen.findByTestId('summary-cases')).toHaveTextContent('تعذّر التحميل');
   });
 
   it('shows only donation actions when the employee can only manage donations', () => {
@@ -88,12 +101,15 @@ describe('home workspace', () => {
   it('shows a donation total without requesting restricted case totals', async () => {
     const donor: StaffProfile = { ...staff, permissions: { casesRead: false, casesWrite: false, donationsRead: true, donationsWrite: false, assistantUse: false } };
     render(<MemoryRouter><HomePage staff={donor} /></MemoryRouter>);
-    expect(await screen.findByTestId('summary-donations')).toHaveTextContent('2');
-    expect(screen.queryByTestId('summary-families')).not.toBeInTheDocument();
+    expect(await screen.findByTestId('summary-donations')).toHaveTextContent('٢');
     expect(screen.queryByTestId('summary-cases')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('summary-children')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('summary-orphans')).not.toBeInTheDocument();
     expect(counts.donations).toHaveBeenCalledOnce();
     expect(counts.families).not.toHaveBeenCalled();
     expect(counts.cases).not.toHaveBeenCalled();
+    expect(counts.caseRows).not.toHaveBeenCalled();
+    expect(counts.members).not.toHaveBeenCalled();
     expect(counts.expirations).not.toHaveBeenCalled();
     expect(counts.ageMembers).not.toHaveBeenCalled();
   });
