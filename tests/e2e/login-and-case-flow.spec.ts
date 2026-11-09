@@ -15,6 +15,8 @@ import { createClient } from '@supabase/supabase-js';
 import { execFileSync } from 'node:child_process';
 
 test('manager creates an employee who signs in and creates a searchable family code', async ({ page }) => {
+  const pageErrors: string[] = [];
+  page.on('pageerror', error => pageErrors.push(error.message));
   const s = JSON.parse(execFileSync('npx', ['supabase', 'status', '-o', 'json'], { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }));
   if (!/^http:\/\/(127\.0\.0\.1|localhost):/.test(s.API_URL)) throw Error('Local Supabase required');
   const admin = createClient(s.API_URL, s.SERVICE_ROLE_KEY, { auth: { persistSession: false } });
@@ -26,6 +28,49 @@ test('manager creates an employee who signs in and creates a searchable family c
     sql(`insert into public.employees(id,employee_code,display_name,role) values ('${manager}','${managerCode}','Synthetic manager','manager'); insert into private.employee_auth values ('${manager}','${manager}');`);
     await page.goto('/login'); await page.getByLabel('كود الموظف').fill(managerCode); await page.getByLabel('كلمة السر').fill(password); await page.getByRole('button', { name: 'دخول', exact: true }).click();
     await expect(page.getByRole('button', { name: 'تسجيل الخروج' })).toBeVisible();
+    await page.setViewportSize({ width: 1440, height: 900 }); await page.goto('/');
+    await expect(page.getByRole('heading', { name: 'ابدأ من هنا' })).toBeVisible();
+    const desktopHeadings = await page.locator('.home-page h2').allTextContents();
+    expect(desktopHeadings.indexOf('ابدأ من هنا')).toBeLessThan(desktopHeadings.indexOf('متابعة انتهاء بطاقات الرقم القومي'));
+    expect(await page.locator('.workspace-summary').evaluate(element => getComputedStyle(element).gridTemplateColumns.split(' ').length)).toBe(4);
+    await page.setViewportSize({ width: 360, height: 800 });
+    expect(await page.locator('.workspace-summary').evaluate(element => getComputedStyle(element).gridTemplateColumns.split(' ').length)).toBe(1);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360);
+    const mobilePages = [
+      ['/cases', 'الحالات'],
+      ['/cases/new', 'إضافة حالة جديدة'],
+      ['/donations', 'التبرعات والكفالات'],
+      ['/assistant', 'المساعد الذكي'],
+      ['/staff', 'الموظفين'],
+    ] as const;
+    for (const [path, heading] of mobilePages) {
+      await page.goto(path);
+      await expect(page.getByRole('heading', { name: heading, exact: true }).first()).toBeVisible();
+      expect(await page.evaluate(() => document.documentElement.scrollWidth), `${path} should fit a 360px viewport`).toBeLessThanOrEqual(360);
+      const navigation = page.getByRole('navigation', { name: 'القائمة الرئيسية' });
+      await expect(navigation.getByRole('link')).toHaveCount(5);
+      expect(await navigation.evaluate(element => element.scrollWidth <= element.clientWidth), `${path} navigation should not clip links`).toBe(true);
+      await page.setViewportSize({ width: 320, height: 720 });
+      expect(await page.evaluate(() => document.documentElement.scrollWidth), `${path} should fit a 320px viewport`).toBeLessThanOrEqual(320);
+      expect(await navigation.evaluate(element => element.scrollWidth <= element.clientWidth), `${path} navigation should fit at 320px`).toBe(true);
+      await page.setViewportSize({ width: 360, height: 800 });
+      if (path === '/donations') {
+        await expect(page.getByRole('status').filter({ hasText: 'جاري تحميل البيانات' })).toBeHidden();
+        await page.getByText('إضافة متبرع', { exact: true }).first().click();
+        await expect(page.getByLabel('اسم المتبرع')).toBeVisible();
+        expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360);
+      }
+      if (path === '/assistant') {
+        await page.getByRole('button', { name: 'ابحث عن حالة فيها علاج' }).click();
+        await expect(page.getByLabel('سؤالك')).toHaveValue('ابحث عن حالة فيها علاج');
+      }
+    }
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto('/');
+    await page.getByRole('button', { name: 'تفعيل الوضع الليلي' }).click();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+    await page.waitForTimeout(250);
+    await page.getByRole('button', { name: 'تفعيل الوضع النهاري' }).click();
     await page.goto('/staff'); await page.getByLabel('كود الموظف').fill(employeeCode); await page.getByLabel('اسم الموظف').fill('Synthetic employee'); await page.getByLabel('كلمة السر المؤقتة').fill(password); await page.getByRole('group', {name:'الصلاحيات'}).getByLabel('تعديل الحالات').check(); await page.getByRole('button', {name:'إنشاء الموظف'}).click();
     await expect(page.getByRole('group', {name:'Synthetic employee'})).toBeVisible();
     employee = sql(`select id from public.employees where employee_code='${employeeCode}'`);
@@ -43,7 +88,12 @@ test('manager creates an employee who signs in and creates a searchable family c
     const row = await admin.from('families').select('code,file_status,status_reason').eq('id', caseFile).single(); if (row.error) throw row.error;
     expect(row.data.code).toMatch(/^F-\d{4,}$/); expect(row.data.file_status).toBe('موقوف'); expect(row.data.status_reason).toBe('استكمال مستند تجريبي');
     await expect(page.getByText(row.data.code).first()).toBeVisible();
-    await page.goto('/cases'); await page.getByLabel('بحث عن حالة').fill(row.data.code); await expect(page.getByRole('link', { name: new RegExp(row.data.code) })).toBeVisible();
+    await page.setViewportSize({ width: 360, height: 800 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth), 'case details should fit a 360px viewport').toBeLessThanOrEqual(360);
+    await expect(page.getByRole('heading', { name: /ملف الحالة/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'طباعة الحالة' })).toBeVisible();
+    await page.goto('/cases'); await expect(page.locator('.table-scroll-help')).toBeVisible(); await page.getByLabel('بحث عن حالة').fill(row.data.code); await expect(page.getByRole('link', { name: new RegExp(row.data.code) })).toBeVisible();
+    expect(pageErrors).toEqual([]);
   } finally {
     if (!employee) employee = sql(`select id from public.employees where employee_code='${employeeCode}'`);
     if (employee && !employeeAuth) employeeAuth = sql(`select auth_user_id from private.employee_auth where employee_id='${employee}'`);

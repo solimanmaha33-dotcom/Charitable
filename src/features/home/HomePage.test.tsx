@@ -115,4 +115,11 @@ describe('home workspace', () => {
     render(<MemoryRouter><HomePage staff={manager} /></MemoryRouter>);
     expect(screen.getByRole('link', { name: /إضافة حالة جديدة/ })).toHaveAttribute('href', '/cases/new');
   });
+
+  it('shows work shortcuts before the reminders', () => {
+    render(<MemoryRouter><HomePage staff={staff} /></MemoryRouter>);
+    const actions = screen.getByRole('heading', { name: 'ابدأ من هنا' });
+    const reminders = screen.getByRole('heading', { name: 'متابعة انتهاء بطاقات الرقم القومي' });
+    expect(actions.compareDocumentPosition(reminders) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
 });

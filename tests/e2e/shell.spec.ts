@@ -18,6 +18,13 @@ test('signed-out Arabic shell fits a 360px phone and links to sign-in', async ({
   await page.keyboard.press('Enter');
   await expect(page).toHaveURL('/login');
   await expect(page.getByRole('heading', { name: 'تسجيل الدخول' })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360);
+  await expect(page.getByLabel('كود الموظف')).toBeVisible();
+  await expect(page.getByLabel('كلمة السر')).toBeVisible();
+  await page.setViewportSize({ width: 320, height: 720 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
+  await expect(page.getByLabel('كود الموظف')).toBeVisible();
+  await page.setViewportSize({ width: 360, height: 800 });
   await page.goto('/cases');
   await expect(page.getByRole('heading', { name: 'سجّل دخولك الأول' })).toBeVisible();
 });

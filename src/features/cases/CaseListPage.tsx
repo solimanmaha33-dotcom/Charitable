@@ -69,7 +69,7 @@ export function CaseListPage({ canWrite }: { canWrite: boolean }) {
     {loading && <p className="empty-state" role="status">جاري تحميل الحالات…</p>}
     {!loading && !error && files.length === 0 && <div className="empty-state"><strong>لسه مفيش ملفات حالات</strong>{canWrite ? 'ابدأ بإضافة ملف حالة جديد.' : 'الملفات الجديدة هتظهر هنا.'}</div>}
     {!loading && !error && files.length > 0 && matches.length === 0 && <div className="empty-state"><strong>ملقيناش حالات مطابقة</strong>جرّب كلمة تانية أو غيّر الفلاتر.</div>}
-    {!loading && !error && matches.length > 0 && <><div className="table-caption">ملفات الحالات المعروضة: {formatCount(matches.length)}</div><div className="data-table-wrap" ref={tableWrap}><table className="data-table" aria-label="قائمة الحالات">
+    {!loading && !error && matches.length > 0 && <><div className="table-caption">ملفات الحالات المعروضة: {formatCount(matches.length)}</div><p className="table-scroll-help">اسحب الجدول يمين وشمال لعرض باقي البيانات.</p><div className="data-table-wrap" ref={tableWrap}><table className="data-table" aria-label="قائمة الحالات">
       <thead><tr><th scope="col">كود الملف</th><th scope="col">الأب والأم</th><th scope="col">التليفونات</th><th scope="col">نوع الحالة</th><th scope="col">حالة الملف</th><th scope="col"><span className="sr-only">فتح الملف</span></th></tr></thead>
       <tbody>{matches.map((file) => {
         const kinds = file.case_file_categories.map((item) => item.category);
