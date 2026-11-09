@@ -3,10 +3,10 @@ import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { HomePage } from './HomePage';
 import type { StaffProfile } from '../auth/permissions';
-import {addDateOnlyDays,cairoToday} from '../families/idExpiry';
+import {addDateOnlyDays,cairoToday} from '../cases/idExpiry';
 
-const counts = vi.hoisted(() => ({ families: vi.fn(), cases: vi.fn(), caseRows: vi.fn(), members: vi.fn(), donations: vi.fn(), expirations: vi.fn(), ageMembers:vi.fn() }));
-vi.mock('../../services/cases', () => ({ countFamilies: counts.families, countCases: counts.cases, listCases: counts.caseRows, listAllMembers: counts.members, listFamilyIdExpirationsBy: counts.expirations,listAgeThresholdMembers:counts.ageMembers }));
+const counts = vi.hoisted(() => ({ caseFiles: vi.fn(), fileRows: vi.fn(), members: vi.fn(), donations: vi.fn(), expirations: vi.fn(), ageMembers:vi.fn() }));
+vi.mock('../../services/cases', () => ({ countCaseFiles: counts.caseFiles, listCaseFiles: counts.fileRows, listAllMembers: counts.members, listCaseFileIdExpirationsBy: counts.expirations,listAgeThresholdMembers:counts.ageMembers }));
 vi.mock('../../services/donations', () => ({ countDonations: counts.donations }));
 
 const staff: StaffProfile = {
@@ -15,11 +15,10 @@ const staff: StaffProfile = {
 };
 
 beforeEach(() => {
-  counts.families.mockResolvedValue(3);
-  counts.cases.mockResolvedValue(5);
-  counts.caseRows.mockResolvedValue([
-    { id: 'c1', family_id: 'f1', notes: '', case_categories: [{ category: 'يتيم الأب' }] },
-    { id: 'c2', family_id: 'f2', notes: '', case_categories: [{ category: 'أرملة' }] },
+  counts.caseFiles.mockResolvedValue(3);
+  counts.fileRows.mockResolvedValue([
+    { id:'f1',code:'F-1',father_name:'أب',mother_name:'أم',case_file_categories:[{category:'يتيم الأب'}] },
+    { id:'f2',code:'F-2',father_name:'أب آخر',mother_name:'أم أخرى',case_file_categories:[{category:'أرملة'}] },
   ]);
   counts.members.mockResolvedValue([
     { family_id: 'f1', person_id: 'p1', relationship: 'ابن', people: { name: 'علي', gender: 'male', date_of_birth: '2018-01-01' } },
@@ -28,9 +27,8 @@ beforeEach(() => {
   counts.donations.mockResolvedValue(2);
   counts.expirations.mockResolvedValue([]);
   counts.ageMembers.mockResolvedValue([]);
-  counts.families.mockClear();
-  counts.cases.mockClear();
-  counts.caseRows.mockClear();
+  counts.caseFiles.mockClear();
+  counts.fileRows.mockClear();
   counts.members.mockClear();
   counts.donations.mockClear();
   counts.expirations.mockClear();
@@ -53,39 +51,38 @@ describe('home workspace', () => {
     expect(screen.getByTestId('summary-orphans')).toHaveTextContent('١');
     expect(screen.queryByTestId('summary-families')).not.toBeInTheDocument();
     expect(screen.queryByTestId('summary-donations')).not.toBeInTheDocument();
-    expect(counts.families).toHaveBeenCalledOnce();
-    expect(counts.cases).not.toHaveBeenCalled();
-    expect(counts.caseRows).toHaveBeenCalledOnce();
+    expect(counts.caseFiles).toHaveBeenCalledOnce();
+    expect(counts.fileRows).toHaveBeenCalledOnce();
     expect(counts.members).toHaveBeenCalledOnce();
     expect(counts.donations).not.toHaveBeenCalled();
   });
 
-  it('shows expired and soon-to-expire IDs as family links', async()=>{
+  it('shows expired and soon-to-expire IDs as case-file links', async()=>{
     const today=cairoToday();
     counts.expirations.mockResolvedValue([
-      {id:'old',code:'F-OLD',name:'أسرة البطاقة المنتهية',contact_name:null,national_id_expires_on:addDateOnlyDays(today,-1)},
-      {id:'soon',code:'F-SOON',name:'أسرة البطاقة القريبة',contact_name:'مسؤولة',national_id_expires_on:addDateOnlyDays(today,25)},
+      {id:'old',code:'F-OLD',father_name:'أحمد',mother_name:'منى',contact_name:null,national_id_expires_on:addDateOnlyDays(today,-1)},
+      {id:'soon',code:'F-SOON',father_name:'محمود',mother_name:'سعاد',contact_name:'مسؤولة',national_id_expires_on:addDateOnlyDays(today,25)},
     ]);
     render(<MemoryRouter><HomePage staff={staff}/></MemoryRouter>);
     expect(await screen.findByText('منتهية')).toBeVisible();
-    expect(screen.getByRole('link',{name:/أسرة البطاقة المنتهية/})).toHaveAttribute('href','/cases/family/old');
+    expect(screen.getByRole('link',{name:/أحمد/})).toHaveAttribute('href','/cases/old');
     expect(await screen.findByText(/هتنتهي خلال ٢٥ يوم/)).toBeVisible();
-    expect(screen.getByRole('link',{name:/أسرة البطاقة القريبة/})).toHaveAttribute('href','/cases/family/soon');
+    expect(screen.getByRole('link',{name:/محمود/})).toHaveAttribute('href','/cases/soon');
     expect(counts.expirations).toHaveBeenCalledWith(addDateOnlyDays(today,90));
   });
 
   it('shows the correct age threshold reminder and family link',async()=>{
     const today=cairoToday();const threshold=addDateOnlyDays(today,25);const [year,month,day]=threshold.split('-');
-    counts.ageMembers.mockResolvedValue([{family_id:'family-1',person_id:'member-1',relationship:'بنت',people:{name:'ريم',gender:'female',date_of_birth:`${Number(year)-21}-${month}-${day}`},families:{name:'أسرة ريم',code:'F-0001'}}]);
+    counts.ageMembers.mockResolvedValue([{family_id:'family-1',person_id:'member-1',relationship:'بنت',people:{name:'ريم',gender:'female',date_of_birth:`${Number(year)-21}-${month}-${day}`},case_file:{father_name:'أحمد',mother_name:'منى',code:'F-0001'}}]);
     render(<MemoryRouter><HomePage staff={staff}/></MemoryRouter>);
     expect(await screen.findByText((_text,element)=>element?.tagName==='SMALL'&&element.textContent?.includes('هيكمل ٢١ سنة')===true)).toBeVisible();
     expect(await screen.findByText('خلال ٢٥ يوم')).toBeVisible();
-    expect(screen.getByRole('link',{name:/ريم · أسرة ريم/})).toHaveAttribute('href','/cases/family/family-1');
+    expect(screen.getByRole('link',{name:/ريم · الأب: أحمد/})).toHaveAttribute('href','/cases/family-1');
     expect(counts.ageMembers).toHaveBeenCalledOnce();
   });
 
   it('does not turn a failed count request into a zero total', async () => {
-    counts.families.mockRejectedValueOnce(new Error('offline'));
+    counts.caseFiles.mockRejectedValueOnce(new Error('offline'));
     render(<MemoryRouter><HomePage staff={staff} /></MemoryRouter>);
     expect(await screen.findByTestId('summary-cases')).toHaveTextContent('تعذّر التحميل');
   });
@@ -106,9 +103,8 @@ describe('home workspace', () => {
     expect(screen.queryByTestId('summary-children')).not.toBeInTheDocument();
     expect(screen.queryByTestId('summary-orphans')).not.toBeInTheDocument();
     expect(counts.donations).toHaveBeenCalledOnce();
-    expect(counts.families).not.toHaveBeenCalled();
-    expect(counts.cases).not.toHaveBeenCalled();
-    expect(counts.caseRows).not.toHaveBeenCalled();
+    expect(counts.caseFiles).not.toHaveBeenCalled();
+    expect(counts.fileRows).not.toHaveBeenCalled();
     expect(counts.members).not.toHaveBeenCalled();
     expect(counts.expirations).not.toHaveBeenCalled();
     expect(counts.ageMembers).not.toHaveBeenCalled();

@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { listFamilies, type Family } from '../../services/cases';
+import { listCaseFiles, type CaseFile, type CaseFileSummary } from '../../services/cases';
 import { endSponsorship, PaymentAlreadyReceivedError, generateInstallments, listDonations, listDonors, listPayments, listSponsorships, receivePayment, saveDonor, utcToday, type Donation, type Donor, type Sponsorship, type SponsorshipPayment } from '../../services/donations';
 import { DonationForm } from './DonationForm';
 import { SponsorshipForm } from './SponsorshipForm';
@@ -9,12 +9,12 @@ import { getSponsorshipStatus } from './sponsorshipStatus';
 
 function CalendarDate({value}:{value:string}) { return <time dateTime={value} dir="ltr" style={{unicodeBidi:'isolate'}}>{value}</time>; }
 
-type Data = {donors:Donor[];donations:Donation[];sponsorships:Sponsorship[];payments:SponsorshipPayment[];families:Family[]};
+type Data = {donors:Donor[];donations:Donation[];sponsorships:Sponsorship[];payments:SponsorshipPayment[];families:CaseFile[]};
 async function loadData(canReadCases:boolean):Promise<Data> {
  if(canReadCases)await generateInstallments();
  const [donors,donations,sponsorships,payments,families]=await Promise.all([
   listDonors(),listDonations(),canReadCases?listSponsorships():Promise.resolve([]),
-  canReadCases?listPayments():Promise.resolve([]),canReadCases?listFamilies():Promise.resolve([]),
+  canReadCases?listPayments():Promise.resolve([]),canReadCases?listCaseFiles():Promise.resolve([]),
  ]);
  return {donors,donations,sponsorships,payments,families};
 }
@@ -33,10 +33,10 @@ function PaymentRow({payment,canWrite,onSaved}:{payment:SponsorshipPayment;canWr
   {error?<p role="alert">{error}</p>:null}
  </li>;
 }
-function SponsorshipCard({sponsorship,family,donor,payments,canWrite,onSaved}:{sponsorship:Sponsorship;family:Family|undefined;donor:Donor|undefined;payments:SponsorshipPayment[];canWrite:boolean;onSaved:()=>Promise<void>}) {
+function SponsorshipCard({sponsorship,family,donor,payments,canWrite,onSaved}:{sponsorship:Sponsorship;family:CaseFileSummary|undefined;donor:Donor|undefined;payments:SponsorshipPayment[];canWrite:boolean;onSaved:()=>Promise<void>}) {
  const [end,setEnd]=useState(sponsorship.end_date??'');const [busy,setBusy]=useState(false);const [error,setError]=useState('');
  async function submit(e:FormEvent){e.preventDefault();setBusy(true);setError('');try{await endSponsorship(sponsorship.id,end||null);await onSaved();}catch{setError('تعذّر حفظ نهاية الكفالة. لا يمكن جعل النهاية قبل دفعة مستلمة.');}finally{setBusy(false);}}
- return <article className="sponsorship-record"><h3>{donor?.name??'متبرع'} — {family?`${family.code} — ${family.name}`:'أسرة غير متاحة'}</h3><p>{sponsorship.monthly_amount} جنيه مصري شهرياً — البداية: <CalendarDate value={sponsorship.start_date}/> — النهاية: {sponsorship.end_date?<CalendarDate value={sponsorship.end_date}/>:'مستمرة'}</p>
+ return <article className="sponsorship-record"><h3>{donor?.name??'متبرع'} — {family?`${family.code} — ${[family.father_name&&`الأب: ${family.father_name}`,family.mother_name&&`الأم: ${family.mother_name}`].filter(Boolean).join(' · ')||'الأسماء مش متسجلة'}`:'ملف حالة غير متاح'}</h3><p>{sponsorship.monthly_amount} جنيه مصري شهرياً — البداية: <CalendarDate value={sponsorship.start_date}/> — النهاية: {sponsorship.end_date?<CalendarDate value={sponsorship.end_date}/>:'مستمرة'}</p>
   {canWrite?<form className="domain-form" onSubmit={submit}><label>تعديل نهاية الكفالة<input type="date" min={sponsorship.start_date} value={end} onChange={e=>setEnd(e.target.value)}/></label><button disabled={busy}>حفظ نهاية الكفالة</button></form>:null}
   {error?<p role="alert" className="error-message">{error}</p>:null}<ul className="installment-list">{payments.map(p=><PaymentRow key={p.id} payment={p} canWrite={canWrite} onSaved={onSaved}/>)}</ul>
  </article>;

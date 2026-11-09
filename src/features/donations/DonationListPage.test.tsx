@@ -11,7 +11,7 @@ vi.mock('../../services/donations', () => ({
   ...service,
   PaymentAlreadyReceivedError: class extends Error {},
 }));
-vi.mock('../../services/cases', () => ({ listFamilies: vi.fn().mockResolvedValue([]) }));
+vi.mock('../../services/cases', () => ({ listCaseFiles: vi.fn().mockResolvedValue([]) }));
 
 beforeEach(() => {
   service.generateInstallments.mockResolvedValue(undefined);

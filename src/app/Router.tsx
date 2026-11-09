@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
-import { Link, Navigate, Route, Routes, useParams } from 'react-router-dom';
+import { Link, Navigate, Route, Routes } from 'react-router-dom';
 import { StaffPage } from '../features/staff/StaffPage';
 import { HomePage } from '../features/home/HomePage';
 import { AssistantPanel } from '../features/assistant/AssistantPanel';
 import { DonationListPage } from '../features/donations/DonationListPage';
 import { LoginPage } from '../features/auth/LoginPage';
-import { FamilyDetailsPage, FamilyListPage } from '../features/families/FamilyListPage';
+import { CaseListPage } from '../features/cases/CaseListPage';
 import { CaseDetailsPage } from '../features/cases/CaseDetailsPage';
+import { CaseFileRedirect } from '../features/cases/CaseFileRedirect';
 import {
   hasPermission,
   type EmployeePermission,
@@ -86,9 +87,9 @@ export function Router({ session, onStaffChange }: { session?: StaffProfile | nu
           }
         />
         <Route path="/families" element={<Navigate to="/cases" replace />} />
-        <Route path="/families/:id" element={<LegacyFamilyRedirect />} />
-        <Route path="/cases" element={!staff?.active ? <SignInPrompt /> : !allowed('/cases', 'casesRead') ? <section className="page-card"><h1>معندكش صلاحية للصفحة دي</h1></section> : <FamilyListPage canWrite={hasPermission(staff, 'casesWrite')} />} />
-        <Route path="/cases/family/:id" element={!staff?.active ? <SignInPrompt /> : !allowed('/cases', 'casesRead') ? <section className="page-card"><h1>معندكش صلاحية للصفحة دي</h1></section> : <FamilyDetailsPage canWrite={hasPermission(staff, 'casesWrite')} />} />
+        <Route path="/families/:id" element={<CaseFileRedirect />} />
+        <Route path="/cases" element={!staff?.active ? <SignInPrompt /> : !allowed('/cases', 'casesRead') ? <section className="page-card"><h1>معندكش صلاحية للصفحة دي</h1></section> : <CaseListPage canWrite={hasPermission(staff, 'casesWrite')} />} />
+        <Route path="/cases/family/:id" element={!staff?.active ? <SignInPrompt /> : !allowed('/cases', 'casesRead') ? <section className="page-card"><h1>معندكش صلاحية للصفحة دي</h1></section> : <CaseFileRedirect />} />
         <Route path="/cases/:id" element={!staff?.active ? <SignInPrompt /> : !allowed('/cases', 'casesRead') ? <section className="page-card"><h1>معندكش صلاحية للصفحة دي</h1></section> : <CaseDetailsPage canWrite={hasPermission(staff, 'casesWrite')} />} />
         {applicationRoutes.map(([path, , permission]) => (
           <Route
@@ -119,9 +120,4 @@ export function Router({ session, onStaffChange }: { session?: StaffProfile | nu
       </Routes>
     </>
   );
-}
-
-function LegacyFamilyRedirect() {
-  const { id } = useParams();
-  return <Navigate to={`/cases/family/${id}`} replace />;
 }

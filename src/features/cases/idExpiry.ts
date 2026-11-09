@@ -1,4 +1,4 @@
-export type IdExpiryRecord = { id:string; code:string; name:string; contact_name:string|null; national_id_expires_on:string };
+export type IdExpiryRecord = { id:string; code:string; father_name:string|null; mother_name:string|null; contact_name:string|null; national_id_expires_on:string };
 export type IdExpiryGroups = { expired:IdExpiryRecord[]; upcoming:Array<IdExpiryRecord & { daysLeft:number }> };
 
 export function cairoToday(now = new Date()): string {

@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { hasPermission, type StaffProfile } from '../auth/permissions';
-import { countFamilies, listAgeThresholdMembers, listAllMembers, listCases, listFamilyIdExpirationsBy, type FamilyIdExpiry, type MemberAgeProfile } from '../../services/cases';
+import { countCaseFiles, listAgeThresholdMembers, listAllMembers, listCaseFiles, listCaseFileIdExpirationsBy, type CaseFileIdExpiry, type MemberAgeProfile } from '../../services/cases';
 import { countDonations } from '../../services/donations';
-import { addDateOnlyDays, cairoToday, groupIdExpirations } from '../families/idExpiry';
-import { findMemberAgeAlerts, type MemberAgeAlert } from '../families/memberAge';
-import { countCaseMembers } from '../families/caseMetrics';
+import { addDateOnlyDays, cairoToday, groupIdExpirations } from '../cases/idExpiry';
+import { findMemberAgeAlerts, type MemberAgeAlert } from '../cases/memberAge';
+import { countCaseMembers } from '../cases/caseMetrics';
 
 const formatCount = new Intl.NumberFormat('ar-EG').format;
+const caseFileLabel = (row: CaseFileIdExpiry) => [row.father_name && `الأب: ${row.father_name}`, row.mother_name && `الأم: ${row.mother_name}`].filter(Boolean).join(' · ') || 'ملف حالة';
 
 type Action = { label: string; description: string; to: string; primary?: boolean };
 
@@ -16,7 +17,7 @@ export function HomePage({ staff }: { staff: StaffProfile }) {
   const canReadDonations = hasPermission(staff, 'donationsRead');
   const [counts, setCounts] = useState<{cases: number|null; children: number|null; orphans: number|null; donations: number|null}>({cases:null,children:null,orphans:null,donations:null});
   const [loadingCounts, setLoadingCounts] = useState(true);
-  const [idExpiryRows,setIdExpiryRows]=useState<FamilyIdExpiry[]>([]);
+  const [idExpiryRows,setIdExpiryRows]=useState<CaseFileIdExpiry[]>([]);
   const [loadingIdExpiry,setLoadingIdExpiry]=useState(true);
   const [idExpiryError,setIdExpiryError]=useState(false);
   const [memberAgeAlerts,setMemberAgeAlerts]=useState<MemberAgeAlert[]>([]);
@@ -28,8 +29,8 @@ export function HomePage({ staff }: { staff: StaffProfile }) {
     setLoadingCounts(true);
     const unavailable = Promise.resolve(undefined);
     Promise.all([
-      canReadCases ? countFamilies().catch(() => null) : unavailable,
-      canReadCases ? listCases().catch(() => null) : unavailable,
+      canReadCases ? countCaseFiles().catch(() => null) : unavailable,
+      canReadCases ? listCaseFiles().catch(() => null) : unavailable,
       canReadCases ? listAllMembers().catch(() => null) : unavailable,
       canReadDonations ? countDonations().catch(() => null) : unavailable,
     ]).then(([cases,caseRows,members,donations]) => {
@@ -43,7 +44,7 @@ export function HomePage({ staff }: { staff: StaffProfile }) {
     let active=true;
     if(!canReadCases){setIdExpiryRows([]);setIdExpiryError(false);setLoadingIdExpiry(false);return()=>{active=false;};}
     setLoadingIdExpiry(true);setIdExpiryError(false);
-    void listFamilyIdExpirationsBy(addDateOnlyDays(cairoToday(),90)).then(rows=>{if(active)setIdExpiryRows(rows);}).catch(()=>{if(active)setIdExpiryError(true);}).finally(()=>{if(active)setLoadingIdExpiry(false);});
+    void listCaseFileIdExpirationsBy(addDateOnlyDays(cairoToday(),90)).then(rows=>{if(active)setIdExpiryRows(rows);}).catch(()=>{if(active)setIdExpiryError(true);}).finally(()=>{if(active)setLoadingIdExpiry(false);});
     return()=>{active=false;};
   },[staff.id,canReadCases]);
 
@@ -101,8 +102,8 @@ export function HomePage({ staff }: { staff: StaffProfile }) {
         {idExpiryError&&<p className="error-message" role="alert">تعذّر تحميل مواعيد البطاقات. حاول تحدّث الصفحة.</p>}
         {!loadingIdExpiry&&!idExpiryError&&!expiryGroups.expired.length&&!expiryGroups.upcoming.length&&<div className="empty-state">مفيش بطاقات منتهية أو هتنتهي خلال ٩٠ يوم من اللي متسجل تاريخها.</div>}
         {!loadingIdExpiry&&!idExpiryError&&(expiryGroups.expired.length>0||expiryGroups.upcoming.length>0)&&<ul className="record-list">
-          {expiryGroups.expired.map(row=><li key={row.id}><div><Link to={`/cases/family/${row.id}`}>{row.name} <span className="family-code">{row.code}</span></Link><small>انتهت يوم {formatDate(row.national_id_expires_on)}</small></div><strong className="expiry-status expiry-status-expired">منتهية</strong></li>)}
-          {expiryGroups.upcoming.map(row=><li key={row.id}><div><Link to={`/cases/family/${row.id}`}>{row.name} <span className="family-code">{row.code}</span></Link><small>تاريخ الانتهاء {formatDate(row.national_id_expires_on)}</small></div><strong className="expiry-status">{row.daysLeft===0?'هتنتهي النهارده':`هتنتهي خلال ${new Intl.NumberFormat('ar-EG').format(row.daysLeft)} يوم`}</strong></li>)}
+          {expiryGroups.expired.map(row=><li key={row.id}><div><Link to={`/cases/${row.id}`}>{caseFileLabel(row)} <span className="family-code">{row.code}</span></Link><small>انتهت يوم {formatDate(row.national_id_expires_on)}</small></div><strong className="expiry-status expiry-status-expired">منتهية</strong></li>)}
+          {expiryGroups.upcoming.map(row=><li key={row.id}><div><Link to={`/cases/${row.id}`}>{caseFileLabel(row)} <span className="family-code">{row.code}</span></Link><small>تاريخ الانتهاء {formatDate(row.national_id_expires_on)}</small></div><strong className="expiry-status">{row.daysLeft===0?'هتنتهي النهارده':`هتنتهي خلال ${new Intl.NumberFormat('ar-EG').format(row.daysLeft)} يوم`}</strong></li>)}
         </ul>}
       </section>:null}
       {canReadCases?<section className="section-block member-age-alerts" aria-labelledby="member-age-title">
@@ -111,7 +112,7 @@ export function HomePage({ staff }: { staff: StaffProfile }) {
         {loadingMemberAgeAlerts&&<p role="status">جاري مراجعة أعمار أفراد الأسر…</p>}
         {memberAgeError&&<p className="error-message" role="alert">تعذّر تحميل أعمار الأفراد. حاول تحدّث الصفحة.</p>}
         {!loadingMemberAgeAlerts&&!memberAgeError&&!memberAgeAlerts.length&&<div className="empty-state">مفيش أفراد هيكملوا السن المحدد خلال ٩٠ يوم من بيانات الميلاد المسجلة.</div>}
-        {!loadingMemberAgeAlerts&&!memberAgeError&&memberAgeAlerts.length>0&&<ul className="record-list">{memberAgeAlerts.map(alert=><li key={alert.personId}><div><Link to={`/cases/family/${alert.familyId}`}>{alert.name} · {alert.familyName} <span className="family-code">{alert.familyCode}</span></Link><small>العمر الحالي {new Intl.NumberFormat('ar-EG').format(alert.age)} سنة · هيكمل {new Intl.NumberFormat('ar-EG').format(alert.targetAge)} سنة يوم {formatDate(alert.thresholdDate)}</small></div><strong className="expiry-status">{alert.daysUntilThreshold===0?'النهارده':`خلال ${new Intl.NumberFormat('ar-EG').format(alert.daysUntilThreshold)} يوم`}</strong></li>)}</ul>}
+        {!loadingMemberAgeAlerts&&!memberAgeError&&memberAgeAlerts.length>0&&<ul className="record-list">{memberAgeAlerts.map(alert=><li key={alert.personId}><div><Link to={`/cases/${alert.caseFileId}`}>{alert.name} · {alert.caseFileLabel} <span className="family-code">{alert.caseFileCode}</span></Link><small>العمر الحالي {new Intl.NumberFormat('ar-EG').format(alert.age)} سنة · هيكمل {new Intl.NumberFormat('ar-EG').format(alert.targetAge)} سنة يوم {formatDate(alert.thresholdDate)}</small></div><strong className="expiry-status">{alert.daysUntilThreshold===0?'النهارده':`خلال ${new Intl.NumberFormat('ar-EG').format(alert.daysUntilThreshold)} يوم`}</strong></li>)}</ul>}
       </section>:null}
       <section aria-labelledby="home-actions-title" className="home-actions-section">
         <h2 id="home-actions-title">ابدأ من هنا</h2>
@@ -133,5 +134,5 @@ export function HomePage({ staff }: { staff: StaffProfile }) {
 }
 
 function toAgeCandidates(rows:MemberAgeProfile[]){
- return rows.map(row=>({personId:row.person_id,name:row.people.name,gender:row.people.gender,birthDate:row.people.date_of_birth,familyId:row.family_id,familyName:row.families.name,familyCode:row.families.code}));
+ return rows.map(row=>({personId:row.person_id,name:row.people.name,gender:row.people.gender,birthDate:row.people.date_of_birth,caseFileId:row.family_id,caseFileLabel:[row.case_file.father_name&&`الأب: ${row.case_file.father_name}`,row.case_file.mother_name&&`الأم: ${row.case_file.mother_name}`].filter(Boolean).join(' · ')||'ملف حالة',caseFileCode:row.case_file.code}));
 }

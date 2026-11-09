@@ -1,4 +1,4 @@
-export type MemberAgeCandidate={personId:string;name:string;gender:'female'|'male'|null;birthDate:string|null;familyId:string;familyName:string;familyCode:string};
+export type MemberAgeCandidate={personId:string;name:string;gender:'female'|'male'|null;birthDate:string|null;caseFileId:string;caseFileLabel:string;caseFileCode:string};
 export type MemberAgeAlert=MemberAgeCandidate&{age:number;targetAge:18|21;daysUntilThreshold:number;thresholdDate:string};
 
 export function ageOn(birthDate:string,today:string):number{

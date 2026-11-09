@@ -17,7 +17,9 @@ select ok(
  not exists(select 1 from public.families where id='a2000000-0000-0000-0000-000000000001')
  or (
   (select count(*)=2 from public.case_file_history where family_id='a2000000-0000-0000-0000-000000000001')
-  and (select count(*)=2 from public.case_file_categories where family_id='a2000000-0000-0000-0000-000000000001')
+  and (select count(*)=4 from public.case_file_categories where family_id='a2000000-0000-0000-0000-000000000001')
+  and (select count(*)=1 from public.case_file_categories where family_id='a2000000-0000-0000-0000-000000000001' and category='وفاة')
+  and (select count(*)=1 from public.case_file_categories where family_id='a2000000-0000-0000-0000-000000000001' and category='أيتام')
   and (select count(*)=2 from public.case_attachments where family_id='a2000000-0000-0000-0000-000000000001')
   and (select count(*)=2 from public.legacy_case_map where family_id='a2000000-0000-0000-0000-000000000001')
   and (select count(*)=1 from public.legacy_family_names where family_id='a2000000-0000-0000-0000-000000000001')
@@ -25,5 +27,5 @@ select ok(
   and (select count(*)=1 from public.case_file_duplicate_review where family_id='a2000000-0000-0000-0000-000000000001' and possible_duplicate_id='a2000000-0000-0000-0000-000000000003')
   and (select extracted_text='نص OCR عربي تجريبي' from public.case_attachments where legacy_file_id='a4000000-0000-0000-0000-000000000001')
  )
-,'migration fixture preserves categories, notes, attachments, OCR, sponsorships, code roots, and legacy archive');
+,'migration fixture preserves old and current categories, notes, attachments, OCR, sponsorships, code roots, and legacy archive');
 select * from finish(); rollback;

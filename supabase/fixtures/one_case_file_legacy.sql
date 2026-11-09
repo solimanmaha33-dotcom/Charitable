@@ -13,6 +13,14 @@ insert into public.case_categories(case_id,category) values
  ('a3000000-0000-0000-0000-000000000001','يتيم الأم'),
  ('a3000000-0000-0000-0000-000000000002','يتيم الأم'),
  ('a3000000-0000-0000-0000-000000000002','أرملة');
+-- Seed removed values as existing historical rows. The NOT VALID constraint still
+-- rejects new writes, so briefly remove it only for this synthetic migration fixture.
+alter table public.case_categories drop constraint case_categories_category_check;
+insert into public.case_categories(case_id,category) values
+ ('a3000000-0000-0000-0000-000000000002','وفاة'),
+ ('a3000000-0000-0000-0000-000000000002','أيتام');
+alter table public.case_categories add constraint case_categories_category_check
+ check (category in ('هجر','أرملة','مطلقة','عجز أو مرض','يتيم الأم','يتيم الأب','كبار السن (٦٠ سنة فأكثر)','أسرة مسجون')) not valid;
 insert into public.case_files(id,case_id,storage_path,file_name,mime_type,size_bytes,uploaded_by) values
  ('a4000000-0000-0000-0000-000000000001','a3000000-0000-0000-0000-000000000001','a3000000-0000-0000-0000-000000000001/a4000000-0000-0000-0000-000000000001','legacy-case.pdf','application/pdf',10,'a1000000-0000-0000-0000-000000000001');
 insert into public.case_file_search_text(file_id,text) values ('a4000000-0000-0000-0000-000000000001','نص OCR عربي تجريبي');

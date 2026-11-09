@@ -1,7 +1,7 @@
 import {expect,it} from 'vitest';
 import {ageOn,findMemberAgeAlerts,type MemberAgeCandidate} from './memberAge';
 
-const member=(id:string,gender:'female'|'male'|null,birthDate:string|null):MemberAgeCandidate=>({personId:id,name:`فرد ${id}`,gender,birthDate,familyId:'family-1',familyName:'أسرة اختبار',familyCode:'F-0001'});
+const member=(id:string,gender:'female'|'male'|null,birthDate:string|null):MemberAgeCandidate=>({personId:id,name:`فرد ${id}`,gender,birthDate,caseFileId:'file-1',caseFileLabel:'ملف اختبار',caseFileCode:'F-0001'});
 
 it('calculates age before and on the birthday',()=>{
  expect(ageOn('2008-11-08','2026-11-07')).toBe(17);

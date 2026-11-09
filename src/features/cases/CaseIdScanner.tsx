@@ -1,18 +1,19 @@
 import {useEffect,useState} from 'react';
-import {saveFamily,uploadFamilyFile,type FamilyProfile,type FamilyProfileInput} from '../../services/cases';
+import {saveCaseFile,uploadCaseAttachment,type CaseFile,type CaseFileInput} from '../../services/cases';
 import {validateDocument,openPdf} from '../files/documentText';
 import {FilePreview} from '../files/FilePreview';
 import {parseNationalIdScan} from './nationalIdScan';
+import {isCaseCategory} from './categories';
 
 const digits='٠١٢٣٤٥٦٧٨٩';const persian='۰۱۲۳۴۵۶۷۸۹';
 function latinDigits(value:string){return [...value].map(char=>{const arabic=digits.indexOf(char);if(arabic>=0)return String(arabic);const other=persian.indexOf(char);return other>=0?String(other):char;}).join('');}
 
-export function FamilyIdScanner({family,onSaved}:{family:FamilyProfile;onSaved:()=>void|Promise<void>}) {
+export function CaseIdScanner({caseFile,onSaved}:{caseFile:CaseFile;onSaved:()=>void|Promise<void>}) {
  const [file,setFile]=useState<File|null>(null);
- const [nationalId,setNationalId]=useState(family.national_id??'');
- const [expiresOn,setExpiresOn]=useState(family.national_id_expires_on??'');
+ const [nationalId,setNationalId]=useState(caseFile.national_id??'');
+ const [expiresOn,setExpiresOn]=useState(caseFile.national_id_expires_on??'');
  const [busy,setBusy]=useState(false);const [message,setMessage]=useState('');const [error,setError]=useState('');
- useEffect(()=>{setNationalId(family.national_id??'');setExpiresOn(family.national_id_expires_on??'');},[family.national_id,family.national_id_expires_on]);
+ useEffect(()=>{setNationalId(caseFile.national_id??'');setExpiresOn(caseFile.national_id_expires_on??'');},[caseFile.national_id,caseFile.national_id_expires_on]);
  function readText(text:string) {
   const parsed=parseNationalIdScan(text);
   if(parsed.nationalId)setNationalId(parsed.nationalId);
@@ -29,18 +30,18 @@ export function FamilyIdScanner({family,onSaved}:{family:FamilyProfile;onSaved:(
   setBusy(true);setError('');setMessage('');
   const normalizedId=latinDigits(nationalId.trim());
   if(normalizedId&&!/^\d{14}$/.test(normalizedId)){setError('الرقم القومي لازم يكون ١٤ رقم.');setBusy(false);return;}
-  const input:FamilyProfileInput={name:family.name,fatherName:family.father_name??'',motherName:family.mother_name??'',contactName:family.contact_name??'',contactRelationship:family.contact_relationship??'',contactAge:family.contact_age,nationalId:normalizedId,nationalIdExpiresOn:expiresOn,phones:[family.phone??'',family.phone_2??'',family.phone_3??''],notes:family.notes};
+  const input:CaseFileInput={fatherName:caseFile.father_name??'',motherName:caseFile.mother_name??'',contactName:caseFile.contact_name??'',contactRelationship:caseFile.contact_relationship??'',contactAge:caseFile.contact_age,nationalId:normalizedId,nationalIdExpiresOn:expiresOn,phones:[caseFile.phone??'',caseFile.phone_2??'',caseFile.phone_3??''],notes:caseFile.notes,address:caseFile.address??'',monthlyIncome:caseFile.monthly_income,healthCondition:caseFile.health_condition??'',branchArea:caseFile.branch_area??'',fileStatus:caseFile.file_status,statusReason:caseFile.status_reason??'',categories:caseFile.case_file_categories.map(({category})=>category).filter(isCaseCategory)};
   try {
-   await saveFamily(family.id,input);
+   await saveCaseFile(caseFile.id,input);
   } catch {
    setError('تعذّر حفظ البيانات. راجع الرقم والتاريخ وحاول تاني.');setBusy(false);return;
   }
   let uploadFailed=false;let refreshFailed=false;
-  try {if(file)await uploadFamilyFile(family.id,file);}catch{uploadFailed=true;}
+  try {if(file)await uploadCaseAttachment(caseFile.id,file);}catch{uploadFailed=true;}
   try {await onSaved();}catch{refreshFailed=true;}
   if(uploadFailed)setError('اتحفظت بيانات البطاقة، لكن تعذّر رفع الملف. حاول رفعه من مرفقات الأسرة.');
-  else if(refreshFailed)setError('اتحفظت بيانات البطاقة، لكن تعذّر تحديث الملف. حدّث الصفحة.');
-  else setMessage(file?'اتحفظت بيانات البطاقة والملف في الأسرة.':'اتحفظت بيانات البطاقة.');
+  else if(refreshFailed)setError('اتحفظت بيانات البطاقة، لكن تعذّر تحديث ملف الحالة. حدّث الصفحة.');
+  else setMessage(file?'اتحفظت بيانات البطاقة والملف في الحالة.':'اتحفظت بيانات البطاقة.');
   setBusy(false);
  }
  return <section className="section-block family-id-scanner" aria-labelledby="family-id-scan-title">

@@ -17,15 +17,15 @@ export async function onRequestPost(context:Context):Promise<Response> {
  try {
   const [casesPermission,donationsPermission]=await Promise.all([staff.client.rpc('has_permission',{permission:'casesRead'}),staff.client.rpc('has_permission',{permission:'donationsRead'})]);
   if(casesPermission.error || donationsPermission.error) throw new Error('Permission unavailable');
-  const records:unknown[]=[]; const sources:Array<{familyCode:string;caseId:string;fileName?:string}>=[];
+  const records:unknown[]=[]; const sources:Array<{caseFileCode:string;caseId:string;fileName?:string}>=[];
   function add(row:unknown) {const next=bounded(row);if(JSON.stringify({question,coverage,records:[...records,next]}).length>15000)return false;records.push(next);return true;}
   if(casesPermission.data) {
    const {data,error}=await staff.client.rpc('assistant_search_cases',{p_question:question}); if(error) throw error;
    for(const row of data ?? []) {
-    const family=Array.isArray(row.families) ? row.families[0] : row.families;
-    if(!family || typeof family.code!=='string' || typeof row.id!=='string' || !add(row)) continue;
-    sources.push({familyCode:family.code,caseId:row.id});
-    for(const f of (row.case_files ?? []).slice(0,10)) if(f.case_file_search_text && (!Array.isArray(f.case_file_search_text) || f.case_file_search_text.length>0)) sources.push({familyCode:family.code,caseId:row.id,fileName:f.file_name});
+    const caseFile=Array.isArray(row.case_file) ? row.case_file[0] : row.case_file;
+    if(!caseFile || typeof caseFile.code!=='string' || typeof row.id!=='string' || !add(row)) continue;
+    sources.push({caseFileCode:caseFile.code,caseId:row.id});
+    for(const file of (row.case_attachments ?? []).slice(0,10)) if(file.case_file_search_text && (!Array.isArray(file.case_file_search_text) || file.case_file_search_text.length>0)) sources.push({caseFileCode:caseFile.code,caseId:row.id,fileName:file.file_name});
    }
   }
   if(donationsPermission.data) {

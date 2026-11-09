@@ -1,12 +1,12 @@
 import {useState,type FormEvent} from 'react';
-import {addMember,updateMemberDemographics,uploadFamilyFile,type Member} from '../../services/cases';
+import {addMember,updateMemberDemographics,uploadCaseAttachment,type Member} from '../../services/cases';
 import {validateDocument,openPdf} from '../files/documentText';
 import {FilePreview} from '../files/FilePreview';
 import {cairoToday} from './idExpiry';
 import {ageOn} from './memberAge';
 import {parseMemberIdText,type MemberGender} from './memberDemographics';
 
-export function FamilyMemberForm({familyId,onAdded,member}:{familyId:string;onAdded:()=>void|Promise<void>;member?:Member}){
+export function CaseMemberForm({caseFileId,onAdded,member}:{caseFileId:string;onAdded:()=>void|Promise<void>;member?:Member}){
  const editing=!!member;
  const [name,setName]=useState(member?.people.name??'');const [relationship,setRelationship]=useState(member?.relationship??'');
  const [nationalId,setNationalId]=useState('');const [birthDate,setBirthDate]=useState(member?.people.date_of_birth??'');const [gender,setGender]=useState<MemberGender|null>(member?.people.gender??null);
@@ -35,9 +35,9 @@ export function FamilyMemberForm({familyId,onAdded,member}:{familyId:string;onAd
   event.preventDefault();setError('');setMessage('');
   if(birthDate>today){setError('تاريخ الميلاد ماينفعش يكون في المستقبل.');return;}
   setBusy(true);
-  try{if(member)await updateMemberDemographics(member.person_id,gender,birthDate||null);else await addMember(familyId,name.trim(),relationship.trim(),gender,birthDate||null);}
+  try{if(member)await updateMemberDemographics(member.person_id,gender,birthDate||null);else await addMember(caseFileId,name.trim(),relationship.trim(),gender,birthDate||null);}
   catch{setError(editing?'تعذّر حفظ بيانات السن. راجع البيانات وحاول تاني.':'تعذّرت إضافة الفرد. راجع البيانات وحاول تاني.');setBusy(false);return;}
-  let uploadFailed=false;try{if(file)await uploadFamilyFile(familyId,file);}catch{uploadFailed=true;}
+  let uploadFailed=false;try{if(file)await uploadCaseAttachment(caseFileId,file);}catch{uploadFailed=true;}
   if(!editing){setName('');setRelationship('');setNationalId('');setBirthDate('');setGender(null);setFile(null);}
   try{await onAdded();}catch{/* The saved member stays saved even if refreshing its list fails. */}
   setMessage(uploadFailed?(editing?'اتحفظت بيانات السن، لكن تعذّر رفع البطاقة. تقدر ترفعها من مرفقات الأسرة.':'اتضاف الفرد، لكن تعذّر رفع البطاقة. تقدر ترفعها من مرفقات الأسرة.'):(editing?'اتحفظت بيانات السن.':'اتضاف الفرد للأسرة.'));
