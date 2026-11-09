@@ -37,7 +37,7 @@ it('requires a category and makes a reason mandatory for hold or rejection', asy
 });
 
 it('edits the current file instead of creating a second one', async () => {
-  const initial = { id:'f1',code:'F-0001',phone:null,phone_2:null,phone_3:null,father_name:null,mother_name:null,contact_name:null,contact_relationship:null,contact_age:null,national_id:null,national_id_expires_on:null,notes:'',address:null,monthly_income:null,health_condition:null,branch_area:null,file_status:'تحت المراجعة' as const,status_reason:null,case_file_categories:[{category:'يتيم الأم' as const}] };
+  const initial = { id:'f1',code:'F-0001',archived_at:null,phone:null,phone_2:null,phone_3:null,father_name:null,mother_name:null,contact_name:null,contact_relationship:null,contact_age:null,national_id:null,national_id_expires_on:null,notes:'',address:null,monthly_income:null,health_condition:null,branch_area:null,file_status:'تحت المراجعة' as const,status_reason:null,case_file_categories:[{category:'يتيم الأم' as const}] };
   const onSaved = vi.fn(); render(<CaseIntakeForm initial={initial} onSaved={onSaved} />);
   fireEvent.change(screen.getByLabelText('حالة الملف'), { target: { value: 'مرفوض' } });
   fireEvent.change(screen.getByLabelText('سبب الرفض'), { target: { value: 'مستند ناقص' } });
@@ -47,7 +47,7 @@ it('edits the current file instead of creating a second one', async () => {
 });
 
 it('keeps removed historical categories visible but never resubmits them as new choices', async () => {
-  const initial = { id:'f1',code:'F-0001',phone:null,phone_2:null,phone_3:null,father_name:null,mother_name:'منى',contact_name:null,contact_relationship:null,contact_age:null,national_id:null,national_id_expires_on:null,notes:'',address:null,monthly_income:null,health_condition:null,branch_area:null,file_status:'نشط' as const,status_reason:null,case_file_categories:[{category:'وفاة' as const},{category:'أرملة' as const}] };
+  const initial = { id:'f1',code:'F-0001',archived_at:null,phone:null,phone_2:null,phone_3:null,father_name:null,mother_name:'منى',contact_name:null,contact_relationship:null,contact_age:null,national_id:null,national_id_expires_on:null,notes:'',address:null,monthly_income:null,health_condition:null,branch_area:null,file_status:'نشط' as const,status_reason:null,case_file_categories:[{category:'وفاة' as const},{category:'أرملة' as const}] };
   render(<CaseIntakeForm initial={initial} onSaved={vi.fn()} />);
   expect(screen.getByText('تصنيف قديم محفوظ: وفاة')).toBeVisible();
   fireEvent.click(screen.getByRole('button', { name: 'حفظ التعديلات' }));

@@ -12,12 +12,14 @@ export type CaseFileInput = {
 };
 export type CaseFile = {
  id: string; code: string; phone: string | null; phone_2: string | null; phone_3: string | null;
+ archived_at: string | null;
  father_name: string | null; mother_name: string | null; contact_name: string | null; contact_relationship: string | null;
  contact_age: number | null; national_id?: string | null; national_id_expires_on: string | null; notes: string;
  address: string | null; monthly_income: number | null; health_condition: string | null; branch_area: string | null;
  file_status: CaseFileStatus; status_reason: string | null; case_file_categories: { category: StoredCaseCategory }[];
 };
-export type CaseFileSummary = Pick<CaseFile,'id'|'code'|'phone'|'phone_2'|'phone_3'|'father_name'|'mother_name'|'address'|'branch_area'|'file_status'>;
+export type CaseFileSummary = Pick<CaseFile,'id'|'code'|'phone'|'phone_2'|'phone_3'|'father_name'|'mother_name'|'address'|'branch_area'|'file_status'|'archived_at'>;
+export type ArchivedCaseFile = Omit<CaseFileSummary,'archived_at'> & {archived_at:string};
 export type CaseFileIdExpiry = { id:string; code:string; father_name:string|null; mother_name:string|null; contact_name:string|null; national_id_expires_on:string };
 export type Member = { person_id: string; relationship: string; people: { name: string; gender:MemberGender|null; date_of_birth:string|null } };
 export type CaseFileMember = Member & { family_id: string };
@@ -28,7 +30,7 @@ export type FamilyFile = CaseAttachment;
 function db() { const client = getSupabase(); if (!client) throw new Error('تعذّر الاتصال بقاعدة البيانات'); return client; }
 function check(error: { message: string } | null) { if (error) throw new Error(error.message); }
 async function countRows(table: 'families'): Promise<number> {
- const {count,error}=await db().from(table).select('id',{count:'exact',head:true});
+ const {count,error}=await db().from(table).select('id',{count:'exact',head:true}).is('archived_at',null);
  check(error); if(count===null) throw new Error('تعذّر تحميل العدد'); return count;
 }
 const PAGE_SIZE = 500;
@@ -39,14 +41,27 @@ async function allPages<T>(fetchPage: (start: number, end: number) => PromiseLik
   const page=data ?? []; result.push(...page); if (page.length<PAGE_SIZE) return result;
  }
 }
-const CASE_FILE_LIST_COLUMNS='id,code,phone,phone_2,phone_3,father_name,mother_name,contact_name,contact_relationship,contact_age,national_id_expires_on,notes,address,monthly_income,health_condition,branch_area,file_status,status_reason,case_file_categories(category)';
+const CASE_FILE_LIST_COLUMNS='id,code,phone,phone_2,phone_3,father_name,mother_name,contact_name,contact_relationship,contact_age,national_id_expires_on,notes,address,monthly_income,health_condition,branch_area,file_status,status_reason,archived_at,case_file_categories(category)';
 const CASE_FILE_DETAIL_COLUMNS=CASE_FILE_LIST_COLUMNS.replace('contact_age,national_id_expires_on','contact_age,national_id,national_id_expires_on');
 async function listCaseFileProfiles(): Promise<CaseFile[]> {
- return allPages((start,end)=>db().from('families').select(CASE_FILE_LIST_COLUMNS).order('id').range(start,end)) as Promise<CaseFile[]>;
+ return allPages((start,end)=>db().from('families').select(CASE_FILE_LIST_COLUMNS).is('archived_at',null).order('id').range(start,end)) as Promise<CaseFile[]>;
 }
 export async function listCaseFiles():Promise<CaseFile[]>{return listCaseFileProfiles();}
 export async function getCaseFile(id:string):Promise<CaseFile|null>{
- const {data,error}=await db().from('families').select(CASE_FILE_DETAIL_COLUMNS).eq('id',id).maybeSingle();check(error);return data as CaseFile|null;
+ const {data,error}=await db().from('families').select(CASE_FILE_DETAIL_COLUMNS).eq('id',id).is('archived_at',null).maybeSingle();check(error);return data as CaseFile|null;
+}
+export async function listCaseFilesByIds(ids:string[]):Promise<CaseFileSummary[]> {
+ if(!ids.length)return [];
+ return allPages((start,end)=>db().from('families').select('id,code,phone,phone_2,phone_3,father_name,mother_name,address,branch_area,file_status,archived_at').in('id',ids).order('id').range(start,end)) as Promise<CaseFileSummary[]>;
+}
+export async function listArchivedCaseFiles():Promise<ArchivedCaseFile[]> {
+ return allPages((start,end)=>db().from('families').select('id,code,phone,phone_2,phone_3,father_name,mother_name,address,branch_area,file_status,archived_at').not('archived_at','is',null).order('archived_at',{ascending:false}).order('id').range(start,end)) as Promise<ArchivedCaseFile[]>;
+}
+export async function archiveCaseFile(id:string):Promise<void> {
+ const {error}=await db().rpc('archive_case_file',{p_id:id});check(error);
+}
+export async function restoreCaseFile(id:string):Promise<void> {
+ const {error}=await db().rpc('restore_case_file',{p_id:id});check(error);
 }
 export async function findCaseFileForLegacyId(id:string):Promise<string|null>{
  const {data,error}=await db().from('legacy_case_map').select('family_id').eq('legacy_case_id',id).maybeSingle();check(error);return (data as {family_id:string}|null)?.family_id??null;
@@ -74,16 +89,16 @@ export async function saveCaseFile(id:string|null,input:CaseFileInput):Promise<s
 }
 export const countCaseFiles=()=>countRows('families');
 export async function listCaseFileIdExpirationsBy(cutoff:string):Promise<CaseFileIdExpiry[]> {
- return allPages((start,end)=>db().from('families').select('id,code,father_name,mother_name,contact_name,national_id_expires_on').not('national_id_expires_on','is',null).lte('national_id_expires_on',cutoff).order('national_id_expires_on').order('id').range(start,end));
+ return allPages((start,end)=>db().from('families').select('id,code,father_name,mother_name,contact_name,national_id_expires_on').is('archived_at',null).not('national_id_expires_on','is',null).lte('national_id_expires_on',cutoff).order('national_id_expires_on').order('id').range(start,end));
 }
 export async function listMembers(caseFileId: string): Promise<Member[]> {
  return allPages((start,end)=>db().from('family_members').select('person_id,relationship,people(name,gender,date_of_birth)').eq('family_id',caseFileId).order('person_id').range(start,end)) as unknown as Promise<Member[]>;
 }
 export async function listAllMembers(): Promise<CaseFileMember[]> {
- return allPages((start,end)=>db().from('family_members').select('family_id,person_id,relationship,people(name,gender,date_of_birth)').order('family_id').order('person_id').range(start,end)) as unknown as Promise<CaseFileMember[]>;
+ return allPages((start,end)=>db().from('family_members').select('family_id,person_id,relationship,people(name,gender,date_of_birth),case_file:families!inner(archived_at)').is('case_file.archived_at',null).order('family_id').order('person_id').range(start,end)) as unknown as Promise<CaseFileMember[]>;
 }
 export async function listAgeThresholdMembers():Promise<MemberAgeProfile[]> {
- return allPages((start,end)=>db().from('family_members').select('family_id,person_id,relationship,people(name,gender,date_of_birth),case_file:families(code,father_name,mother_name)').order('family_id').order('person_id').range(start,end)) as unknown as Promise<MemberAgeProfile[]>;
+ return allPages((start,end)=>db().from('family_members').select('family_id,person_id,relationship,people(name,gender,date_of_birth),case_file:families!inner(code,father_name,mother_name,archived_at)').is('case_file.archived_at',null).order('family_id').order('person_id').range(start,end)) as unknown as Promise<MemberAgeProfile[]>;
 }
 export async function addMember(caseFileId: string, name: string, relationship: string, gender:MemberGender|null=null, dateOfBirth:string|null=null): Promise<void> {
  const {error}=await db().rpc('add_family_member_profile',{p_family_id:caseFileId,p_name:name,p_relationship:relationship,p_gender:gender,p_date_of_birth:dateOfBirth}); check(error);

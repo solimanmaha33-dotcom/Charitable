@@ -5,7 +5,7 @@ const state = vi.hoisted(() => ({
   calls: [] as Array<{ table: string; columns: string }>,
   rpc: [] as Array<{ name: string; args: Record<string, unknown> }>,
   rows: {
-    families: [{ id: 'file-1', code: 'F-0001', father_name: 'أب', mother_name: 'أم', phone: '0100', phone_2: '0101', phone_3: null, address: 'عنوان', monthly_income: 1200, health_condition: 'متابعة', branch_area: 'الفرع', file_status: 'تحت المراجعة', status_reason: null, case_file_categories: [{ category: 'هجر' }] }],
+    families: [{ id: 'file-1', code: 'F-0001', archived_at: null, father_name: 'أب', mother_name: 'أم', phone: '0100', phone_2: '0101', phone_3: null, address: 'عنوان', monthly_income: 1200, health_condition: 'متابعة', branch_area: 'الفرع', file_status: 'تحت المراجعة', status_reason: null, case_file_categories: [{ category: 'هجر' }] }],
     case_attachments: [{ id: 'att-1', family_id: 'file-1', storage_path: 'file-1/path', file_name: 'مستند.pdf', mime_type: 'application/pdf', size_bytes: 10, uploaded_by: 'staff-1', extracted_text: 'نص عربي', created_at: '2026-11-09' }],
   } as Record<string, Array<Record<string, unknown>>>,
 }));
@@ -19,6 +19,7 @@ vi.mock('./supabase', () => ({
       const query = {
         select: (columns = '*') => { state.calls.push({ table, columns }); return query; },
         eq: (column: string, value: unknown) => { data = data.filter((row) => row[column] === value); return query; },
+        is: (column: string, value: unknown) => { data = data.filter((row) => row[column] === value); return query; },
         order: () => query,
         range: (first: number, last: number) => { start = first; end = last; return query; },
         maybeSingle: async () => ({ data: data[0] ?? null, error: null }),

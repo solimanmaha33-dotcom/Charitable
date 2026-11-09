@@ -4,14 +4,15 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DonationListPage } from './DonationListPage';
 
 const service = vi.hoisted(() => ({
-  endSponsorship: vi.fn(), generateInstallments: vi.fn(), listDonations: vi.fn(), listDonors: vi.fn(),
+  endSponsorship: vi.fn(), generateInstallments: vi.fn(), listDonations: vi.fn(), listDonors: vi.fn(), listCaseFilesByIds: vi.fn(),
   listPayments: vi.fn(), listSponsorships: vi.fn(), receivePayment: vi.fn(), saveDonor: vi.fn(), utcToday: vi.fn(),
 }));
 vi.mock('../../services/donations', () => ({
   ...service,
   PaymentAlreadyReceivedError: class extends Error {},
 }));
-vi.mock('../../services/cases', () => ({ listCaseFiles: vi.fn().mockResolvedValue([]) }));
+const caseService = vi.hoisted(() => ({ listCaseFiles: vi.fn() }));
+vi.mock('../../services/cases', () => ({ ...caseService, listCaseFilesByIds: service.listCaseFilesByIds }));
 
 beforeEach(() => {
   service.generateInstallments.mockResolvedValue(undefined);
@@ -19,6 +20,8 @@ beforeEach(() => {
   service.listDonations.mockRejectedValue(new Error('offline'));
   service.listSponsorships.mockResolvedValue([]);
   service.listPayments.mockResolvedValue([]);
+  service.listCaseFilesByIds.mockResolvedValue([]);
+  caseService.listCaseFiles.mockResolvedValue([]);
 });
 
 describe('donation workspace', () => {
@@ -45,5 +48,21 @@ describe('donation workspace', () => {
     expect(await screen.findByText(/مفيش تبرعات مسجلة لسه/)).toBeVisible();
     expect(screen.queryByText('0 كفالات')).not.toBeInTheDocument();
     expect(screen.getByText(/عدد الكفالات مش متاح من غير صلاحية قراءة الحالات/)).toBeVisible();
+  });
+
+  it('keeps an archived linked sponsorship visible but excludes its file from new sponsorship choices', async () => {
+    service.listDonations.mockResolvedValue([]);
+    service.listSponsorships.mockResolvedValue([{ id: 's-1', donor_id: 'd-1', family_id: 'archived-1', monthly_amount: 300, start_date: '2026-01-01', end_date: null }]);
+    service.listPayments.mockResolvedValue([]);
+    service.listDonors.mockResolvedValue([{ id: 'd-1', name: 'متبرع تجريبي', phone: null, created_at: '2026-01-01' }]);
+    caseService.listCaseFiles.mockResolvedValue([{ id: 'active-1', code: 'F-0001', father_name: 'أب حالي', mother_name: 'أم حالية', archived_at: null }]);
+    service.listCaseFilesByIds.mockResolvedValue([{ id: 'archived-1', code: 'F-0002', father_name: 'أب قديم', mother_name: 'أم قديمة', archived_at: '2026-10-01T12:00:00Z' }]);
+    render(<MemoryRouter><DonationListPage canWrite canReadCases /></MemoryRouter>);
+    expect(await screen.findByText('ملف الحالة مؤرشف')).toBeVisible();
+    expect(screen.getByText(/F-0002 — الأب: أب قديم/)).toBeVisible();
+    expect(service.listCaseFilesByIds).toHaveBeenCalledWith(['archived-1']);
+    const choice = screen.getByLabelText('ملف الكفالة') as HTMLSelectElement;
+    expect(choice.textContent).toContain('F-0001');
+    expect(choice.textContent).not.toContain('F-0002');
   });
 });

@@ -230,6 +230,11 @@ fieldset label { display: inline-flex; align-items: center; gap: 8px; margin: 5p
 .case-status-hold { color: var(--warning-text); background: var(--warning-bg); }
 .case-status-review { color: var(--tag-text); background: var(--tag-bg); }
 .case-status-rejected { color: var(--danger-text); background: var(--danger-bg); }
+.archived-case-label { display: inline-flex; width: fit-content; margin: 0; padding: 3px 9px; border: 1px solid var(--border); border-radius: 999px; color: var(--muted); background: var(--surface-soft); font-size: .82rem; font-weight: 700; }
+.archive-confirmation { margin-block: 18px; padding: 18px; border: 1px solid var(--danger-border); border-radius: 10px; background: var(--danger-bg); }
+.archive-confirmation h2 { margin: 0 0 8px; color: var(--danger-text); }
+.archive-confirmation p { margin-block: 0 14px; }
+.archived-case-list > li { align-items: flex-start; }
 .status-reason { display: block; max-width: 240px; margin-block-start: 4px; color: var(--muted); }
 .profile-details { display: grid; grid-template-columns: repeat(auto-fit,minmax(210px,1fr)); gap: 12px; }
 .profile-details > div { padding: 12px; border: 1px solid var(--border); border-radius: 8px; }
@@ -345,6 +350,7 @@ img, iframe { max-width: 100%; }
   .installment-row { align-items: flex-start; flex-direction: column; }
   .installment-row .domain-form { grid-template-columns: minmax(0, 1fr); }
   .page-heading .heading-actions, .page-heading > button, .page-heading > a { align-self: flex-start; }
+  .archived-case-list > li { align-items: stretch; flex-direction: column; }
   .toolbar { align-items: stretch; }
   .toolbar .search-control, .toolbar .filter-control { flex: 1 1 100%; }
   .family-summary { align-items: flex-start; flex-direction: column; padding: 15px; }

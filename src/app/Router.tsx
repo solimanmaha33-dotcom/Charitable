@@ -7,6 +7,7 @@ import { DonationListPage } from '../features/donations/DonationListPage';
 import { LoginPage } from '../features/auth/LoginPage';
 import { CaseListPage } from '../features/cases/CaseListPage';
 import { CaseDetailsPage } from '../features/cases/CaseDetailsPage';
+import { ArchivedCasesPage } from '../features/cases/ArchivedCasesPage';
 import { CaseFileRedirect } from '../features/cases/CaseFileRedirect';
 import {
   hasPermission,
@@ -88,9 +89,10 @@ export function Router({ session, onStaffChange }: { session?: StaffProfile | nu
         />
         <Route path="/families" element={<Navigate to="/cases" replace />} />
         <Route path="/families/:id" element={<CaseFileRedirect />} />
-        <Route path="/cases" element={!staff?.active ? <SignInPrompt /> : !allowed('/cases', 'casesRead') ? <section className="page-card"><h1>معندكش صلاحية للصفحة دي</h1></section> : <CaseListPage canWrite={hasPermission(staff, 'casesWrite')} />} />
+        <Route path="/cases" element={!staff?.active ? <SignInPrompt /> : !allowed('/cases', 'casesRead') ? <section className="page-card"><h1>معندكش صلاحية للصفحة دي</h1></section> : <CaseListPage canWrite={hasPermission(staff, 'casesWrite')} canArchive={staff.role==='general_manager'} />} />
+        <Route path="/cases/archive" element={!staff?.active ? <SignInPrompt /> : staff.role!=='general_manager' ? <section className="page-card"><h1>معندكش صلاحية للصفحة دي</h1></section> : <ArchivedCasesPage />} />
         <Route path="/cases/family/:id" element={!staff?.active ? <SignInPrompt /> : !allowed('/cases', 'casesRead') ? <section className="page-card"><h1>معندكش صلاحية للصفحة دي</h1></section> : <CaseFileRedirect />} />
-        <Route path="/cases/:id" element={!staff?.active ? <SignInPrompt /> : !allowed('/cases', 'casesRead') ? <section className="page-card"><h1>معندكش صلاحية للصفحة دي</h1></section> : <CaseDetailsPage canWrite={hasPermission(staff, 'casesWrite')} />} />
+        <Route path="/cases/:id" element={!staff?.active ? <SignInPrompt /> : !allowed('/cases', 'casesRead') ? <section className="page-card"><h1>معندكش صلاحية للصفحة دي</h1></section> : <CaseDetailsPage canWrite={hasPermission(staff, 'casesWrite')} canArchive={staff.role==='general_manager'} />} />
         {applicationRoutes.map(([path, , permission]) => (
           <Route
             key={path}

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { findCaseFileForLegacyId, getCaseFile, listCaseAttachments, listCaseFileHistory, listMembers, type CaseAttachment, type CaseFile, type CaseFileHistory, type Member } from '../../services/cases';
+import { archiveCaseFile, findCaseFileForLegacyId, getCaseFile, listCaseAttachments, listCaseFileHistory, listMembers, type CaseAttachment, type CaseFile, type CaseFileHistory, type Member } from '../../services/cases';
 import { CaseAttachmentsPanel } from './CaseAttachmentsPanel';
 import { CaseMemberForm } from './CaseMemberForm';
 import { ageOn } from './memberAge';
@@ -15,13 +15,13 @@ function householdCount(file: CaseFile, members: Member[]) {
   return names.size;
 }
 
-export function CaseDetailsPage({ canWrite }: { canWrite: boolean }) {
+export function CaseDetailsPage({ canWrite, canArchive=false }: { canWrite: boolean; canArchive?:boolean }) {
   const { id } = useParams(); const navigate = useNavigate();
   const [file, setFile] = useState<CaseFile | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
   const [attachments, setAttachments] = useState<CaseAttachment[]>([]);
   const [history, setHistory] = useState<CaseFileHistory[]>([]);
-  const [error, setError] = useState(''); const [loading, setLoading] = useState(true); const [editing, setEditing] = useState(id === 'new'); const [addingMember, setAddingMember] = useState(false);
+  const [error, setError] = useState(''); const [loading, setLoading] = useState(true); const [editing, setEditing] = useState(id === 'new'); const [addingMember, setAddingMember] = useState(false); const [confirmArchive,setConfirmArchive]=useState(false);const [archiving,setArchiving]=useState(false);
   const today = cairoToday();
 
   async function refresh(caseFileId = id) {
@@ -34,6 +34,13 @@ export function CaseDetailsPage({ canWrite }: { canWrite: boolean }) {
     }
     const [people, files, oldRecords] = await Promise.all([listMembers(found.id), listCaseAttachments(found.id), listCaseFileHistory(found.id)]);
     setFile(found); setMembers(people); setAttachments(files); setHistory(oldRecords);
+  }
+  async function confirmArchiveCase() {
+    if(!id||id==='new')return;
+    setArchiving(true);setError('');
+    try {await archiveCaseFile(id);navigate('/cases',{replace:true});}
+    catch {setError('تعذّرت أرشفة الحالة. حاول تاني أو راجع صلاحيتك.');}
+    finally {setArchiving(false);}
   }
   useEffect(() => {
     let alive = true; setLoading(true); setError(''); setEditing(id === 'new');
@@ -54,8 +61,13 @@ export function CaseDetailsPage({ canWrite }: { canWrite: boolean }) {
     {file && <>
       <header className="page-heading"><div><h1>ملف الحالة <span className="family-code">{file.code}</span></h1><p>{[file.father_name && `الأب: ${file.father_name}`, file.mother_name && `الأم: ${file.mother_name}`].filter(Boolean).join(' · ') || 'الأسماء مش متسجلة'}</p>
         <p><span className={`status-label case-file-status ${statusClass[file.file_status]}`}>{file.file_status}</span>{file.status_reason && ` — ${file.status_reason}`}</p></div>
-        {!editing && <div className="heading-actions"><button type="button" className="secondary" onClick={() => window.print()}>طباعة الحالة</button>{canWrite && <button type="button" className="secondary" onClick={() => setEditing(true)}>تعديل الملف</button>}</div>}
+        {!editing && <div className="heading-actions"><button type="button" className="secondary" onClick={() => window.print()}>طباعة الحالة</button>{canWrite && <button type="button" className="secondary" onClick={() => setEditing(true)}>تعديل الملف</button>}{canArchive&&<button type="button" className="danger" onClick={()=>setConfirmArchive(true)}>حذف الحالة</button>}</div>}
       </header>
+      {confirmArchive&&<div className="archive-confirmation" role="alertdialog" aria-modal="true" aria-labelledby="archive-confirmation-title">
+        <h2 id="archive-confirmation-title">أرشفة الحالة {file.code}؟</h2>
+        <p>ملف الحالة وأفراده ومرفقاته والكفالات هيفضلوا محفوظين. الحالة هتختفي من القوائم اليومية، والمدير العام يقدر يسترجعها من «الحالات المؤرشفة».</p>
+        <div className="form-actions"><button type="button" className="danger" disabled={archiving} onClick={()=>void confirmArchiveCase()}>{archiving?'جاري الأرشفة…':'تأكيد الأرشفة'}</button><button type="button" className="secondary" disabled={archiving} onClick={()=>setConfirmArchive(false)}>إلغاء</button></div>
+      </div>}
       {editing && canWrite ? <CaseIntakeForm initial={file} initialMembers={members} onSaved={async (savedId) => { setEditing(false); try { await refresh(savedId); } catch { setError('اتحفظ الملف بس تعذّر تحديث العرض.'); } }} /> : <>
         <section className="section-block"><h2>بيانات الملف</h2><dl className="profile-details">
           <div><dt>أنواع الحالة</dt><dd>{file.case_file_categories.map((item) => item.category).join('، ') || 'غير محدد'}</dd></div>

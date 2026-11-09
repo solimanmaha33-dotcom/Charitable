@@ -26,6 +26,12 @@ describe('one-file case directory', () => {
     expect(screen.getByRole('link', { name:'إضافة حالة جديدة' })).toHaveAttribute('href','/cases/new');
     expect(screen.queryByText('اسم الأسرة')).not.toBeInTheDocument();
   });
+  it('shows the archive link only for a general manager', async () => {
+    const { rerender } = render(<MemoryRouter><CaseListPage canWrite canArchive /></MemoryRouter>);
+    expect(await screen.findByRole('link',{name:'الحالات المؤرشفة'})).toHaveAttribute('href','/cases/archive');
+    rerender(<MemoryRouter><CaseListPage canWrite canArchive={false} /></MemoryRouter>);
+    expect(screen.queryByRole('link',{name:'الحالات المؤرشفة'})).not.toBeInTheDocument();
+  });
   it('searches by parent, member, code, phone, address and area', async () => {
     render(<MemoryRouter><CaseListPage canWrite={false} /></MemoryRouter>);
     const search = await screen.findByRole('searchbox', { name:'بحث عن حالة' });

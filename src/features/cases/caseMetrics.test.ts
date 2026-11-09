@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { CaseFile, CaseFileMember } from '../../services/cases';
 import { countCaseMembers, matchesCaseDirectoryFilter } from './caseMetrics';
 
-function file(id:string,categories:string[]=[]):CaseFile{return {id,code:`F-${id}`,phone:null,phone_2:null,phone_3:null,father_name:null,mother_name:null,contact_name:null,contact_relationship:null,contact_age:null,notes:'',address:null,monthly_income:null,health_condition:null,branch_area:null,file_status:'نشط',status_reason:null,national_id_expires_on:null,case_file_categories:categories.map(category=>({category:category as CaseFile['case_file_categories'][number]['category']}))};}
+function file(id:string,categories:string[]=[]):CaseFile{return {id,code:`F-${id}`,archived_at:null,phone:null,phone_2:null,phone_3:null,father_name:null,mother_name:null,contact_name:null,contact_relationship:null,contact_age:null,notes:'',address:null,monthly_income:null,health_condition:null,branch_area:null,file_status:'نشط',status_reason:null,national_id_expires_on:null,case_file_categories:categories.map(category=>({category:category as CaseFile['case_file_categories'][number]['category']}))};}
 const files=[file('f1',['يتيم الأم','أرملة']),file('f2',['كبار السن (٦٠ سنة فأكثر)'])];
 const members:CaseFileMember[]=[
  {family_id:'f1',person_id:'p1',relationship:'ابن',people:{name:'كريم',gender:'male',date_of_birth:'2008-11-09'}},

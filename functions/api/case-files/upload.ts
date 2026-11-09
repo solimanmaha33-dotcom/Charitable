@@ -15,7 +15,7 @@ export async function onRequestPost(context:Context):Promise<Response> {
   let name='';try{name=decodeURIComponent(encoded);}catch{return json({error:'Invalid file'},400);}
   const mime=context.request.headers.get('content-type') ?? '';
   if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(caseFileId) || !name || name.length>255 || /[\u0000-\u001f\u007f]/.test(name)) return json({error:'Invalid file'},400);
-  const record=await staff.client.from('families').select('id').eq('id',caseFileId).maybeSingle();if(record.error || !record.data) return json({error:'Case file not found'},404);
+  const record=await staff.client.from('families').select('id,archived_at').eq('id',caseFileId).maybeSingle();if(record.error || !record.data || record.data.archived_at!==null) return json({error:'Case file not found'},404);
   let bytes:Uint8Array;try{bytes=await readBounded(context.request);await inspectUpload(bytes,mime);}catch{return json({error:'Invalid file'},400);}
   const {data:{user},error:userError}=await staff.client.auth.getUser(staff.token);if(userError || !user) return json({error:'Access denied'},401);
   const again=await staff.client.rpc('has_permission',{permission:'casesWrite'});if(again.error || !again.data) return json({error:'Access denied'},403);

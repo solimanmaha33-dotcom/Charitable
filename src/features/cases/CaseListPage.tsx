@@ -11,7 +11,7 @@ const formatCount = new Intl.NumberFormat('ar-EG').format;
 const statuses: CaseFileStatus[] = ['نشط', 'موقوف', 'تحت المراجعة', 'مرفوض'];
 const statusClass: Record<CaseFileStatus,string> = { 'نشط':'case-status-active','موقوف':'case-status-hold','تحت المراجعة':'case-status-review','مرفوض':'case-status-rejected' };
 
-export function CaseListPage({ canWrite }: { canWrite: boolean }) {
+export function CaseListPage({ canWrite, canArchive=false }: { canWrite: boolean; canArchive?:boolean }) {
   const [files, setFiles] = useState<CaseFile[]>([]);
   const [members, setMembers] = useState<CaseFileMember[]>([]);
   const [search, setSearch] = useState('');
@@ -55,7 +55,7 @@ export function CaseListPage({ canWrite }: { canWrite: boolean }) {
   return <section className="page-card">
     <header className="page-heading">
       <div><h1>الحالات</h1><p>كل ملف له كود واحد، ومنه تراجع بيانات الأسرة والأفراد والمرفقات.</p></div>
-      {canWrite && <Link className="primary-link" to="/cases/new">إضافة حالة جديدة</Link>}
+      <div className="heading-actions">{canArchive&&<Link className="button secondary" to="/cases/archive">الحالات المؤرشفة</Link>}{canWrite && <Link className="primary-link" to="/cases/new">إضافة حالة جديدة</Link>}</div>
     </header>
     <aside className="staff-steps" aria-label="خطوات تسجيل الحالة"><strong>خطوات الشغل</strong><ol><li>اضغط «إضافة حالة جديدة».</li><li>اختار نوع الحالة وسجّل بيانات الأم والأب والعنوان.</li><li>حدد حالة الملف؛ واكتب السبب لو اخترت موقوف أو مرفوض.</li><li>ارفع الصور أو PDF، وبعدها افتح الملف للمراجعة والطباعة.</li></ol></aside>
     <div className="toolbar">
