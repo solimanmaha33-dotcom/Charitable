@@ -68,7 +68,8 @@ describe('home workspace', () => {
     expect(screen.getByRole('link',{name:/أحمد/})).toHaveAttribute('href','/cases/old');
     expect(await screen.findByText(/هتنتهي خلال ٢٥ يوم/)).toBeVisible();
     expect(screen.getByRole('link',{name:/محمود/})).toHaveAttribute('href','/cases/soon');
-    expect(counts.expirations).toHaveBeenCalledWith(addDateOnlyDays(today,90));
+    expect(counts.expirations).toHaveBeenCalledWith(addDateOnlyDays(today,30));
+    expect(screen.getByText('خلال ٣٠ يوم')).toBeVisible();
   });
 
   it('shows the correct age threshold reminder and family link',async()=>{
@@ -77,6 +78,7 @@ describe('home workspace', () => {
     render(<MemoryRouter><HomePage staff={staff}/></MemoryRouter>);
     expect(await screen.findByText((_text,element)=>element?.tagName==='SMALL'&&element.textContent?.includes('هيكمل ٢١ سنة')===true)).toBeVisible();
     expect(await screen.findByText('خلال ٢٥ يوم')).toBeVisible();
+    expect(screen.getByText('قبل السن المحدد بـ٣٠ يوم')).toBeVisible();
     expect(screen.getByRole('link',{name:/ريم · الأب: أحمد/})).toHaveAttribute('href','/cases/family-1');
     expect(counts.ageMembers).toHaveBeenCalledOnce();
   });

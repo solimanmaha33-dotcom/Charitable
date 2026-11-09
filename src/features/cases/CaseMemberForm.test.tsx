@@ -38,6 +38,8 @@ it('lets staff enter demographics manually and calculates age immediately',()=>{
 
 it('saves a health status and condition details for each family member',async()=>{
  const onAdded=vi.fn();render(<CaseMemberForm caseFileId="family-1" onAdded={onAdded}/>);
+ expect(screen.getByLabelText('الحالة الصحية للفرد').querySelectorAll('option')).toHaveLength(4);
+ expect([...screen.getByLabelText('الحالة الصحية للفرد').querySelectorAll('option')].map(option=>option.textContent)).toEqual(['اختار الحالة الصحية','عجز / إعاقة','مرض','حالة مستقرة']);
  fireEvent.change(screen.getByLabelText('اسم الفرد'),{target:{value:'ريم'}});
  fireEvent.change(screen.getByLabelText('صلة القرابة'),{target:{value:'بنت'}});
  fireEvent.change(screen.getByLabelText('الحالة الصحية للفرد'),{target:{value:'مرض'}});
@@ -47,7 +49,7 @@ it('saves a health status and condition details for each family member',async()=
 });
 
 it('loads and updates the health condition when editing a member',async()=>{
- const member={person_id:'person-2',relationship:'ابنة',people:{name:'ريم',gender:'female' as const,date_of_birth:'2010-01-01',health_condition:'ربو',health_status:'مرض',health_details:'ربو'}};
+ const member={person_id:'person-2',relationship:'ابنة',people:{name:'ريم',gender:'female' as const,date_of_birth:'2010-01-01',health_condition:'ربو',health_status:'مرض' as const,health_details:'ربو'}};
  render(<CaseMemberForm caseFileId="family-1" onAdded={vi.fn()} member={member}/>);
  expect(screen.getByLabelText('الحالة الصحية للفرد')).toHaveValue('مرض');
  fireEvent.change(screen.getByLabelText('نوع المرض'),{target:{value:'حساسية صدر'}});

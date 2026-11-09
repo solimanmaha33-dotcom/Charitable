@@ -14,7 +14,7 @@ function dateAtAge(birthDate:string,targetAge:number):string{
  return `${value.getUTCFullYear()}-${String(value.getUTCMonth()+1).padStart(2,'0')}-${String(value.getUTCDate()).padStart(2,'0')}`;
 }
 
-export function findMemberAgeAlerts(members:MemberAgeCandidate[],today:string,windowDays=90):MemberAgeAlert[]{
+export function findMemberAgeAlerts(members:MemberAgeCandidate[],today:string,windowDays=30):MemberAgeAlert[]{
  const todayTime=Date.parse(`${today}T00:00:00Z`);
  return members.flatMap(member=>{
   if(!member.birthDate||!member.gender)return[];

@@ -29,6 +29,26 @@ it('creates one file without a family-name field and saves status, reason and pr
   expect(saveCaseFile).toHaveBeenCalledWith(null, expect.objectContaining({ motherName: 'منى', fatherName: '', address: 'شارع النيل', monthlyIncome: 2500, healthCondition: 'تحتاج متابعة', phones: ['', '01000000002', ''], fileStatus: 'موقوف', statusReason: 'مراجعة الأوراق', categories: ['أرملة'] }));
 });
 
+it('offers another case type and makes abandonment, widowhood and divorce mutually exclusive',()=>{
+ render(<CaseIntakeForm onSaved={vi.fn()}/>);
+ expect(screen.getByLabelText('أخرى')).toBeInTheDocument();
+ fireEvent.click(screen.getByLabelText('هجر'));
+ expect(screen.getByLabelText('هجر')).toBeChecked();
+ fireEvent.click(screen.getByLabelText('أرملة'));
+ expect(screen.getByLabelText('أرملة')).toBeChecked();
+ expect(screen.getByLabelText('هجر')).not.toBeChecked();
+ fireEvent.click(screen.getByLabelText('مطلقة'));
+ expect(screen.getByLabelText('مطلقة')).toBeChecked();
+ expect(screen.getByLabelText('أرملة')).not.toBeChecked();
+});
+
+it('shows exactly the requested three health options for each parent',()=>{
+ render(<CaseIntakeForm onSaved={vi.fn()}/>);
+ for(const label of ['الحالة الصحية للأب','الحالة الصحية للأم']){
+  expect(within(screen.getByLabelText(label)).getAllByRole('option').map(option=>option.textContent)).toEqual(['اختار الحالة الصحية','عجز / إعاقة','مرض','حالة مستقرة']);
+ }
+});
+
 it('hides father fields for a widow and saves both parent national IDs and individual health notes',async()=>{
  render(<CaseIntakeForm onSaved={vi.fn()}/>);
  fireEvent.click(screen.getByLabelText('أرملة'));

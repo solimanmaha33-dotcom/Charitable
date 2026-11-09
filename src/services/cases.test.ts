@@ -52,6 +52,11 @@ it('rejects a new file without a mother name and a negative income before the da
  await expect(saveCaseFile(null,{...base,monthlyIncome:'1,000' as unknown as number})).rejects.toThrow('الدخل الشهري غير صحيح');
  expect(rows.rpc).toHaveLength(0);
 });
+it('rejects mutually exclusive family case types before calling the database',async()=>{
+ const base={fatherName:'',motherName:'أم',contactName:'',contactRelationship:'',contactAge:null,nationalId:'',nationalIdExpiresOn:'',phones:['01012345678','',''],notes:'',address:'',monthlyIncome:null,healthCondition:'',branchArea:'',fileStatus:'نشط' as const,statusReason:'',categories:['هجر','أرملة'] as CaseFileInput['categories']};
+ await expect(saveCaseFile(null,base)).rejects.toThrow('اختار نوع واحد بس من هجر أو أرملة أو مطلقة');
+ expect(rows.rpc).toHaveLength(0);
+});
 it('requires a reason for held and rejected statuses',async()=>{
  const base={fatherName:'',motherName:'أم',contactName:'',contactRelationship:'',contactAge:null,nationalId:'',nationalIdExpiresOn:'',phones:[],notes:'',address:'',monthlyIncome:null,healthCondition:'',branchArea:'',statusReason:'',categories:[]};
  for(const fileStatus of ['موقوف','مرفوض'] as const) await expect(saveCaseFile(null,{...base,fileStatus})).rejects.toThrow('سبب الإيقاف أو الرفض مطلوب');

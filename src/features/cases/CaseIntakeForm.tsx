@@ -3,7 +3,8 @@ import { saveCaseFile, uploadCaseAttachment, type CaseFile, type CaseFileInput, 
 import { addBranch, listBranches, removeBranch } from '../../services/branches';
 import { FieldSuggestions } from '../assistant/FieldSuggestions';
 import { FilePicker } from '../files/FilePicker';
-import { CASE_CATEGORIES, isCaseCategory, type CaseCategory } from './categories';
+import { CASE_CATEGORIES, hasConflictingCaseCategories, isCaseCategory, updateCaseCategorySelection, type CaseCategory } from './categories';
+import { HEALTH_STATUSES, type HealthStatus } from './healthStatus';
 
 const arabicDigits = '٠١٢٣٤٥٦٧٨٩';
 const persianDigits = '۰۱۲۳۴۵۶۷۸۹';
@@ -24,8 +25,8 @@ export function CaseIntakeForm({ onSaved, initial, initialMembers = [] }: { onSa
   const [motherNationalId, setMotherNationalId] = useState(initial?.mother_national_id ?? '');
   const [fatherHealthCondition, setFatherHealthCondition] = useState(initial?.father_health_condition ?? '');
   const [motherHealthCondition, setMotherHealthCondition] = useState(initial?.mother_health_condition ?? '');
-  const [fatherHealthStatus, setFatherHealthStatus] = useState(initial?.father_health_status ?? '');
-  const [motherHealthStatus, setMotherHealthStatus] = useState(initial?.mother_health_status ?? '');
+  const [fatherHealthStatus, setFatherHealthStatus] = useState<HealthStatus | ''>(initial?.father_health_status ?? '');
+  const [motherHealthStatus, setMotherHealthStatus] = useState<HealthStatus | ''>(initial?.mother_health_status ?? '');
   const [fatherEmploymentStatus, setFatherEmploymentStatus] = useState<EmploymentStatus|null>(initial?.father_employment_status ?? null);
   const [motherEmploymentStatus, setMotherEmploymentStatus] = useState<EmploymentStatus|null>(initial?.mother_employment_status ?? null);
   const [fatherOccupation, setFatherOccupation] = useState(initial?.father_occupation ?? '');
@@ -94,6 +95,7 @@ export function CaseIntakeForm({ onSaved, initial, initialMembers = [] }: { onSa
     event.preventDefault(); setError('');
     if (!motherName.trim() && !initial) { setError('اسم الأم مطلوب.'); return; }
     if (!categories.length && !preservedCategories.length) { setError('اختار نوع حالة واحد على الأقل.'); return; }
+    if (hasConflictingCaseCategories(categories)) { setError('اختار نوع واحد بس من هجر أو أرملة أو مطلقة.'); return; }
     const normalizedAge = latinDigits(guardianAge.trim());
     const normalizedId = digitsOnly(nationalId.trim());
     const normalizedFatherId = digitsOnly(fatherNationalId.trim());
@@ -105,7 +107,7 @@ export function CaseIntakeForm({ onSaved, initial, initialMembers = [] }: { onSa
     if (!phones.some((phone) => phone.trim())) { setError('اكتب رقم موبايل أو رقم منزل واحد على الأقل.'); return; }
     if (phones.slice(0, 2).some((phone) => phone.trim() && !/^\d{11}$/.test(phone.trim()))) { setError('رقم الموبايل لازم يكون ١١ رقم.'); return; }
     if (phones[2]?.trim() && !/^\d{10}$/.test(phones[2].trim())) { setError('رقم المنزل لازم يكون ١٠ أرقام.'); return; }
-    if ((fatherHealthStatus && fatherHealthStatus !== 'مستقرة' && !fatherHealthCondition.trim()) || (motherHealthStatus && motherHealthStatus !== 'مستقرة' && !motherHealthCondition.trim())) { setError('اكتب نوع العجز أو المرض للشخص اللي اخترت له الحالة الصحية.'); return; }
+    if ((fatherHealthStatus && fatherHealthStatus !== 'حالة مستقرة' && !fatherHealthCondition.trim()) || (motherHealthStatus && motherHealthStatus !== 'حالة مستقرة' && !motherHealthCondition.trim())) { setError('اكتب نوع العجز أو المرض للشخص اللي اخترت له الحالة الصحية.'); return; }
     if (normalizedIncome && !/^\d+$/.test(normalizedIncome)) { setError('الدخل الشهري اكتب فيه أرقام بس من غير فواصل.'); return; }
     if ((fileStatus === 'موقوف' || fileStatus === 'مرفوض') && !statusReason.trim()) { setError('اكتب سبب إيقاف أو رفض الملف.'); return; }
 
@@ -116,7 +118,7 @@ export function CaseIntakeForm({ onSaved, initial, initialMembers = [] }: { onSa
       monthlyIncome: normalizedIncome ? Number(normalizedIncome) : null, healthCondition: healthCondition.trim(), branchArea: branchArea.trim(),
       fileStatus, statusReason: statusReason.trim(), categories, fatherNationalId: normalizedFatherId, motherNationalId: normalizedMotherId,
       fatherHealthCondition: fatherHealthCondition.trim(), motherHealthCondition: motherHealthCondition.trim(),
-      fatherHealthStatus, motherHealthStatus,
+      fatherHealthStatus: fatherHealthStatus || undefined, motherHealthStatus: motherHealthStatus || undefined,
       fatherEmploymentStatus, motherEmploymentStatus, fatherOccupation, motherOccupation,
     };
     setBusy(true);
@@ -134,7 +136,7 @@ export function CaseIntakeForm({ onSaved, initial, initialMembers = [] }: { onSa
     <p className="form-help">كل البيانات دي بتتسجل في ملف واحد له كود ثابت. الأب ممكن تسيبه فاضي.</p>
     <section className="form-section">
       <h2>١. نوع الحالة وحالة الملف</h2>
-      <fieldset><legend>اختار نوع الحالة</legend>{CASE_CATEGORIES.map((category) => <label key={category}><input type="checkbox" checked={categories.includes(category)} onChange={(event) => setCategories((current) => event.target.checked ? [...current, category] : current.filter((item) => item !== category))} /> {category}</label>)}{preservedCategories.map((category) => <span className="category-label" key={category}>تصنيف قديم محفوظ: {category}</span>)}</fieldset>
+      <fieldset><legend>اختار نوع الحالة</legend>{CASE_CATEGORIES.map((category) => <label key={category}><input type="checkbox" checked={categories.includes(category)} onChange={(event) => setCategories((current) => updateCaseCategorySelection(current, category, event.target.checked))} /> {category}</label>)}{preservedCategories.map((category) => <span className="category-label" key={category}>تصنيف قديم محفوظ: {category}</span>)}</fieldset>
       <div className="form-grid">
         <label>حالة الملف<select value={fileStatus} onChange={(event) => setFileStatus(event.target.value as CaseFileStatus)}>{statuses.map((status) => <option key={status} value={status}>{status}</option>)}</select></label>
         {(fileStatus === 'موقوف' || fileStatus === 'مرفوض') && <label>سبب {fileStatus === 'موقوف' ? 'الإيقاف' : 'الرفض'}<textarea required maxLength={1000} value={statusReason} onChange={(event) => setStatusReason(event.target.value)} /></label>}
@@ -148,9 +150,9 @@ export function CaseIntakeForm({ onSaved, initial, initialMembers = [] }: { onSa
         <label>اسم الأم {!initial && <span className="muted-cell">(مطلوب)</span>}<input required={!initial} maxLength={200} value={motherName} onChange={(event) => setMotherName(event.target.value)} /></label>
         {!widowCase && <label>الرقم القومي للأب <span className="muted-cell">(اختياري)</span><input aria-label="الرقم القومي للأب" inputMode="numeric" maxLength={14} value={fatherNationalId} onChange={(event) => setFatherNationalId(digitsOnly(event.target.value))} /></label>}
         <label>الرقم القومي للأم <span className="muted-cell">(اختياري)</span><input aria-label="الرقم القومي للأم" inputMode="numeric" maxLength={14} value={motherNationalId} onChange={(event) => setMotherNationalId(digitsOnly(event.target.value))} /></label>
-        {!widowCase && <><label>الحالة الصحية للأب<select aria-label="الحالة الصحية للأب" value={fatherHealthStatus} onChange={(event) => setFatherHealthStatus(event.target.value)}><option value="">اختار الحالة الصحية</option><option value="مستقرة">مستقرة</option><option value="عجز أو إعاقة">عجز أو إعاقة</option><option value="مرض">مرض</option></select></label>{fatherHealthStatus && fatherHealthStatus !== 'مستقرة' && <label>نوع العجز أو الإعاقة أو المرض للأب<textarea maxLength={2000} value={fatherHealthCondition} onChange={(event) => setFatherHealthCondition(event.target.value)} /></label>}</>}
-        <label>الحالة الصحية للأم<select aria-label="الحالة الصحية للأم" value={motherHealthStatus} onChange={(event) => setMotherHealthStatus(event.target.value)}><option value="">اختار الحالة الصحية</option><option value="مستقرة">مستقرة</option><option value="عجز أو إعاقة">عجز أو إعاقة</option><option value="مرض">مرض</option></select></label>
-        {motherHealthStatus && motherHealthStatus !== 'مستقرة' && <label>نوع العجز أو الإعاقة أو المرض للأم<textarea maxLength={2000} value={motherHealthCondition} onChange={(event) => setMotherHealthCondition(event.target.value)} /></label>}
+        {!widowCase && <><label>الحالة الصحية للأب<select aria-label="الحالة الصحية للأب" value={fatherHealthStatus} onChange={(event) => setFatherHealthStatus((event.target.value || '') as HealthStatus | '')}><option value="">اختار الحالة الصحية</option>{HEALTH_STATUSES.map((status) => <option key={status} value={status}>{status}</option>)}</select></label>{fatherHealthStatus && fatherHealthStatus !== 'حالة مستقرة' && <label>نوع العجز أو الإعاقة أو المرض للأب<textarea maxLength={2000} value={fatherHealthCondition} onChange={(event) => setFatherHealthCondition(event.target.value)} /></label>}</>}
+        <label>الحالة الصحية للأم<select aria-label="الحالة الصحية للأم" value={motherHealthStatus} onChange={(event) => setMotherHealthStatus((event.target.value || '') as HealthStatus | '')}><option value="">اختار الحالة الصحية</option>{HEALTH_STATUSES.map((status) => <option key={status} value={status}>{status}</option>)}</select></label>
+        {motherHealthStatus && motherHealthStatus !== 'حالة مستقرة' && <label>نوع العجز أو الإعاقة أو المرض للأم<textarea maxLength={2000} value={motherHealthCondition} onChange={(event) => setMotherHealthCondition(event.target.value)} /></label>}
         {!widowCase && <label>حالة عمل الأب<select aria-label="حالة عمل الأب" value={fatherEmploymentStatus??''} onChange={(event) => setFatherEmploymentStatus((event.target.value||null) as EmploymentStatus|null)}><option value="">اختار حالة العمل</option>{employmentOptions.map((option) => <option key={option} value={option}>{option}</option>)}</select></label>}
         {fatherEmploymentStatus === 'يعمل' && !widowCase && <label>نوع عمل الأب<input aria-label="نوع عمل الأب" maxLength={200} value={fatherOccupation} onChange={(event) => setFatherOccupation(event.target.value)} /></label>}
         <label>حالة عمل الأم<select aria-label="حالة عمل الأم" value={motherEmploymentStatus??''} onChange={(event) => setMotherEmploymentStatus((event.target.value||null) as EmploymentStatus|null)}><option value="">اختار حالة العمل</option>{employmentOptions.map((option) => <option key={option} value={option}>{option}</option>)}</select></label>

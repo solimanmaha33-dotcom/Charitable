@@ -35,14 +35,14 @@ select is((select to_jsonb(p)->>'health_status' from public.people p where name=
 select is((select to_jsonb(p)->>'health_details' from public.people p where name='كريم'),'حساسية صدر','individual health details persist');
 select is((select to_jsonb(p)->>'employment_status' from public.people p where name='سلمى'),'يعمل','individual employment status persists');
 select is((select to_jsonb(p)->>'occupation' from public.people p where name='سلمى'),'مدرسة','individual work type persists');
-select lives_ok($$update public.people set health_status='عجز أو إعاقة',health_details='إعاقة حركية',health_condition='إعاقة حركية' where name='كريم'$$,'writer can update individual health status and details');
-select is((select to_jsonb(p)->>'health_status' from public.people p where name='كريم'),'عجز أو إعاقة','updated individual health status persists');
-select lives_ok($$select public.save_case_file('94000000-0000-0000-0000-000000000001','{"mother_name":"الأم","phone":"01012345678","father_national_id":"28001011234567","mother_national_id":"29001011234567","father_health_status":"مستقرة","mother_health_status":"مرض","mother_health_condition":"ضغط","mother_employment_status":"يعمل","mother_occupation":"خياطة","father_employment_status":"لا يعمل"}'::jsonb,null)$$,'writer saves parent identity, health and employment data');
+select lives_ok($$update public.people set health_status='عجز / إعاقة',health_details='إعاقة حركية',health_condition='إعاقة حركية' where name='كريم'$$,'writer can update individual health status and details');
+select is((select to_jsonb(p)->>'health_status' from public.people p where name='كريم'),'عجز / إعاقة','updated individual health status persists');
+select lives_ok($$select public.save_case_file('94000000-0000-0000-0000-000000000001','{"mother_name":"الأم","phone":"01012345678","father_national_id":"28001011234567","mother_national_id":"29001011234567","father_health_status":"حالة مستقرة","mother_health_status":"مرض","mother_health_condition":"ضغط","mother_employment_status":"يعمل","mother_occupation":"خياطة","father_employment_status":"لا يعمل"}'::jsonb,null)$$,'writer saves parent identity, health and employment data');
 select is((select to_jsonb(f)->>'father_national_id' from public.families f where id='94000000-0000-0000-0000-000000000001'),'28001011234567','father national ID persists');
 select is((select to_jsonb(f)->>'mother_national_id' from public.families f where id='94000000-0000-0000-0000-000000000001'),'29001011234567','mother national ID persists');
 select is((select to_jsonb(f)->>'father_health_condition' from public.families f where id='94000000-0000-0000-0000-000000000001'),null,'stable father has no extra condition details');
 select is((select to_jsonb(f)->>'mother_health_condition' from public.families f where id='94000000-0000-0000-0000-000000000001'),'ضغط','mother health note persists');
-select is((select to_jsonb(f)->>'father_health_status' from public.families f where id='94000000-0000-0000-0000-000000000001'),'مستقرة','father health status persists');
+select is((select to_jsonb(f)->>'father_health_status' from public.families f where id='94000000-0000-0000-0000-000000000001'),'حالة مستقرة','father health status persists');
 select is((select to_jsonb(f)->>'mother_health_status' from public.families f where id='94000000-0000-0000-0000-000000000001'),'مرض','mother health status persists');
 select is((select to_jsonb(f)->>'mother_employment_status' from public.families f where id='94000000-0000-0000-0000-000000000001'),'يعمل','mother employment status persists');
 select is((select to_jsonb(f)->>'mother_occupation' from public.families f where id='94000000-0000-0000-0000-000000000001'),'خياطة','mother work type persists');
@@ -54,7 +54,7 @@ select set_config('request.jwt.claims','{"sub":"63000000-0000-0000-0000-00000000
 set local role authenticated;
 select is((select date_of_birth from public.people where name='ريم'),'2008-12-31'::date,'family reader can see member birth date');
 select is((select to_jsonb(p)->>'health_condition' from public.people p where name='كريم'),'إعاقة حركية','family reader can see individual health details');
-select is((select to_jsonb(p)->>'health_status' from public.people p where name='كريم'),'عجز أو إعاقة','family reader can see individual health status');
+select is((select to_jsonb(p)->>'health_status' from public.people p where name='كريم'),'عجز / إعاقة','family reader can see individual health status');
 select is((select to_jsonb(p)->>'employment_status' from public.people p where name='سلمى'),'يعمل','family reader can see individual employment status');
 select throws_ok($$select public.add_family_member_profile('94000000-0000-0000-0000-000000000001','فرد','ابن','male','2010-01-01')$$,'42501',null,'read-only staff cannot add member profile');
 select * from finish();

@@ -1,7 +1,8 @@
 import { getSupabase } from './supabase';
 import { validateDocument, openPdf } from '../features/files/documentText';
-import type { CaseCategory, StoredCaseCategory } from '../features/cases/categories';
+import { hasConflictingCaseCategories, isCaseCategory, type StoredCaseCategory } from '../features/cases/categories';
 import type { MemberGender } from '../features/cases/memberDemographics';
+import { HEALTH_STATUSES, type HealthStatus } from '../features/cases/healthStatus';
 
 export type CaseFileStatus = 'نشط' | 'موقوف' | 'تحت المراجعة' | 'مرفوض';
 export type EmploymentStatus = 'يعمل' | 'لا يعمل' | 'طفل' | 'طفلة';
@@ -10,7 +11,7 @@ export type CaseFileInput = {
  nationalId: string; nationalIdExpiresOn: string; phones: string[]; notes: string; address: string;
  monthlyIncome: number | null; healthCondition: string; branchArea: string; fileStatus: CaseFileStatus;
  statusReason: string; categories: StoredCaseCategory[]; fatherNationalId?: string; motherNationalId?: string;
- fatherHealthCondition?: string; motherHealthCondition?: string; fatherHealthStatus?: string; motherHealthStatus?: string;
+ fatherHealthCondition?: string; motherHealthCondition?: string; fatherHealthStatus?: HealthStatus; motherHealthStatus?: HealthStatus;
  fatherEmploymentStatus?: EmploymentStatus | null; motherEmploymentStatus?: EmploymentStatus | null; fatherOccupation?: string; motherOccupation?: string;
 };
 export type CaseFile = {
@@ -18,7 +19,7 @@ export type CaseFile = {
  archived_at: string | null;
  father_name: string | null; mother_name: string | null; contact_name: string | null; contact_relationship: string | null;
  father_national_id?: string | null; mother_national_id?: string | null; father_health_condition?: string | null; mother_health_condition?: string | null;
- father_health_status?: string | null; mother_health_status?: string | null;
+ father_health_status?: HealthStatus | null; mother_health_status?: HealthStatus | null;
  father_employment_status?: EmploymentStatus | null; mother_employment_status?: EmploymentStatus | null; father_occupation?: string | null; mother_occupation?: string | null;
  contact_age: number | null; national_id?: string | null; national_id_expires_on: string | null; notes: string;
  address: string | null; monthly_income: number | null; health_condition: string | null; branch_area: string | null;
@@ -27,7 +28,7 @@ export type CaseFile = {
 export type CaseFileSummary = Pick<CaseFile,'id'|'code'|'phone'|'phone_2'|'phone_3'|'father_name'|'mother_name'|'address'|'branch_area'|'file_status'|'archived_at'>;
 export type ArchivedCaseFile = Omit<CaseFileSummary,'archived_at'> & {archived_at:string};
 export type CaseFileIdExpiry = { id:string; code:string; father_name:string|null; mother_name:string|null; contact_name:string|null; national_id_expires_on:string };
-export type Member = { person_id: string; relationship: string; people: { name: string; gender:MemberGender|null; date_of_birth:string|null; health_condition?:string|null; health_status?:string|null; health_details?:string|null; employment_status?:EmploymentStatus|null; occupation?:string|null } };
+export type Member = { person_id: string; relationship: string; people: { name: string; gender:MemberGender|null; date_of_birth:string|null; health_condition?:string|null; health_status?:HealthStatus|null; health_details?:string|null; employment_status?:EmploymentStatus|null; occupation?:string|null } };
 export type CaseFileMember = Member & { family_id: string };
 export type MemberAgeProfile=CaseFileMember & {case_file:{father_name:string|null;mother_name:string|null;code:string}};
 export type CaseAttachment = { id:string; family_id:string; storage_path:string; file_name:string; mime_type:string; size_bytes:number; uploaded_by:string; extracted_text:string|null; created_at:string };
@@ -80,6 +81,8 @@ function validateInput(input:CaseFileInput,requireMother:boolean){
  if(!['نشط','موقوف','تحت المراجعة','مرفوض'].includes(input.fileStatus))throw new Error('حالة الملف غير صحيحة');
  if((input.fileStatus==='موقوف'||input.fileStatus==='مرفوض')&&!input.statusReason.trim())throw new Error('سبب الإيقاف أو الرفض مطلوب');
  if(input.monthlyIncome!==null&&(!Number.isFinite(input.monthlyIncome)||!Number.isInteger(input.monthlyIncome)||input.monthlyIncome<0))throw new Error('الدخل الشهري غير صحيح');
+ if(input.categories.some((category)=>!isCaseCategory(category)))throw new Error('نوع الحالة غير صحيح');
+ if(hasConflictingCaseCategories(input.categories))throw new Error('اختار نوع واحد بس من هجر أو أرملة أو مطلقة');
  for(const id of [input.nationalId,input.fatherNationalId??'',input.motherNationalId??'']) if(id.trim()&&!/^\d{14}$/.test(id.trim()))throw new Error('الرقم القومي لازم يكون ١٤ رقم');
  const phones=input.phones.map((phone)=>phone.trim());
  if(!phones.some(Boolean))throw new Error('اكتب رقم موبايل أو رقم منزل واحد على الأقل');
@@ -87,8 +90,8 @@ function validateInput(input:CaseFileInput,requireMother:boolean){
  if(phones[2]&&!/^\d{10}$/.test(phones[2]))throw new Error('رقم المنزل لازم يكون ١٠ أرقام');
  if(phones.slice(3).some(Boolean))throw new Error('مسموح برقمَي موبايل ورقم منزل فقط');
  for(const [status,details] of [[input.fatherHealthStatus,input.fatherHealthCondition],[input.motherHealthStatus,input.motherHealthCondition]]) {
-  if(status&&!['مستقرة','عجز أو إعاقة','مرض'].includes(status))throw new Error('الحالة الصحية غير صحيحة');
-  if(status&&status!=='مستقرة'&&!details?.trim())throw new Error('اكتب نوع العجز أو المرض');
+  if(status&&!HEALTH_STATUSES.some((option)=>option===status))throw new Error('الحالة الصحية غير صحيحة');
+  if(status&&status!=='حالة مستقرة'&&!details?.trim())throw new Error('اكتب نوع العجز أو المرض');
  }
  for(const [status,occupation] of [[input.fatherEmploymentStatus,input.fatherOccupation],[input.motherEmploymentStatus,input.motherOccupation]]) validateEmployment(status,occupation);
 }
@@ -132,11 +135,11 @@ export async function listAllMembers(): Promise<CaseFileMember[]> {
 export async function listAgeThresholdMembers():Promise<MemberAgeProfile[]> {
  return allPages((start,end)=>db().from('family_members').select('family_id,person_id,relationship,people(name,gender,date_of_birth,health_condition,health_status,health_details),case_file:families!inner(code,father_name,mother_name,archived_at)').is('case_file.archived_at',null).order('family_id').order('person_id').range(start,end)) as unknown as Promise<MemberAgeProfile[]>;
 }
-export async function addMember(caseFileId: string, name: string, relationship: string, gender:MemberGender|null=null, dateOfBirth:string|null=null, healthStatus:string|null=null, healthDetails:string|null=null, employmentStatus:EmploymentStatus|null=null, occupation:string|null=null): Promise<void> {
+export async function addMember(caseFileId: string, name: string, relationship: string, gender:MemberGender|null=null, dateOfBirth:string|null=null, healthStatus:HealthStatus|null=null, healthDetails:string|null=null, employmentStatus:EmploymentStatus|null=null, occupation:string|null=null): Promise<void> {
  validateEmployment(employmentStatus,occupation);
  const {error}=await db().rpc('add_family_member_profile',{p_family_id:caseFileId,p_name:name,p_relationship:relationship,p_gender:gender,p_date_of_birth:dateOfBirth,p_health_status:healthStatus,p_health_details:healthDetails,p_employment_status:employmentStatus,p_occupation:employmentStatus==='يعمل'?occupation:null}); check(error);
 }
-export async function updateMemberDemographics(personId:string,gender:MemberGender|null,dateOfBirth:string|null,healthStatus:string|null=null,healthDetails:string|null=null,employmentStatus:EmploymentStatus|null=null,occupation:string|null=null):Promise<void>{
+export async function updateMemberDemographics(personId:string,gender:MemberGender|null,dateOfBirth:string|null,healthStatus:HealthStatus|null=null,healthDetails:string|null=null,employmentStatus:EmploymentStatus|null=null,occupation:string|null=null):Promise<void>{
  validateEmployment(employmentStatus,occupation);
  const {data,error}=await db().from('people').update({gender,date_of_birth:dateOfBirth,health_status:healthStatus,health_details:healthDetails,health_condition:healthDetails,employment_status:employmentStatus,occupation:employmentStatus==='يعمل'?occupation:null}).eq('id',personId).select('id').single();
  check(error);if(!data)throw new Error('تعذّر حفظ بيانات السن');

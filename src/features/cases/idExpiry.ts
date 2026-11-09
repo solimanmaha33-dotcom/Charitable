@@ -21,7 +21,7 @@ export function groupIdExpirations(rows:IdExpiryRecord[], today:string):IdExpiry
     const expiresTime=Date.parse(`${row.national_id_expires_on}T00:00:00Z`);
     if(row.national_id_expires_on < today){ expired.push(row); continue; }
     const daysLeft=Math.round((expiresTime-todayTime)/86_400_000);
-    if(daysLeft<=90) upcoming.push({...row,daysLeft});
+    if(daysLeft<=30) upcoming.push({...row,daysLeft});
   }
   return {expired,upcoming};
 }

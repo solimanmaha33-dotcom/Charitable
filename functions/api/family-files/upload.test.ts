@@ -15,7 +15,7 @@ beforeAll(async()=>{
  admin=createClient(env.SUPABASE_URL,env.SUPABASE_SERVICE_ROLE_KEY,{auth:{persistSession:false}});user=createClient(env.SUPABASE_URL,env.SUPABASE_ANON_KEY,{auth:{persistSession:false}});
  const email=`${crypto.randomUUID()}@staff.invalid`,password='synthetic-password-123';const created=await admin.auth.admin.createUser({email,password,email_confirm:true});if(created.error||!created.data.user)throw created.error;uid=created.data.user.id;
  sql(`insert into public.employees(id,employee_code,display_name,role) values ('${uid}','F${uid.slice(0,8)}','Synthetic','employee'); insert into private.employee_auth(employee_id,auth_user_id) values ('${uid}','${uid}'); insert into public.employee_permissions(employee_id,cases_read,cases_write) values ('${uid}',true,true);`);
- const f=await admin.from('families').insert({name:'',mother_name:'أم وهمية'}).select('id').single();if(f.error)throw f.error;family=f.data.id;
+ const f=await admin.from('families').insert({name:'',mother_name:'أم وهمية',phone:'01012345678'}).select('id').single();if(f.error)throw f.error;family=f.data.id;
  const login=await user.auth.signInWithPassword({email,password});if(login.error||!login.data.session)throw login.error;token=login.data.session.access_token;
 });
 afterAll(async()=>{if(fileId)await admin.from('case_attachments').delete().eq('id',fileId);if(path)await admin.storage.from('case-files').remove([path]);if(family)await admin.from('families').delete().eq('id',family);if(uid){sql(`delete from private.employee_auth where employee_id='${uid}'; delete from public.employee_permissions where employee_id='${uid}'; delete from public.employees where id='${uid}';`);await admin.auth.admin.deleteUser(uid);}});

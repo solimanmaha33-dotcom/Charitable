@@ -12,7 +12,7 @@ beforeAll(async()=>{
  admin=createClient(env.SUPABASE_URL,env.SUPABASE_SERVICE_ROLE_KEY,{auth:{persistSession:false}});user=createClient(env.SUPABASE_URL,env.SUPABASE_ANON_KEY,{auth:{persistSession:false}});
  const email=`${crypto.randomUUID()}@staff.invalid`,password='synthetic-password-123';const created=await admin.auth.admin.createUser({email,password,email_confirm:true});if(created.error||!created.data.user)throw created.error;uid=created.data.user.id;
  sql(`insert into public.employees(id,employee_code,display_name,role) values ('${uid}','Z${uid.slice(0,8)}','Synthetic','employee'); insert into private.employee_auth(employee_id,auth_user_id) values ('${uid}','${uid}'); insert into public.employee_permissions(employee_id,cases_read,cases_write,assistant_use) values ('${uid}',true,true,true);`);
- const f=await admin.from('families').insert({name:'',mother_name:'أم وهمية'}).select('id').single();if(f.error)throw f.error;family=f.data.id;caseId=family;
+ const f=await admin.from('families').insert({name:'',mother_name:'أم وهمية',phone:'01012345678'}).select('id').single();if(f.error)throw f.error;family=f.data.id;caseId=family;
  const file=await admin.from('case_attachments').insert({family_id:family,storage_path:`${family}/${crypto.randomUUID()}`,file_name:'synthetic.png',mime_type:'image/png',size_bytes:1,uploaded_by:uid}).select('id').single();if(file.error)throw file.error;fileId=file.data.id;
  const login=await user.auth.signInWithPassword({email,password});if(login.error||!login.data.session)throw login.error;token=login.data.session.access_token;
 });

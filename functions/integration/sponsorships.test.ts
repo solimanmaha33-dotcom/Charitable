@@ -14,7 +14,7 @@ beforeAll(async()=>{
   sql(`insert into public.employees(id,employee_code,display_name) values('${id}','R${id.slice(0,8)}','Synthetic receipts'); insert into private.employee_auth values('${id}','${id}');insert into public.employee_permissions(employee_id,donations_read,donations_write,cases_read) values('${id}',true,${writable},true);`);
   const client=createClient(s.API_URL,s.ANON_KEY,{auth:{persistSession:false,autoRefreshToken:false}});const signed=await client.auth.signInWithPassword({email,password});if(signed.error)throw signed.error;if(writable)writer=client;else reader=client;
  }
- const f=await admin.from('families').insert({name:'أسرة اختبار استلام وهمية'}).select('id').single();if(f.error)throw f.error;familyId=f.data.id;
+ const f=await admin.from('families').insert({name:'أسرة اختبار استلام وهمية',mother_name:'أم وهمية',phone:'01012345678'}).select('id').single();if(f.error)throw f.error;familyId=f.data.id;
  const d=await admin.from('donors').insert({name:'متبرع اختبار استلام وهمي'}).select('id').single();if(d.error)throw d.error;donorId=d.data.id;
  const sp=await admin.from('sponsorships').insert({family_id:familyId,donor_id:donorId,monthly_amount:450,start_date:'2024-01-31'}).select('id').single();if(sp.error)throw sp.error;sponsorshipId=sp.data.id;
 });

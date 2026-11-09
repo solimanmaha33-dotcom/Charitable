@@ -44,7 +44,7 @@ export function HomePage({ staff }: { staff: StaffProfile }) {
     let active=true;
     if(!canReadCases){setIdExpiryRows([]);setIdExpiryError(false);setLoadingIdExpiry(false);return()=>{active=false;};}
     setLoadingIdExpiry(true);setIdExpiryError(false);
-    void listCaseFileIdExpirationsBy(addDateOnlyDays(cairoToday(),90)).then(rows=>{if(active)setIdExpiryRows(rows);}).catch(()=>{if(active)setIdExpiryError(true);}).finally(()=>{if(active)setLoadingIdExpiry(false);});
+    void listCaseFileIdExpirationsBy(addDateOnlyDays(cairoToday(),30)).then(rows=>{if(active)setIdExpiryRows(rows);}).catch(()=>{if(active)setIdExpiryError(true);}).finally(()=>{if(active)setLoadingIdExpiry(false);});
     return()=>{active=false;};
   },[staff.id,canReadCases]);
 
@@ -112,22 +112,22 @@ export function HomePage({ staff }: { staff: StaffProfile }) {
       </section> : null}
       {canReadCases ? <section className="home-followups" aria-label="المتابعات"><div className="home-followups-grid">
       <section className="home-followup-card id-expiry-alerts" aria-labelledby="id-expiry-title">
-        <div className="section-heading"><h2 id="id-expiry-title">متابعة انتهاء بطاقات الرقم القومي</h2><span>خلال ٩٠ يوم</span></div>
+        <div className="section-heading"><h2 id="id-expiry-title">متابعة انتهاء بطاقات الرقم القومي</h2><span>خلال ٣٠ يوم</span></div>
         <p className="form-help">التنبيه بيظهر للبطاقات اللي تاريخ انتهائها متسجل في ملف الأسرة.</p>
         {loadingIdExpiry&&<p role="status">جاري تحميل مواعيد انتهاء البطاقات…</p>}
         {idExpiryError&&<p className="error-message" role="alert">تعذّر تحميل مواعيد البطاقات. حاول تحدّث الصفحة.</p>}
-        {!loadingIdExpiry&&!idExpiryError&&!expiryGroups.expired.length&&!expiryGroups.upcoming.length&&<div className="empty-state home-followup-empty">مفيش بطاقات منتهية أو هتنتهي خلال ٩٠ يوم من اللي متسجل تاريخها.</div>}
+        {!loadingIdExpiry&&!idExpiryError&&!expiryGroups.expired.length&&!expiryGroups.upcoming.length&&<div className="empty-state home-followup-empty">مفيش بطاقات منتهية أو هتنتهي خلال ٣٠ يوم من اللي متسجل تاريخها.</div>}
         {!loadingIdExpiry&&!idExpiryError&&(expiryGroups.expired.length>0||expiryGroups.upcoming.length>0)&&<ul className="record-list">
           {expiryGroups.expired.map(row=><li key={row.id}><div><Link to={`/cases/${row.id}`}>{caseFileLabel(row)} <span className="family-code">{row.code}</span></Link><small>انتهت يوم {formatDate(row.national_id_expires_on)}</small></div><strong className="expiry-status expiry-status-expired">منتهية</strong></li>)}
           {expiryGroups.upcoming.map(row=><li key={row.id}><div><Link to={`/cases/${row.id}`}>{caseFileLabel(row)} <span className="family-code">{row.code}</span></Link><small>تاريخ الانتهاء {formatDate(row.national_id_expires_on)}</small></div><strong className="expiry-status">{row.daysLeft===0?'هتنتهي النهارده':`هتنتهي خلال ${new Intl.NumberFormat('ar-EG').format(row.daysLeft)} يوم`}</strong></li>)}
         </ul>}
       </section>
       <section className="home-followup-card member-age-alerts" aria-labelledby="member-age-title">
-        <div className="section-heading"><h2 id="member-age-title">متابعة السن</h2><span>قبل السن المحدد بـ٩٠ يوم</span></div>
+        <div className="section-heading"><h2 id="member-age-title">متابعة السن</h2><span>قبل السن المحدد بـ٣٠ يوم</span></div>
         <p className="form-help">لما تاريخ الميلاد والنوع يكونوا متسجلين في ملف الفرد.</p>
         {loadingMemberAgeAlerts&&<p role="status">جاري مراجعة أعمار أفراد الأسر…</p>}
         {memberAgeError&&<p className="error-message" role="alert">تعذّر تحميل أعمار الأفراد. حاول تحدّث الصفحة.</p>}
-        {!loadingMemberAgeAlerts&&!memberAgeError&&!memberAgeAlerts.length&&<div className="empty-state home-followup-empty">مفيش أفراد هيكملوا السن المحدد خلال ٩٠ يوم من بيانات الميلاد المسجلة.</div>}
+        {!loadingMemberAgeAlerts&&!memberAgeError&&!memberAgeAlerts.length&&<div className="empty-state home-followup-empty">مفيش أفراد هيكملوا السن المحدد خلال ٣٠ يوم من بيانات الميلاد المسجلة.</div>}
         {!loadingMemberAgeAlerts&&!memberAgeError&&memberAgeAlerts.length>0&&<ul className="record-list">{memberAgeAlerts.map(alert=><li key={alert.personId}><div><Link to={`/cases/${alert.caseFileId}`}>{alert.name} · {alert.caseFileLabel} <span className="family-code">{alert.caseFileCode}</span></Link><small>العمر الحالي {new Intl.NumberFormat('ar-EG').format(alert.age)} سنة · هيكمل {new Intl.NumberFormat('ar-EG').format(alert.targetAge)} سنة يوم {formatDate(alert.thresholdDate)}</small></div><strong className="expiry-status">{alert.daysUntilThreshold===0?'النهارده':`خلال ${new Intl.NumberFormat('ar-EG').format(alert.daysUntilThreshold)} يوم`}</strong></li>)}</ul>}
       </section>
       </div></section> : null}
