@@ -6,7 +6,7 @@ insert into auth.sessions(id,user_id,created_at,updated_at) select ('70000000-00
 insert into public.employees(id,employee_code,display_name,role) select ('80000000-0000-0000-0000-00000000000'||n)::uuid,'FILE'||n,'Synthetic','employee' from generate_series(1,3) n;
 insert into private.employee_auth(employee_id,auth_user_id) select ('80000000-0000-0000-0000-00000000000'||n)::uuid,('60000000-0000-0000-0000-00000000000'||n)::uuid from generate_series(1,3) n;
 insert into public.employee_permissions(employee_id,cases_read,cases_write) values ('80000000-0000-0000-0000-000000000001',false,true),('80000000-0000-0000-0000-000000000002',true,false);
-insert into public.families(id,name) values ('90000000-0000-0000-0000-000000000001','');
+insert into public.families(id,name,phone) values ('90000000-0000-0000-0000-000000000001','','01012345678');
 insert into storage.objects(bucket_id,name,owner_id) values ('case-files','90000000-0000-0000-0000-000000000001/90000000-0000-0000-0000-000000000003','60000000-0000-0000-0000-000000000001');
 insert into public.case_attachments(id,family_id,storage_path,file_name,mime_type,size_bytes,uploaded_by) values ('90000000-0000-0000-0000-000000000002','90000000-0000-0000-0000-000000000001','90000000-0000-0000-0000-000000000001/90000000-0000-0000-0000-000000000003','synthetic.png','image/png',5,'60000000-0000-0000-0000-000000000001');
 select ok((select not public from storage.buckets where id='case-files'),'bucket is private');

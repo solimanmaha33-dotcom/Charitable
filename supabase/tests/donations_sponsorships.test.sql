@@ -11,7 +11,7 @@ insert into public.employees(id,employee_code,display_name) select ('a5000000-00
 insert into private.employee_auth select ('a5000000-0000-0000-0000-00000000000'||n)::uuid,('a3000000-0000-0000-0000-00000000000'||n)::uuid from generate_series(1,3)n;
 insert into public.employee_permissions(employee_id,donations_write,donations_read,cases_write) values
  ('a5000000-0000-0000-0000-000000000001',true,false,false),('a5000000-0000-0000-0000-000000000002',false,true,false),('a5000000-0000-0000-0000-000000000003',false,false,true);
-insert into public.families(id,name) values('a6000000-0000-0000-0000-000000000001','أسرة وهمية');
+insert into public.families(id,name,phone) values('a6000000-0000-0000-0000-000000000001','أسرة وهمية','01012345678');
 select set_config('request.jwt.claims','{"sub":"a3000000-0000-0000-0000-000000000001","session_id":"a4000000-0000-0000-0000-000000000001","role":"authenticated"}',true);
 set local role authenticated;
 select lives_ok($$insert into public.donors(id,name,phone) values('a7000000-0000-0000-0000-000000000001','متبرع وهمي','01000000000')$$,'donation-only writer creates donor');

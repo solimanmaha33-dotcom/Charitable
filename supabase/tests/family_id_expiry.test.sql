@@ -6,7 +6,7 @@ insert into auth.sessions(id,user_id,created_at,updated_at) select ('72000000-00
 insert into public.employees(id,employee_code,display_name,role) select ('82000000-0000-0000-0000-00000000000'||n)::uuid,'EXP'||n,'Synthetic','employee' from generate_series(1,2) n;
 insert into private.employee_auth(employee_id,auth_user_id) select ('82000000-0000-0000-0000-00000000000'||n)::uuid,('62000000-0000-0000-0000-00000000000'||n)::uuid from generate_series(1,2) n;
 insert into public.employee_permissions(employee_id,cases_read,cases_write) values ('82000000-0000-0000-0000-000000000001',true,true),('82000000-0000-0000-0000-000000000002',true,false);
-insert into public.families(id,name) values ('93000000-0000-0000-0000-000000000001','أسرة اختبار الانتهاء');
+insert into public.families(id,name,phone) values ('93000000-0000-0000-0000-000000000001','أسرة اختبار الانتهاء','01012345678');
 select has_column('public','families','national_id_expires_on','family stores the ID expiry date');
 select set_config('request.jwt.claims','{"sub":"62000000-0000-0000-0000-000000000001","session_id":"72000000-0000-0000-0000-000000000001","role":"authenticated"}',true);
 set local role authenticated;

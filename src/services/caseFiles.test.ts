@@ -42,18 +42,21 @@ it('lists and loads a single case file with categories and no legacy family name
 it('saves the complete profile and categories through one atomic RPC', async () => {
   const id = await saveCaseFile(null, {
     fatherName: 'أب', motherName: 'أم', contactName: 'المسؤولة', contactRelationship: 'الأم', contactAge: 40,
-    nationalId: '29001011234567', nationalIdExpiresOn: '2027-01-01', phones: ['0100', '0101', ''], notes: 'ملاحظات',
+    nationalId: '29001011234567', nationalIdExpiresOn: '2027-01-01', phones: ['01012345678', '01098765432', '1234567890'], notes: 'ملاحظات',
     address: 'عنوان', monthlyIncome: 1200, healthCondition: 'متابعة', branchArea: 'الفرع',
-    fileStatus: 'موقوف', statusReason: 'مراجعة الأوراق', categories: ['هجر'],
+    fileStatus: 'موقوف', statusReason: 'مراجعة الأوراق', categories: ['هجر'],motherEmploymentStatus:'يعمل',motherOccupation:'خياطة',
   });
   expect(id).toBe('file-new');
   expect(state.rpc).toEqual([{ name: 'save_case_file', args: {
     p_id: null,
     p_profile: {
       father_name: 'أب', mother_name: 'أم', contact_name: 'المسؤولة', contact_relationship: 'الأم', contact_age: 40,
-      national_id: '29001011234567', national_id_expires_on: '2027-01-01', phone: '0100', phone_2: '0101', phone_3: null,
+      national_id: '29001011234567', national_id_expires_on: '2027-01-01', phone: '01012345678', phone_2: '01098765432', phone_3: '1234567890',
       notes: 'ملاحظات', address: 'عنوان', monthly_income: 1200, health_condition: 'متابعة', branch_area: 'الفرع',
       file_status: 'موقوف', status_reason: 'مراجعة الأوراق',
+      father_national_id: null, mother_national_id: null, father_health_condition: null, mother_health_condition: null,
+      father_health_status: null, mother_health_status: null,
+      father_employment_status: null, mother_employment_status: 'يعمل', father_occupation: null, mother_occupation: 'خياطة',
     },
     p_categories: ['هجر'],
   } }]);

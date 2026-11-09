@@ -22,7 +22,7 @@ insert into public.employee_permissions(employee_id,cases_read,cases_write) valu
  ('ac000000-0000-0000-0000-000000000002',true,true),
  ('ac000000-0000-0000-0000-000000000003',true,true);
 
-insert into public.families(id,name,mother_name) values ('ad000000-0000-0000-0000-000000000001','','أم أرشيف');
+insert into public.families(id,name,mother_name,phone) values ('ad000000-0000-0000-0000-000000000001','','أم أرشيف','01012345678');
 insert into public.people(id,name) values ('ae000000-0000-0000-0000-000000000001','طفل أرشيف');
 insert into public.family_members(family_id,person_id,relationship) values
  ('ad000000-0000-0000-0000-000000000001','ae000000-0000-0000-0000-000000000001','ابن');

@@ -1,9 +1,8 @@
 import {useEffect,useState} from 'react';
-import {saveCaseFile,uploadCaseAttachment,type CaseFile,type CaseFileInput} from '../../services/cases';
+import {updateCaseFileIdentity,uploadCaseAttachment,type CaseFile} from '../../services/cases';
 import {validateDocument,openPdf} from '../files/documentText';
 import {FilePreview} from '../files/FilePreview';
 import {parseNationalIdScan} from './nationalIdScan';
-import {isCaseCategory} from './categories';
 
 const digits='٠١٢٣٤٥٦٧٨٩';const persian='۰۱۲۳۴۵۶۷۸۹';
 function latinDigits(value:string){return [...value].map(char=>{const arabic=digits.indexOf(char);if(arabic>=0)return String(arabic);const other=persian.indexOf(char);return other>=0?String(other):char;}).join('');}
@@ -30,9 +29,8 @@ export function CaseIdScanner({caseFile,onSaved}:{caseFile:CaseFile;onSaved:()=>
   setBusy(true);setError('');setMessage('');
   const normalizedId=latinDigits(nationalId.trim());
   if(normalizedId&&!/^\d{14}$/.test(normalizedId)){setError('الرقم القومي لازم يكون ١٤ رقم.');setBusy(false);return;}
-  const input:CaseFileInput={fatherName:caseFile.father_name??'',motherName:caseFile.mother_name??'',contactName:caseFile.contact_name??'',contactRelationship:caseFile.contact_relationship??'',contactAge:caseFile.contact_age,nationalId:normalizedId,nationalIdExpiresOn:expiresOn,phones:[caseFile.phone??'',caseFile.phone_2??'',caseFile.phone_3??''],notes:caseFile.notes,address:caseFile.address??'',monthlyIncome:caseFile.monthly_income,healthCondition:caseFile.health_condition??'',branchArea:caseFile.branch_area??'',fileStatus:caseFile.file_status,statusReason:caseFile.status_reason??'',categories:caseFile.case_file_categories.map(({category})=>category).filter(isCaseCategory)};
   try {
-   await saveCaseFile(caseFile.id,input);
+   await updateCaseFileIdentity(caseFile.id,normalizedId,expiresOn);
   } catch {
    setError('تعذّر حفظ البيانات. راجع الرقم والتاريخ وحاول تاني.');setBusy(false);return;
   }

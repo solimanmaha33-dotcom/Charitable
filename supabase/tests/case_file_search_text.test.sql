@@ -7,7 +7,7 @@ insert into public.employees(id,employee_code,display_name,role) values ('810000
 insert into private.employee_auth(employee_id,auth_user_id) values ('81000000-0000-0000-0000-000000000001','61000000-0000-0000-0000-000000000001'),('81000000-0000-0000-0000-000000000002','61000000-0000-0000-0000-000000000002');
 insert into public.employee_permissions(employee_id,cases_write,cases_read) values ('81000000-0000-0000-0000-000000000001',false,false),('81000000-0000-0000-0000-000000000002',false,true);
 select has_column('public','case_attachments','extracted_text','OCR text is attached to the unified file');
-insert into public.families(id,name) values ('91000000-0000-0000-0000-000000000001','');
+insert into public.families(id,name,phone) values ('91000000-0000-0000-0000-000000000001','','01012345678');
 insert into public.case_attachments(id,family_id,storage_path,file_name,mime_type,size_bytes,uploaded_by,extracted_text) values ('91000000-0000-0000-0000-000000000003','91000000-0000-0000-0000-000000000001','91000000-0000-0000-0000-000000000001/91000000-0000-0000-0000-000000000004','synthetic.png','image/png',5,'61000000-0000-0000-0000-000000000001','نص OCR وهمي');
 select set_config('request.jwt.claims','{"sub":"61000000-0000-0000-0000-000000000001","session_id":"71000000-0000-0000-0000-000000000001","role":"authenticated"}',true);
 set local role authenticated;

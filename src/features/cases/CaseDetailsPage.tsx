@@ -73,15 +73,23 @@ export function CaseDetailsPage({ canWrite, canArchive=false }: { canWrite: bool
           <div><dt>أنواع الحالة</dt><dd>{file.case_file_categories.map((item) => item.category).join('، ') || 'غير محدد'}</dd></div>
           <div><dt>العنوان</dt><dd>{file.address || 'مش متسجل'}</dd></div>
           <div><dt>الدخل الشهري</dt><dd>{file.monthly_income === null ? 'مش متسجل' : `${new Intl.NumberFormat('ar-EG').format(file.monthly_income)} جنيه`}</dd></div>
-          <div><dt>الحالة الصحية</dt><dd>{file.health_condition || 'مش متسجل'}</dd></div>
+          <div><dt>الرقم القومي للأب</dt><dd>{file.father_national_id || 'مش متسجل'}</dd></div>
+          <div><dt>الرقم القومي للأم</dt><dd>{file.mother_national_id || 'مش متسجل'}</dd></div>
+          <div><dt>الحالة الصحية للأب</dt><dd>{[file.father_health_status,file.father_health_condition].filter(Boolean).join(' — ') || 'مش متسجل'}</dd></div>
+          <div><dt>الحالة الصحية للأم</dt><dd>{[file.mother_health_status,file.mother_health_condition].filter(Boolean).join(' — ') || 'مش متسجل'}</dd></div>
+          <div><dt>الحالة الصحية العامة للأسرة</dt><dd>{file.health_condition || 'مش متسجل'}</dd></div>
+          <div><dt>حالة عمل الأب</dt><dd>{[file.father_employment_status,file.father_occupation].filter(Boolean).join(' — ') || 'مش متسجل'}</dd></div>
+          <div><dt>حالة عمل الأم</dt><dd>{[file.mother_employment_status,file.mother_occupation].filter(Boolean).join(' — ') || 'مش متسجل'}</dd></div>
           <div><dt>الفرع أو المنطقة</dt><dd>{file.branch_area || 'مش متسجل'}</dd></div>
           <div><dt>عدد أفراد الأسرة</dt><dd>{formatCount(householdCount(file, members))}</dd></div>
           <div><dt>المسؤول عن التربية</dt><dd>{file.contact_name || 'مش متسجل'}{file.contact_relationship ? ` — ${file.contact_relationship}` : ''}</dd></div>
-          <div><dt>أرقام التليفون</dt><dd>{[file.phone, file.phone_2, file.phone_3].filter(Boolean).join('، ') || 'مش متسجل'}</dd></div>
+          <div><dt>رقم الموبايل 1</dt><dd>{file.phone || 'مش متسجل'}</dd></div>
+          <div><dt>رقم الموبايل 2</dt><dd>{file.phone_2 || 'مش متسجل'}</dd></div>
+          <div><dt>رقم المنزل</dt><dd>{file.phone_3 || 'مش متسجل'}</dd></div>
           <div><dt>ملاحظات الملف</dt><dd>{file.notes || 'مفيش ملاحظات'}</dd></div>
         </dl></section>
         <section className="section-block" aria-labelledby="case-members-title"><div className="section-heading"><h2 id="case-members-title">أفراد الأسرة</h2><span>{formatCount(members.length)} أفراد مسجلين</span></div>
-          {members.length ? <ul className="record-list">{members.map((member) => <li key={member.person_id}><div><strong>{member.people.name}</strong><small>{member.relationship}{member.people.gender ? ` · ${member.people.gender === 'female' ? 'بنت' : 'ولد'}` : ''}{member.people.date_of_birth ? ` · العمر: ${formatCount(ageOn(member.people.date_of_birth, today))} سنة` : ''}</small></div></li>)}</ul> : <div className="empty-state">لسه مفيش أفراد مضافين للملف.</div>}
+          {members.length ? <ul className="record-list">{members.map((member) => <li key={member.person_id}><div><strong>{member.people.name}</strong><small>{member.relationship}{member.people.gender ? ` · ${member.people.gender === 'female' ? 'بنت' : 'ولد'}` : ''}{member.people.date_of_birth ? ` · العمر: ${formatCount(ageOn(member.people.date_of_birth, today))} سنة` : ''}</small>{(member.people.health_status||member.people.health_details||member.people.health_condition)&&<small>الحالة الصحية: {[member.people.health_status,member.people.health_details||member.people.health_condition].filter(Boolean).join(' — ')}</small>}{member.people.employment_status&&<small>حالة العمل: {[member.people.employment_status,member.people.employment_status==='يعمل'?member.people.occupation:null].filter(Boolean).join(' — ')}</small>}</div></li>)}</ul> : <div className="empty-state">لسه مفيش أفراد مضافين للملف.</div>}
           {canWrite && <><button className="secondary" type="button" onClick={() => setAddingMember((value) => !value)}>{addingMember ? 'إلغاء' : 'إضافة فرد للأسرة'}</button>{addingMember && <CaseMemberForm caseFileId={file.id} onAdded={async () => { setAddingMember(false); await refresh(file.id); }} />}</>}
         </section>
         <CaseAttachmentsPanel caseFile={file} canWrite={canWrite} onCaseFileUpdated={() => { void refresh(file.id); }} />

@@ -3,7 +3,7 @@ import {expect,it,vi} from 'vitest';
 import {CaseIdScanner} from './CaseIdScanner';
 import type {CaseFile} from '../../services/cases';
 
-const service=vi.hoisted(()=>({saveCaseFile:vi.fn(),uploadCaseAttachment:vi.fn()}));
+const service=vi.hoisted(()=>({updateCaseFileIdentity:vi.fn(),uploadCaseAttachment:vi.fn()}));
 vi.mock('../../services/cases',()=>service);
 vi.mock('../files/FilePreview',()=>({FilePreview:()=>null}));
 
@@ -20,9 +20,18 @@ it('syncs scanner values when the saved family ID profile changes',()=>{
 
 it('does not resubmit read-only historical categories when saving scanned ID data',async()=>{
  const caseFile={...profile(null,null),case_file_categories:[{category:'أرملة' as const},{category:'وفاة' as const}]};
- service.saveCaseFile.mockResolvedValue('family-1');
+ service.updateCaseFileIdentity.mockResolvedValue(undefined);
  render(<CaseIdScanner caseFile={caseFile} onSaved={vi.fn()}/>);
  fireEvent.change(screen.getByLabelText('تاريخ انتهاء البطاقة'),{target:{value:'2027-01-01'}});
  fireEvent.click(screen.getByRole('button',{name:'مراجعة البيانات وحفظها'}));
- await waitFor(()=>expect(service.saveCaseFile).toHaveBeenCalledWith('family-1',expect.objectContaining({categories:['أرملة']})));
+ await waitFor(()=>expect(service.updateCaseFileIdentity).toHaveBeenCalledWith('family-1','', '2027-01-01'));
+});
+
+it('updates identity without resaving or changing contact fields',async()=>{
+ const caseFile={...profile(null,null),phone:'0100 123 4567',phone_2:'٠١٠٩٨٧٦٥٤٣٢'};
+ service.updateCaseFileIdentity.mockResolvedValue(undefined);
+ render(<CaseIdScanner caseFile={caseFile} onSaved={vi.fn()}/>);
+ fireEvent.change(screen.getByLabelText('تاريخ انتهاء البطاقة'),{target:{value:'2027-01-01'}});
+ fireEvent.click(screen.getByRole('button',{name:'مراجعة البيانات وحفظها'}));
+ await waitFor(()=>expect(service.updateCaseFileIdentity).toHaveBeenCalledWith('family-1','', '2027-01-01'));
 });

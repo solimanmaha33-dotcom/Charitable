@@ -6,7 +6,7 @@ insert into auth.sessions(id,user_id,created_at,updated_at) values ('72000000-00
 insert into public.employees(id,employee_code,display_name,role) values ('82000000-0000-0000-0000-000000000001','ARSEARCH','Synthetic','employee');
 insert into private.employee_auth(employee_id,auth_user_id) values ('82000000-0000-0000-0000-000000000001','62000000-0000-0000-0000-000000000001');
 insert into public.employee_permissions(employee_id,cases_read,donations_read) values ('82000000-0000-0000-0000-000000000001',true,true);
-insert into public.families(id,name) values ('92000000-0000-0000-0000-000000000001','وهمي');
+insert into public.families(id,name,phone) values ('92000000-0000-0000-0000-000000000001','وهمي','01012345678');
 insert into public.case_file_categories(family_id,category) values ('92000000-0000-0000-0000-000000000001','أرملة');
 insert into public.donations(id,donation_type,kind,amount,description,received_on) values ('92000000-0000-0000-0000-000000000003','cash','cash',1234.56,'','2026-01-02');
 insert into public.donations(id,donation_type,kind,quantity,unit,description,received_on) values ('92000000-0000-0000-0000-000000000004','in_kind_food','in_kind',1,'كجم','وهمي','2026-01-02');

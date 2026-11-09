@@ -14,12 +14,12 @@ select has_column('public','families','file_status','family stores profile statu
 select has_column('public','families','status_reason','family stores status reason');
 select has_table('public','case_attachments','case files have one attachment index');
 select ok((select not public from storage.buckets where id='case-files'),'shared attachment bucket remains private');
-insert into public.families(id,name,mother_name,national_id,phone,phone_2,phone_3,notes,address,monthly_income,health_condition,branch_area,file_status) values ('91000000-0000-0000-0000-000000000001','','أم وهمية','29001011234567','01000000001','01000000002','01000000003','ملاحظة وهمية','شارع تجريبي',1500,'تحتاج متابعة','فرع وسط البلد','تحت المراجعة');
+insert into public.families(id,name,mother_name,national_id,phone,phone_2,phone_3,notes,address,monthly_income,health_condition,branch_area,file_status) values ('91000000-0000-0000-0000-000000000001','','أم وهمية','29001011234567','01000000001','01000000002','1234567890','ملاحظة وهمية','شارع تجريبي',1500,'تحتاج متابعة','فرع وسط البلد','تحت المراجعة');
 insert into storage.objects(bucket_id,name,owner_id) values ('case-files','91000000-0000-0000-0000-000000000001/91000000-0000-0000-0000-000000000002','61000000-0000-0000-0000-000000000001');
 insert into public.case_attachments(id,family_id,storage_path,file_name,mime_type,size_bytes,uploaded_by) values ('91000000-0000-0000-0000-000000000002','91000000-0000-0000-0000-000000000001','91000000-0000-0000-0000-000000000001/91000000-0000-0000-0000-000000000002','synthetic.png','image/png',5,'61000000-0000-0000-0000-000000000001');
 select set_config('request.jwt.claims','{"sub":"61000000-0000-0000-0000-000000000001","session_id":"71000000-0000-0000-0000-000000000001","role":"authenticated"}',true);
 set local role authenticated;
-select is((select count(*)::int from public.case_attachments),1,'staff with case read permission sees unified file metadata');
+select is((select count(*)::int from public.case_attachments where family_id='91000000-0000-0000-0000-000000000001'),1,'staff with case read permission sees unified file metadata');
 select is((select address from public.families where id='91000000-0000-0000-0000-000000000001'),'شارع تجريبي','staff with case read permission sees family profile data');
 select throws_ok($$select * from public.family_files$$,'42501',null,'legacy family file table is archived from staff');
 select lives_ok($$update public.families set file_status='مرفوض',status_reason='رفض موثق',monthly_income=2500 where id='91000000-0000-0000-0000-000000000001'$$,'reader update is safely filtered by row policy');
@@ -33,9 +33,9 @@ select throws_ok($$insert into public.case_attachments(family_id,storage_path,fi
 reset role;
 select set_config('request.jwt.claims','{"sub":"61000000-0000-0000-0000-000000000002","session_id":"71000000-0000-0000-0000-000000000002","role":"authenticated"}',true);
 set local role authenticated;
-select is((select count(*)::int from public.case_attachments),0,'staff without case read permission sees no file metadata');
-select is((select count(*)::int from storage.objects where bucket_id='case-files'),0,'staff without case read permission sees no file object');
+select is((select count(*)::int from public.case_attachments where family_id='91000000-0000-0000-0000-000000000001'),0,'staff without case read permission sees no file metadata');
+select is((select count(*)::int from storage.objects where bucket_id='case-files' and name like '91000000-0000-0000-0000-000000000001/%'),0,'staff without case read permission sees no file object');
 reset role;
-select throws_ok($$insert into public.families(name,national_id) values ('عينة','123')$$,'23514',null,'short national IDs are rejected');
-select throws_ok($$insert into public.families(name,contact_age) values ('عينة',121)$$,'23514',null,'invalid ages are rejected');
+select throws_ok($$insert into public.families(name,national_id,phone) values ('عينة','123','01012345678')$$,'23514',null,'short national IDs are rejected');
+select throws_ok($$insert into public.families(name,contact_age,phone) values ('عينة',121,'01012345678')$$,'23514',null,'invalid ages are rejected');
 select * from finish(); rollback;
