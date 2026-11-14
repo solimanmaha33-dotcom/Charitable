@@ -42,7 +42,7 @@ it('keeps archived files out of details and active lists but resolves existing l
  expect(rows.selects.at(-1)?.columns).toContain('archived_at');
 });
 it('saves one unified profile and its categories through the atomic RPC',async()=>{
- const id=await saveCaseFile(null,{fatherName:'أب',motherName:'أم',contactName:'مسؤول',contactRelationship:'الأم',contactAge:42,nationalId:'29001011234567',nationalIdExpiresOn:'2027-01-15',fatherNationalId:'28001011234567',motherNationalId:'29001011234568',fatherNationalIdExpiresOn:'2027-02-01',motherNationalIdExpiresOn:'2027-03-01',fatherDateOfBirth:'1980-01-01',fatherGender:'male',motherDateOfBirth:'1990-01-01',motherGender:'female',contactDateOfBirth:'1980-01-01',contactGender:'male',phones:['01012345678','','1234567890'],notes:'ملاحظة',address:'عنوان',monthlyIncome:500,healthCondition:'مستقرة',branchArea:'فرع',fileStatus:'موقوف',statusReason:'مراجعة الأوراق',categories:['هجر']});
+ const id=await saveCaseFile(null,{fatherName:'أب',motherName:'أم',contactName:'مسؤول',contactRelationship:'الأم',contactAge:42,nationalId:'29001011234567',nationalIdExpiresOn:'2027-01-15',fatherNationalId:'28001011234567',motherNationalId:'29001011234568',fatherNationalIdExpiresOn:'2027-02-01',motherNationalIdExpiresOn:'2027-03-01',fatherDateOfBirth:'1980-01-01',fatherGender:'female',motherDateOfBirth:'1990-01-01',motherGender:'male',contactDateOfBirth:'1980-01-01',contactGender:'male',phones:['01012345678','','1234567890'],notes:'ملاحظة',address:'عنوان',monthlyIncome:500,healthCondition:'مستقرة',branchArea:'فرع',fileStatus:'موقوف',statusReason:'مراجعة الأوراق',categories:['هجر']});
  expect(id).toBe('file-new');expect(rows.rpc.at(-1)?.name).toBe('save_case_file');expect(rows.rpc.at(-1)?.args).toMatchObject({p_id:null,p_categories:['هجر'],p_profile:{father_name:'أب',mother_name:'أم',phone:'01012345678',phone_2:null,phone_3:'1234567890',father_national_id:'28001011234567',mother_national_id:'29001011234568',father_national_id_expires_on:'2027-02-01',mother_national_id_expires_on:'2027-03-01',father_date_of_birth:'1980-01-01',father_gender:'male',mother_date_of_birth:'1990-01-01',mother_gender:'female',contact_date_of_birth:null,contact_gender:null,national_id:null,national_id_expires_on:null,address:'عنوان',monthly_income:500,health_condition:'مستقرة',branch_area:'فرع',file_status:'موقوف',status_reason:'مراجعة الأوراق',next_review_date:null}});
 });
 it('rejects a new file without a mother name and a negative income before the database call',async()=>{
@@ -95,8 +95,12 @@ it('sends explicit null demographics through the profile RPC so staff can clear 
  expect(rows.rpc).toEqual([{name:'update_case_file_identity_profile',args:{p_id:'f1',p_national_id:'29001011234567',p_expires_on:'2027-01-01',p_birth_date:null,p_gender:null,p_age:null}}]);
 });
 it('updates a parent national ID and expiry through the scoped identity RPC',async()=>{
- rows.rpc.length=0;await updateCaseParentIdentityProfile('f1','mother','29001011234567','2027-01-01',{birthDate:'1990-01-01',gender:'female'});
+ rows.rpc.length=0;await updateCaseParentIdentityProfile('f1','mother','29001011234567','2027-01-01',{birthDate:'1990-01-01',gender:'male'});
  expect(rows.rpc).toEqual([{name:'update_case_parent_identity_profile',args:{p_id:'f1',p_parent:'mother',p_national_id:'29001011234567',p_expires_on:'2027-01-01',p_birth_date:'1990-01-01',p_gender:'female'}}]);
+});
+it('always saves the father as male when the ID scanner reports a different gender',async()=>{
+ rows.rpc.length=0;await updateCaseParentIdentityProfile('f1','father','29001011234567','',{birthDate:'1990-01-01',gender:'female'});
+ expect(rows.rpc).toEqual([{name:'update_case_parent_identity_profile',args:{p_id:'f1',p_parent:'father',p_national_id:'29001011234567',p_expires_on:null,p_birth_date:'1990-01-01',p_gender:'male'}}]);
 });
 it('adds and updates member health and employment details',async()=>{
  rows.rpc.length=0;await addMember('f1','ريم','بنت','female','2008-12-31','مرض','ربو','يعمل','مدرسة');

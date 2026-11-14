@@ -34,9 +34,7 @@ export function CaseIntakeForm({ onSaved, initial, initialMembers = [] }: { onSa
   const [fatherNationalIdExpiresOn, setFatherNationalIdExpiresOn] = useState(initial?.father_national_id_expires_on ?? '');
   const [motherNationalIdExpiresOn, setMotherNationalIdExpiresOn] = useState(initial?.mother_national_id_expires_on ?? '');
   const [fatherDateOfBirth, setFatherDateOfBirth] = useState(initial?.father_date_of_birth ?? parseEgyptianNationalId(initial?.father_national_id ?? '', today)?.birthDate ?? '');
-  const [fatherGender, setFatherGender] = useState<MemberGender | null>(initial?.father_gender ?? null);
   const [motherDateOfBirth, setMotherDateOfBirth] = useState(initial?.mother_date_of_birth ?? parseEgyptianNationalId(initial?.mother_national_id ?? '', today)?.birthDate ?? '');
-  const [motherGender, setMotherGender] = useState<MemberGender | null>(initial?.mother_gender ?? null);
   const [fatherHealthCondition, setFatherHealthCondition] = useState(initial?.father_health_condition ?? '');
   const [motherHealthCondition, setMotherHealthCondition] = useState(initial?.mother_health_condition ?? '');
   const [fatherHealthStatus, setFatherHealthStatus] = useState<HealthStatus | ''>(initial?.father_health_status ?? '');
@@ -54,9 +52,9 @@ export function CaseIntakeForm({ onSaved, initial, initialMembers = [] }: { onSa
   const [phones, setPhones] = useState([initial?.phone ?? '', initial?.phone_2 ?? '', initial?.phone_3 ?? ''].map(digitsOnly));
   const [address, setAddress] = useState(initial?.address ?? '');
   const [monthlyIncome, setMonthlyIncome] = useState(initial?.monthly_income?.toString() ?? '');
+  const preservedLegacyHealthCondition = initial?.health_condition ?? '';
   const [fixedExpenses, setFixedExpenses] = useState('');
   const [nextReviewDate, setNextReviewDate] = useState(initial?.next_review_date ?? '');
-  const [healthCondition, setHealthCondition] = useState(initial?.health_condition ?? '');
   const [branchArea, setBranchArea] = useState(initial?.branch_area ?? '');
   const [branchOptions, setBranchOptions] = useState<CaseBranch[]>([]);
   const [inactiveBranchOptions, setInactiveBranchOptions] = useState<CaseBranch[]>([]);
@@ -104,7 +102,7 @@ export function CaseIntakeForm({ onSaved, initial, initialMembers = [] }: { onSa
     setCategories(next);
     if (hidesFatherFields(next)) {
       setFatherName(''); setFatherNationalId(''); setFatherNationalIdExpiresOn('');
-      setFatherDateOfBirth(''); setFatherGender(null); setFatherHealthCondition(''); setFatherHealthStatus('');
+      setFatherDateOfBirth(''); setFatherHealthCondition(''); setFatherHealthStatus('');
       setFatherEmploymentStatus(null); setFatherOccupation('');
       if (scanTarget === 'father') setScanTarget('mother');
     }
@@ -127,8 +125,8 @@ export function CaseIntakeForm({ onSaved, initial, initialMembers = [] }: { onSa
     const lastApplied = parent === 'father' ? lastAppliedFatherId : lastAppliedMotherId;
     if (parsed.nationalId === lastApplied.current) return;
     lastApplied.current = parsed.nationalId;
-    if (parent === 'father') { setFatherDateOfBirth(parsed.birthDate); setFatherGender(parsed.gender); }
-    else { setMotherDateOfBirth(parsed.birthDate); setMotherGender(parsed.gender); }
+    if (parent === 'father') setFatherDateOfBirth(parsed.birthDate);
+    else setMotherDateOfBirth(parsed.birthDate);
   }
 
   function updateGuardianId(value: string) {
@@ -215,13 +213,13 @@ export function CaseIntakeForm({ onSaved, initial, initialMembers = [] }: { onSa
       fatherName: fatherName.trim(), motherName: motherName.trim(), contactName: guardianName.trim(), contactRelationship: guardianRelationship.trim(),
       contactAge: guardianDateOfBirth && guardianDateOfBirth <= today ? ageOn(guardianDateOfBirth,today) : null, nationalId: normalizedId, nationalIdExpiresOn,
       phones: phones.map((phone) => phone.trim()), notes: familyNotes.trim(), address: address.trim(),
-      monthlyIncome: normalizedIncome ? Number(normalizedIncome) : null, healthCondition: healthCondition.trim(), branchArea: branchArea.trim(),
+      monthlyIncome: normalizedIncome ? Number(normalizedIncome) : null, healthCondition: preservedLegacyHealthCondition, branchArea: branchArea.trim(),
       fileStatus, statusReason: statusReason.trim(), categories, fatherNationalId: normalizedFatherId, motherNationalId: normalizedMotherId,nextReviewDate,
       fatherNationalIdExpiresOn, motherNationalIdExpiresOn,
       fatherHealthCondition: fatherHealthCondition.trim(), motherHealthCondition: motherHealthCondition.trim(),
       fatherHealthStatus: fatherHealthStatus || undefined, motherHealthStatus: motherHealthStatus || undefined,
       fatherEmploymentStatus, motherEmploymentStatus, fatherOccupation, motherOccupation,
-      fatherDateOfBirth, fatherGender, motherDateOfBirth, motherGender, contactDateOfBirth: guardianDateOfBirth, contactGender: guardianGender,
+      fatherDateOfBirth, fatherGender: 'male', motherDateOfBirth, motherGender: 'female', contactDateOfBirth: guardianDateOfBirth, contactGender: guardianGender,
     } satisfies CaseFileInput);
     for (const candidate of [input.nationalId, input.fatherNationalId ?? '', input.motherNationalId ?? '']) {
       if (candidate && !parseEgyptianNationalId(candidate, today)) { setError('اتأكد إن كل رقم قومي ١٤ رقم وتاريخ الميلاد والمحافظة فيه صحيحين.'); return; }
@@ -264,12 +262,12 @@ export function CaseIntakeForm({ onSaved, initial, initialMembers = [] }: { onSa
         {!widowCase && <><label>الرقم القومي للأب <span className="muted-cell">(لو الأب هو البالغ المسؤول)</span><input aria-label="الرقم القومي للأب" inputMode="numeric" maxLength={14} value={fatherNationalId} onChange={(event) => updateParentId('father', event.target.value)} />{fatherDateOfBirth&&fatherDateOfBirth<=today&&<small className="member-age-preview" role="status">سن الأب: {new Intl.NumberFormat('ar-EG').format(ageOn(fatherDateOfBirth,today))} سنة</small>}{fatherIdDetails&&<small className="form-help">المحافظة اللي باينة من الرقم القومي: {fatherIdDetails.governorate} (للمراجعة بس)</small>}</label>
         <label>انتهاء بطاقة الأب<input aria-label="انتهاء بطاقة الأب" type="date" value={fatherNationalIdExpiresOn} onChange={(event) => setFatherNationalIdExpiresOn(event.target.value)} /></label>
         <label>تاريخ ميلاد الأب<input aria-label="تاريخ ميلاد الأب" type="date" max={today} value={fatherDateOfBirth} onChange={(event) => setFatherDateOfBirth(event.target.value)} /></label>
-        <label>النوع للأب (ذكر أو أنثى)<select aria-label="النوع للأب (ذكر أو أنثى)" value={fatherGender ?? ''} onChange={(event) => setFatherGender((event.target.value || null) as MemberGender | null)}><option value="">اختار النوع</option><option value="male">ذكر</option><option value="female">أنثى</option></select></label>
+        <p className="fixed-parent-gender"><span>نوع الأب</span><strong>ذكر</strong></p>
         </>}
         <label>الرقم القومي للأم <span className="muted-cell">(لو الأم هي البالغة المسؤولة)</span><input aria-label="الرقم القومي للأم" inputMode="numeric" maxLength={14} value={motherNationalId} onChange={(event) => updateParentId('mother', event.target.value)} />{motherDateOfBirth&&motherDateOfBirth<=today&&<small className="member-age-preview" role="status">سن الأم: {new Intl.NumberFormat('ar-EG').format(ageOn(motherDateOfBirth,today))} سنة</small>}{motherIdDetails&&<small className="form-help">المحافظة اللي باينة من الرقم القومي: {motherIdDetails.governorate} (للمراجعة بس)</small>}</label>
         <label>انتهاء بطاقة الأم<input aria-label="انتهاء بطاقة الأم" type="date" value={motherNationalIdExpiresOn} onChange={(event) => setMotherNationalIdExpiresOn(event.target.value)} /></label>
         <label>تاريخ ميلاد الأم<input aria-label="تاريخ ميلاد الأم" type="date" max={today} value={motherDateOfBirth} onChange={(event) => setMotherDateOfBirth(event.target.value)} /></label>
-        <label>النوع للأم (ذكر أو أنثى)<select aria-label="النوع للأم (ذكر أو أنثى)" value={motherGender ?? ''} onChange={(event) => setMotherGender((event.target.value || null) as MemberGender | null)}><option value="">اختار النوع</option><option value="male">ذكر</option><option value="female">أنثى</option></select></label>
+        <p className="fixed-parent-gender"><span>نوع الأم</span><strong>أنثى</strong></p>
         {!widowCase && <><label>الحالة الصحية للأب<select aria-label="الحالة الصحية للأب" value={fatherHealthStatus} onChange={(event) => setFatherHealthStatus((event.target.value || '') as HealthStatus | '')}><option value="">اختار الحالة الصحية</option>{HEALTH_STATUSES.map((status) => <option key={status} value={status}>{status}</option>)}</select></label>{fatherHealthStatus && fatherHealthStatus !== 'حالة مستقرة' && <label>نوع العجز أو الإعاقة أو المرض للأب<textarea maxLength={2000} value={fatherHealthCondition} onChange={(event) => setFatherHealthCondition(event.target.value)} /></label>}</>}
         <label>الحالة الصحية للأم<select aria-label="الحالة الصحية للأم" value={motherHealthStatus} onChange={(event) => setMotherHealthStatus((event.target.value || '') as HealthStatus | '')}><option value="">اختار الحالة الصحية</option>{HEALTH_STATUSES.map((status) => <option key={status} value={status}>{status}</option>)}</select></label>
         {motherHealthStatus && motherHealthStatus !== 'حالة مستقرة' && <label>نوع العجز أو الإعاقة أو المرض للأم<textarea maxLength={2000} value={motherHealthCondition} onChange={(event) => setMotherHealthCondition(event.target.value)} /></label>}
@@ -301,7 +299,6 @@ export function CaseIntakeForm({ onSaved, initial, initialMembers = [] }: { onSa
       })}</div>
       <div className="form-grid">
         <label>الدخل الشهري بالجنيه<input inputMode="numeric" value={monthlyIncome} onChange={(event) => setMonthlyIncome(digitsOnly(event.target.value))} /></label>
-        <label>ملاحظات صحية عامة للأسرة<textarea maxLength={2000} value={healthCondition} onChange={(event) => setHealthCondition(event.target.value)} /></label>
         <label>الفرع أو المنطقة<select value={branchArea} onChange={(event) => event.target.value === '__manage_branches__' ? (setBranchError(''), setBranchDialogOpen(true)) : setBranchArea(event.target.value)}>
           <option value="">اختار الفرع أو المنطقة</option>
           {!branchOptions.some((branch) => branch.name === branchArea) && branchArea && <option value={branchArea}>{branchArea} (فرع محفوظ)</option>}

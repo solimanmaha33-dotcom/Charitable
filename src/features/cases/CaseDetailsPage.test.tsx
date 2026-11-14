@@ -26,6 +26,7 @@ it('shows one canonical case file with status, profile fields, members, attachme
   expect(screen.getAllByText('F-0001')[0]).toBeVisible(); expect(screen.getAllByText('تحت المراجعة')).toHaveLength(2);
   expect(screen.getAllByText('شارع النيل').length).toBeGreaterThanOrEqual(2); expect(screen.getAllByText('فرع وسط البلد').length).toBeGreaterThanOrEqual(2);
   expect(screen.getAllByText('ريم').length).toBeGreaterThanOrEqual(2); expect(screen.getByText('متابعة سابقة')).toBeVisible();
+  expect(screen.queryByText('ملاحظات صحية عامة للأسرة')).not.toBeInTheDocument();
   expect(screen.getByText(/الحالة الصحية: مرض — حساسية صدر/)).toBeVisible();
   expect(screen.getByText('28001011234567')).toBeVisible();expect(screen.getByText('29001011234567')).toBeVisible();
   expect(screen.getAllByText(/انتهاء البطاقة:/)).toHaveLength(2);

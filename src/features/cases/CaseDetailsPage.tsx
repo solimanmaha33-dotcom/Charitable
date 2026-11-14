@@ -95,7 +95,6 @@ export function CaseDetailsPage({ canWrite, canArchive=false }: { canWrite: bool
           <div id="contact-mother" className={matchedContact === 'mother' ? 'matched-member' : undefined}><dt>بيانات الأم</dt><dd>{file.mother_name || 'مش متسجل'} — الرقم القومي: <bdi dir="ltr">{file.mother_national_id || 'مش متسجل'}</bdi> · انتهاء البطاقة: {file.mother_national_id_expires_on ? new Intl.DateTimeFormat('ar-EG',{dateStyle:'medium'}).format(new Date(`${file.mother_national_id_expires_on}T12:00:00`)) : 'مش متسجل'}{matchedContact === 'mother' && <span className="member-match-label">مطابقة البحث</span>}</dd></div>
           {!widow&&<div><dt>الحالة الصحية للأب</dt><dd>{[file.father_health_status,file.father_health_condition].filter(Boolean).join(' — ') || 'مش متسجل'}</dd></div>}
           <div><dt>الحالة الصحية للأم</dt><dd>{[file.mother_health_status,file.mother_health_condition].filter(Boolean).join(' — ') || 'مش متسجل'}</dd></div>
-          <div><dt>ملاحظات صحية عامة للأسرة</dt><dd>{file.health_condition || 'مش متسجل'}</dd></div>
           {!widow&&<div><dt>حالة عمل الأب</dt><dd>{[file.father_employment_status,file.father_occupation].filter(Boolean).join(' — ') || 'مش متسجل'}</dd></div>}
           <div><dt>حالة عمل الأم</dt><dd>{[file.mother_employment_status,file.mother_occupation].filter(Boolean).join(' — ') || 'مش متسجل'}</dd></div>
           <div><dt>الفرع أو المنطقة</dt><dd>{file.branch_area || 'مش متسجل'}</dd></div>

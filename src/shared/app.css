@@ -264,6 +264,17 @@ fieldset label { display: inline-flex; align-items: center; gap: 8px; margin: 5p
 .branch-list li span { overflow-wrap: anywhere; }
 .member-form { max-width: none; margin-block-start: 20px; padding: 18px; background: var(--surface-soft); border: 1px solid var(--border); border-radius: 9px; }
 .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.case-intake-form { width: 100%; max-width: 1120px; margin-inline: auto; gap: 22px; }
+.case-intake-form > .form-section { min-width: 0; gap: 18px; padding: clamp(16px, 2vw, 26px); border: 1px solid var(--border); border-radius: 14px; background: var(--surface-soft); }
+.case-intake-form > .form-section h2 { padding-inline-start: 12px; border-inline-start: 4px solid var(--green-700); line-height: 1.55; }
+.case-intake-form .form-grid { gap: 18px 22px; }
+.case-intake-form fieldset { display: flex; flex-wrap: wrap; gap: 5px 14px; padding: 16px; }
+.case-intake-form fieldset label { min-height: 42px; margin: 0; padding: 8px 11px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface); }
+.case-intake-form input:not([type=checkbox]), .case-intake-form select, .case-intake-form textarea { min-height: 48px; }
+.case-intake-form textarea { min-height: 116px; }
+.fixed-parent-gender { display: flex; flex-direction: column; justify-content: center; gap: 4px; min-height: 72px; margin: 0; padding: 10px 13px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface); }
+.fixed-parent-gender span { color: var(--muted); font-size: .88rem; }
+.fixed-parent-gender strong { color: var(--green-800); }
 .family-form { max-width: none; }
 .family-form .form-section { display: grid; gap: 14px; }
 .family-form .form-section h2 { margin: 0; }

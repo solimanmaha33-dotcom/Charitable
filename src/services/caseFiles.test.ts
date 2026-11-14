@@ -57,7 +57,7 @@ it('saves the complete profile and categories through one atomic RPC', async () 
       father_national_id: '28001011234567', mother_national_id: null, father_national_id_expires_on: null, mother_national_id_expires_on: null, father_health_condition: null, mother_health_condition: null,
       father_health_status: null, mother_health_status: null,
       father_employment_status: null, mother_employment_status: 'يعمل', father_occupation: null, mother_occupation: 'خياطة',
-      father_date_of_birth: null, father_gender: null, mother_date_of_birth: null, mother_gender: null, contact_date_of_birth: null, contact_gender: null,
+      father_date_of_birth: null, father_gender: 'male', mother_date_of_birth: null, mother_gender: 'female', contact_date_of_birth: null, contact_gender: null,
     },
     p_categories: ['هجر'],
   } }]);

@@ -137,8 +137,8 @@ function profileValues(input:CaseFileInput){
   father_employment_status:input.fatherEmploymentStatus||null,mother_employment_status:input.motherEmploymentStatus||null,
   father_occupation:input.fatherEmploymentStatus==='يعمل'?(input.fatherOccupation??'').trim()||null:null,
   mother_occupation:input.motherEmploymentStatus==='يعمل'?(input.motherOccupation??'').trim()||null:null,
-  father_date_of_birth:input.fatherDateOfBirth||null,father_gender:input.fatherGender||null,
-  mother_date_of_birth:input.motherDateOfBirth||null,mother_gender:input.motherGender||null,
+  father_date_of_birth:input.fatherDateOfBirth||null,father_gender:input.fatherName||input.fatherNationalId||input.fatherDateOfBirth?'male':null,
+  mother_date_of_birth:input.motherDateOfBirth||null,mother_gender:input.motherName||input.motherNationalId||input.motherDateOfBirth?'female':null,
   contact_date_of_birth:input.contactDateOfBirth||null,contact_gender:input.contactGender||null,next_review_date:input.nextReviewDate||null};
 }
 export async function saveCaseFile(id:string|null,input:CaseFileInput):Promise<string>{
@@ -156,7 +156,7 @@ export async function updateCaseFileIdentity(id:string,nationalId:string,expires
 export async function updateCaseParentIdentityProfile(id:string,parent:'father'|'mother',nationalId:string,expiresOn:string,profile:{birthDate:string|null;gender:MemberGender|null}):Promise<void>{
  const normalizedId=normalizeEgyptianNationalIdInput(nationalId);
  if(normalizedId&&!parseEgyptianNationalId(normalizedId,cairoToday()))throw new Error('اتأكد إن الرقم القومي ١٤ رقم وتاريخ الميلاد والمحافظة فيه صحيحين.');
- const {error}=await db().rpc('update_case_parent_identity_profile',{p_id:id,p_parent:parent,p_national_id:normalizedId||null,p_expires_on:expiresOn||null,p_birth_date:profile.birthDate,p_gender:profile.gender});check(error);
+ const {error}=await db().rpc('update_case_parent_identity_profile',{p_id:id,p_parent:parent,p_national_id:normalizedId||null,p_expires_on:expiresOn||null,p_birth_date:profile.birthDate,p_gender:parent==='father'?'male':'female'});check(error);
 }
 export const countCaseFiles=()=>countRows('families');
 export async function listCaseFileIdExpirationsBy(cutoff:string):Promise<CaseFileIdExpiry[]> {

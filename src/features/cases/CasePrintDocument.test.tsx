@@ -10,7 +10,8 @@ it('prints the case code, status, parents, contact details, profile fields, memb
     disbursements={[{id:'aid-1',case_id:'file-1',branch_id:'branch-1',disbursement_type:'علاج',amount:500,items_summary:null,disbursed_on:'2026-11-01',created_by:'staff-1',created_at:'2026-11-01T10:00:00Z',notes:'دواء',is_voided:false,void_reason:null,voided_at:null}]}
   />);
   const sheet = container.querySelector('.case-print-document');
-  for (const value of ['مرام الخير','F-0001','أحمد','منى','الأم','٢٨٠٠١٠١١٢٣٤٥٦٧','٢٩٠٠١٠١١٢٣٤٥٦٧','انتهاء بطاقة الأب','انتهاء بطاقة الأم','البحث الاجتماعي: مستند.pdf','ريم','حساسية صدر','ضغط','مستقر','لا يعمل','يعمل — خياطة','يعمل — مدرسة','موقوف','مراجعة البيانات','شارع النيل','٣٬٥٠٠ جنيه','متابعة دورية','فرع الجيزة','مكان ختم الجمعية','01000000002','المساعدات المنصرفة','إجمالي المساعدات اللي اتصرفت الشهر ده','دواء','٥٠٠ جنيه','توقيع المستفيد']) expect(sheet).toHaveTextContent(value);
+  for (const value of ['مرام الخير','F-0001','أحمد','منى','الأم','٢٨٠٠١٠١١٢٣٤٥٦٧','٢٩٠٠١٠١١٢٣٤٥٦٧','انتهاء بطاقة الأب','انتهاء بطاقة الأم','البحث الاجتماعي: مستند.pdf','ريم','حساسية صدر','ضغط','مستقر','لا يعمل','يعمل — خياطة','يعمل — مدرسة','موقوف','مراجعة البيانات','شارع النيل','٣٬٥٠٠ جنيه','فرع الجيزة','مكان ختم الجمعية','01000000002','المساعدات المنصرفة','إجمالي المساعدات اللي اتصرفت الشهر ده','دواء','٥٠٠ جنيه','توقيع المستفيد']) expect(sheet).toHaveTextContent(value);
+  expect(sheet).not.toHaveTextContent('ملاحظات صحية عامة للأسرة');
   expect(sheet?.querySelector('img[alt="شعار جمعية مرام الخير"]')).toHaveAttribute('src', '/brand/maram-logo.png');
   expect(sheet?.querySelector('.association-stamp')).toBeVisible();
   expect(sheet?.querySelector('.print-signature-line')).toBeVisible();

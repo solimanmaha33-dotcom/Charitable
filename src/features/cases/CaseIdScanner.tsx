@@ -13,8 +13,8 @@ type IdentityDetails={nationalId:string;expiresOn:string;birthDate:string;gender
 const digits='٠١٢٣٤٥٦٧٨٩';const persian='۰۱۲۳۴۵۶۷۸۹';
 function latinDigits(value:string){return [...value].map(char=>{const arabic=digits.indexOf(char);if(arabic>=0)return String(arabic);const other=persian.indexOf(char);return other>=0?String(other):char;}).join('');}
 function identityDetails(caseFile:CaseFile,target:IdentityTarget,today:string):IdentityDetails{
- if(target==='father')return{nationalId:caseFile.father_national_id??'',expiresOn:caseFile.father_national_id_expires_on??'',birthDate:caseFile.father_date_of_birth??parseEgyptianNationalId(caseFile.father_national_id??'',today)?.birthDate??'',gender:caseFile.father_gender??null,age:null};
- if(target==='mother')return{nationalId:caseFile.mother_national_id??'',expiresOn:caseFile.mother_national_id_expires_on??'',birthDate:caseFile.mother_date_of_birth??parseEgyptianNationalId(caseFile.mother_national_id??'',today)?.birthDate??'',gender:caseFile.mother_gender??null,age:null};
+ if(target==='father')return{nationalId:caseFile.father_national_id??'',expiresOn:caseFile.father_national_id_expires_on??'',birthDate:caseFile.father_date_of_birth??parseEgyptianNationalId(caseFile.father_national_id??'',today)?.birthDate??'',gender:'male',age:null};
+ if(target==='mother')return{nationalId:caseFile.mother_national_id??'',expiresOn:caseFile.mother_national_id_expires_on??'',birthDate:caseFile.mother_date_of_birth??parseEgyptianNationalId(caseFile.mother_national_id??'',today)?.birthDate??'',gender:'female',age:null};
  return{nationalId:caseFile.national_id??'',expiresOn:caseFile.national_id_expires_on??'',birthDate:caseFile.contact_date_of_birth??parseEgyptianNationalId(caseFile.national_id??'',today)?.birthDate??'',gender:caseFile.contact_gender??null,age:caseFile.contact_age};
 }
 
@@ -44,7 +44,9 @@ export function CaseIdScanner({caseFile,onSaved}:{caseFile:CaseFile;onSaved:()=>
   if(!parsed)return;
   setNationalId(parsed.nationalId);
   if(parsed.nationalId===lastAppliedNationalId.current)return;
-  lastAppliedNationalId.current=parsed.nationalId;setExpiresOn('');setBirthDate(parsed.birthDate);setGender(parsed.gender);if(validTarget==='guardian')setAge(parsed.age);
+  lastAppliedNationalId.current=parsed.nationalId;setExpiresOn('');setBirthDate(parsed.birthDate);
+  setGender(validTarget==='father'?'male':validTarget==='mother'?'female':parsed.gender);
+  if(validTarget==='guardian')setAge(parsed.age);
  }
  function readText(text:string) {
   const parsed=parseNationalIdScan(text);
@@ -65,7 +67,7 @@ export function CaseIdScanner({caseFile,onSaved}:{caseFile:CaseFile;onSaved:()=>
   if(!hasValidNationalIdForExpiry(normalizedId,expiresOn,today)){setError('سجّل رقم قومي صحيح قبل تاريخ انتهاء البطاقة للشخص ده.');setBusy(false);return;}
   try {
    if(validTarget==='guardian')await updateCaseFileIdentity(caseFile.id,normalizedId,expiresOn,{birthDate:birthDate||null,gender,age});
-   else await updateCaseParentIdentityProfile(caseFile.id,validTarget,normalizedId,expiresOn,{birthDate:birthDate||null,gender});
+   else await updateCaseParentIdentityProfile(caseFile.id,validTarget,normalizedId,expiresOn,{birthDate:birthDate||null,gender:validTarget==='father'?'male':'female'});
   } catch {
    setError('ماعرفناش نحفظ البيانات. راجع الرقم والتاريخ وجرب تاني.');setBusy(false);return;
   }
@@ -86,7 +88,7 @@ export function CaseIdScanner({caseFile,onSaved}:{caseFile:CaseFile;onSaved:()=>
   {file&&<FilePreview key={file.name+file.size} file={file} onText={readText}/>}
   <div className="form-grid"><label>الرقم القومي لـ{holderName}<input aria-label="الرقم القومي" inputMode="numeric" maxLength={14} value={nationalId} onChange={event=>{const value=latinDigits(event.target.value);if(normalizeEgyptianNationalIdInput(value)!==lastAppliedNationalId.current)setExpiresOn('');setNationalId(value);applyId(value);}} />{parseEgyptianNationalId(nationalId,today)&&<small className="form-help">المحافظة اللي باينة من الرقم القومي: {parseEgyptianNationalId(nationalId,today)?.governorate} (للمراجعة بس)</small>}</label><label>تاريخ انتهاء البطاقة<input aria-label="تاريخ انتهاء البطاقة" type="date" value={expiresOn} onChange={event=>setExpiresOn(event.target.value)} /></label>
    <label>تاريخ ميلاد {holderName}<input aria-label={`تاريخ ميلاد ${holderName}`} type="date" max={today} value={birthDate} onChange={event=>{setBirthDate(event.target.value);if(validTarget==='guardian')setAge(event.target.value?ageOn(event.target.value,today):null);}} /></label>
-   <label>النوع (ذكر أو أنثى)<select aria-label="النوع (ذكر أو أنثى)" value={gender??''} onChange={event=>setGender((event.target.value||null) as MemberGender|null)}><option value="">اختار النوع</option><option value="male">ذكر</option><option value="female">أنثى</option></select></label>
+   {validTarget==='guardian'?<label>النوع (ذكر أو أنثى)<select aria-label="النوع (ذكر أو أنثى)" value={gender??''} onChange={event=>setGender((event.target.value||null) as MemberGender|null)}><option value="">اختار النوع</option><option value="male">ذكر</option><option value="female">أنثى</option></select></label>:<p className="fixed-parent-gender"><span>النوع</span><strong>{validTarget==='father'?'ذكر':'أنثى'}</strong></p>}
    {validTarget==='guardian'&&<label>سن المسؤول<input aria-label="سن المسؤول" type="number" min="0" max="120" value={age??''} onChange={event=>setAge(event.target.value===''?null:Number(event.target.value))} /></label>}
   </div>
   {message&&<p role="status">{message}</p>}{error&&<p className="error-message" role="alert">{error}</p>}

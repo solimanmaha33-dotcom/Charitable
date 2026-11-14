@@ -26,7 +26,19 @@ it('does not resubmit read-only historical categories when saving scanned ID dat
  render(<CaseIdScanner caseFile={caseFile} onSaved={vi.fn()}/>);
  fireEvent.change(screen.getByLabelText('تاريخ انتهاء البطاقة'),{target:{value:'2027-01-01'}});
  fireEvent.click(screen.getByRole('button',{name:'مراجعة البيانات وحفظها'}));
- await waitFor(()=>expect(service.updateCaseParentIdentityProfile).toHaveBeenCalledWith('family-1','mother','29001011234567','2027-01-01',{birthDate:'1990-01-01',gender:null}));
+ await waitFor(()=>expect(service.updateCaseParentIdentityProfile).toHaveBeenCalledWith('family-1','mother','29001011234567','2027-01-01',{birthDate:'1990-01-01',gender:'female'}));
+});
+
+it('keeps parent gender fixed when an ID or OCR suggests the opposite',async()=>{
+ const caseFile={...profile(null,null),father_name:'أب',mother_name:'أم'};
+ service.updateCaseParentIdentityProfile.mockResolvedValue(undefined);
+ render(<CaseIdScanner caseFile={caseFile} onSaved={vi.fn()}/>);
+ fireEvent.change(screen.getByLabelText('البطاقة تخص مين؟'),{target:{value:'father'}});
+ expect(screen.getByText('النوع').parentElement).toHaveTextContent('ذكر');
+ expect(screen.queryByLabelText('النوع (ذكر أو أنثى)')).not.toBeInTheDocument();
+ fireEvent.change(screen.getByLabelText('الرقم القومي'),{target:{value:'29001011234567'}});
+ fireEvent.click(screen.getByRole('button',{name:'مراجعة البيانات وحفظها'}));
+ await waitFor(()=>expect(service.updateCaseParentIdentityProfile).toHaveBeenCalledWith('family-1','father','29001011234567','',{birthDate:'1990-01-01',gender:'male'}));
 });
 
 it('updates identity without resaving or changing contact fields',async()=>{
