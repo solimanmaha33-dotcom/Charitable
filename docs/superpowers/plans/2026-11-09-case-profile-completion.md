@@ -143,5 +143,5 @@
 - [x] شغّل `npm run typecheck`, `npm test`, `npm run test:worker`, `npm run test:db`, `npm run build`, و`npm run build:functions`.
 - [x] راجع diff للتأكد من بقاء النصوص المصرية وعدم تعديل migrations سابقة أو كشف مرفقات، ومن اشتراط نوع حالة واحد على الأقل في قاعدة البيانات.
 - [x] ثبّت التغييرات في commit محلي.
-- [ ] ادفع فرع التنفيذ إلى GitHub.
+- [x] ادفع فرع التنفيذ إلى GitHub.
 - [ ] طبّق migrations `032–035` على Supabase قبل دفع فرع Cloudflare الإنتاجي، ثم تحقق من نجاح النشر.
