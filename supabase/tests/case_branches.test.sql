@@ -39,7 +39,8 @@ set local role authenticated;
 select throws_ok($$delete from public.case_branches where name='القاهرة - المرج'$$,'42501',null,'authenticated staff cannot hard-delete branches');
 reset role;
 
-insert into public.families(name,branch_area,notes,phone) values ('branch-history-test','القاهرة - المرج','branch-history-test','01012345678');
+select set_config('request.jwt.claims','{"role":"service_role"}',true);
+insert into public.families(name,branch_area,notes,phone,mother_national_id) values ('branch-history-test','القاهرة - المرج','branch-history-test','01012345678','29001011234567');
 select set_config('request.jwt.claims','{"sub":"31000000-0000-0000-0000-000000000001","session_id":"41000000-0000-0000-0000-000000000001","role":"authenticated"}',true);
 set local role authenticated;
 select lives_ok($$insert into public.case_branches(name) values ('فرع تجريبي')$$,'case writers can add branches');

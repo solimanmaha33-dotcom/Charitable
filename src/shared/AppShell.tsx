@@ -58,7 +58,7 @@ export function AppShell({ children, staff, onSignOut, logoutError }: { children
         return false;
       });
   return (
-    <div className="app-shell" lang="ar" dir="rtl">
+    <div className="app-shell" lang="ar-EG" dir="rtl">
       <OfflineBanner />
       <a className="skip-link" href="#main-content">روح لمحتوى الصفحة</a>
       <header className="app-header">

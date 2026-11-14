@@ -15,14 +15,14 @@ function sortBranches(branches: CaseBranch[]): CaseBranch[] {
 
 function db() {
   const client = getSupabase();
-  if (!client) throw new Error('تعذّر الاتصال بقاعدة البيانات');
+  if (!client) throw new Error('مش قادرين نتصل بقاعدة البيانات. اتأكد من الاتصال وجرب تاني.');
   return client;
 }
 
 function check(error: { message: string; code?: string } | null) {
   if (!error) return;
   if (error.code === '23505') throw new Error('الفرع موجود بالفعل');
-  throw new Error(error.message || 'تعذّر حفظ الفرع');
+  throw new Error('ماقدرناش نحفظ الفرع. اتأكد من صلاحيتك وجرب تاني.');
 }
 
 export async function listBranches(): Promise<CaseBranch[]> {

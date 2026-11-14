@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 import { CaseDisbursementsPanel } from './CaseDisbursementsPanel';
 import type { CaseFile } from '../../services/cases';
+import { cairoToday } from '../../shared/cairoDate';
 
 const state=vi.hoisted(()=>({branches:vi.fn(),record:vi.fn(),void:vi.fn()}));
 vi.mock('../../services/branches',()=>({listBranches:state.branches}));
@@ -27,4 +28,15 @@ it('requires an item description for in-kind aid and keeps canceled history visi
  expect(screen.getByLabelText('وصف المساعدة العينية')).toBeRequired();
  rerender(<CaseDisbursementsPanel caseFile={caseFile} records={[{id:'row-2',case_id:'case-1',branch_id:'branch-1',disbursement_type:'علاج',amount:200,items_summary:null,disbursed_on:'2026-11-01',created_by:'staff-1',created_at:'2026-11-01T10:00:00Z',notes:null,is_voided:true,void_reason:'اتسجل بالغلط',voided_at:'2026-11-02T00:00:00Z'}]} canWrite onChanged={onChanged}/>);
  expect(await screen.findByText('ملغي')).toBeVisible();expect(screen.getByText('سبب الإلغاء: اتسجل بالغلط')).toBeVisible();
+});
+
+it('shows a current-month total and explains the printed beneficiary signature',()=>{
+ const today=cairoToday();const lastMonth=new Date(`${today}T00:00:00Z`);lastMonth.setUTCMonth(lastMonth.getUTCMonth()-1);const oldDate=lastMonth.toISOString().slice(0,10);
+ render(<CaseDisbursementsPanel caseFile={caseFile} records={[
+  {id:'active',case_id:'case-1',branch_id:'branch-1',disbursement_type:'علاج',amount:350.5,items_summary:null,disbursed_on:today,created_by:'staff',created_at:`${today}T10:00:00Z`,notes:null,is_voided:false,void_reason:null,voided_at:null},
+  {id:'old',case_id:'case-1',branch_id:'branch-1',disbursement_type:'علاج',amount:900,items_summary:null,disbursed_on:oldDate,created_by:'staff',created_at:`${oldDate}T10:00:00Z`,notes:null,is_voided:false,void_reason:null,voided_at:null},
+  {id:'void',case_id:'case-1',branch_id:'branch-1',disbursement_type:'علاج',amount:1000,items_summary:null,disbursed_on:today,created_by:'staff',created_at:`${today}T10:00:00Z`,notes:null,is_voided:true,void_reason:'ملغي',voided_at:`${today}T11:00:00Z`},
+ ]} canWrite={false} onChanged={vi.fn(async()=>{})}/>);
+ expect(screen.getByLabelText('ملخص مساعدات الشهر الحالي')).toHaveTextContent('عدد المساعدات: ١ · الإجمالي ٣٥٠٫٥ جنيه');
+ expect(screen.getByLabelText('ملخص مساعدات الشهر الحالي')).toHaveTextContent('بعد الصرف، اطبع النموذج وخد توقيع المستفيد.');
 });

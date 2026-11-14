@@ -26,7 +26,7 @@ it('submits employee code and password and shows a generic failure', async () =>
     employeeCode: 'E0001',
     password: 'wrong-password',
   });
-  expect(screen.getByRole('alert')).toHaveTextContent('تعذّر تسجيل الدخول');
+  expect(screen.getByRole('alert')).toHaveTextContent('الكود أو كلمة السر مش مظبوطين');
 });
 
 it('shows the server lockout instructions after too many attempts for one employee code', async () => {

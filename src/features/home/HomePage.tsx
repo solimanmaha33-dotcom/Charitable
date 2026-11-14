@@ -97,7 +97,7 @@ export function HomePage({ staff }: { staff: StaffProfile }) {
     actions.push({ label: 'الحالات', description: 'دور على حالة وافتح ملفها', to: '/cases' });
   }
   if (hasPermission(staff, 'casesWrite')) {
-    actions.unshift({ label: 'إضافة حالة جديدة', description: 'سجّل الأسرة والحالة مع بعض', to: '/cases/new', primary: true });
+    actions.unshift({ label: 'إضافة حالة جديدة', description: 'سجّل بيانات الأسرة في ملف حالة واحد.', to: '/cases/new', primary: true });
   }
   if (canReadDonations) {
     actions.push({ label: 'التبرعات والكفالات', description: 'راجع التبرعات والدفعات الشهرية', to: '/donations' });
@@ -137,44 +137,44 @@ export function HomePage({ staff }: { staff: StaffProfile }) {
       </section>
       {(canReadCases || canReadDonations) ? <section className="workspace-summary" aria-label="ملخص السجلات">
         {canReadCases ? <>
-          <article className="summary-card"><span>الحالات المسجلة</span><strong data-testid="summary-cases">{loadingCounts ? 'جاري التحميل…' : counts.cases === null ? 'تعذّر التحميل' : formatCount(counts.cases)}</strong></article>
-          <article className="summary-card"><span>الأطفال أقل من ١٨ سنة</span><strong data-testid="summary-children">{loadingCounts ? 'جاري التحميل…' : counts.children === null ? 'تعذّر التحميل' : formatCount(counts.children)}</strong></article>
-          <article className="summary-card"><span>الأيتام أقل من ١٨ سنة</span><strong data-testid="summary-orphans">{loadingCounts ? 'جاري التحميل…' : counts.orphans === null ? 'تعذّر التحميل' : formatCount(counts.orphans)}</strong></article>
+          <article className="summary-card"><span>الحالات المسجلة</span><strong data-testid="summary-cases">{loadingCounts ? 'بنحمّل…' : counts.cases === null ? 'ماقدرناش نحمّل' : formatCount(counts.cases)}</strong></article>
+          <article className="summary-card"><span>الأطفال أقل من ١٨ سنة</span><strong data-testid="summary-children">{loadingCounts ? 'بنحمّل…' : counts.children === null ? 'ماقدرناش نحمّل' : formatCount(counts.children)}</strong></article>
+          <article className="summary-card"><span>الأيتام أقل من ١٨ سنة</span><strong data-testid="summary-orphans">{loadingCounts ? 'بنحمّل…' : counts.orphans === null ? 'ماقدرناش نحمّل' : formatCount(counts.orphans)}</strong></article>
         </> : null}
-        {canReadDonations ? <article className="summary-card"><span>التبرعات المسجلة</span><strong data-testid="summary-donations">{loadingCounts ? 'جاري التحميل…' : counts.donations === null ? 'تعذّر التحميل' : formatCount(counts.donations)}</strong></article> : null}
+        {canReadDonations ? <article className="summary-card"><span>التبرعات المسجلة</span><strong data-testid="summary-donations">{loadingCounts ? 'بنحمّل…' : counts.donations === null ? 'ماقدرناش نحمّل' : formatCount(counts.donations)}</strong></article> : null}
       </section> : null}
       {canReadCases ? <section className="home-followups" aria-label="المتابعات"><div className="home-followups-grid">
       <section className="home-followup-card id-expiry-alerts" aria-labelledby="id-expiry-title">
         <div className="section-heading"><h2 id="id-expiry-title">متابعة انتهاء بطاقات الرقم القومي</h2><span>خلال ٣٠ يوم</span></div>
-        <p className="form-help">التنبيه بيظهر للبطاقات اللي تاريخ انتهائها متسجل في ملف الأسرة.</p>
-        {loadingIdExpiry&&<p role="status">جاري تحميل مواعيد انتهاء البطاقات…</p>}
-        {idExpiryError&&<p className="error-message" role="alert">تعذّر تحميل مواعيد البطاقات. حاول تحدّث الصفحة.</p>}
+        <p className="form-help">التنبيه بيظهر للبطاقات اللي تاريخ انتهائها متسجل في ملف الحالة.</p>
+        {loadingIdExpiry&&<p role="status">بنحمّل مواعيد انتهاء البطاقات…</p>}
+        {idExpiryError&&<p className="error-message" role="alert">ماقدرناش نحمّل مواعيد البطاقات. حدّث الصفحة وجرب تاني.</p>}
         {!loadingIdExpiry&&!idExpiryError&&!expiryGroups.expired.length&&!expiryGroups.upcoming.length&&<div className="empty-state home-followup-empty">مفيش بطاقات منتهية أو هتنتهي خلال ٣٠ يوم من اللي متسجل تاريخها.</div>}
         {!loadingIdExpiry&&!idExpiryError&&(expiryGroups.expired.length>0||expiryGroups.upcoming.length>0)&&<ul className="record-list">
-          {expiryGroups.expired.map(row=><li key={row.id}><div><Link to={`/cases/${row.id}`}>{caseFileLabel(row)} <span className="family-code">{row.code}</span></Link><small>انتهت يوم {formatDate(row.national_id_expires_on)}</small></div><strong className="expiry-status expiry-status-expired">منتهية</strong></li>)}
-          {expiryGroups.upcoming.map(row=><li key={row.id}><div><Link to={`/cases/${row.id}`}>{caseFileLabel(row)} <span className="family-code">{row.code}</span></Link><small>تاريخ الانتهاء {formatDate(row.national_id_expires_on)}</small></div><strong className="expiry-status">{row.daysLeft===0?'هتنتهي النهارده':`هتنتهي خلال ${new Intl.NumberFormat('ar-EG').format(row.daysLeft)} يوم`}</strong></li>)}
+          {expiryGroups.expired.map(row=><li key={`${row.id}-${row.identity_holder}`}><div><Link to={`/cases/${row.id}`}>{caseFileLabel(row)} <span className="family-code">{row.code}</span></Link><small>بطاقة {row.identity_holder} انتهت يوم {formatDate(row.national_id_expires_on)}</small></div><strong className="expiry-status expiry-status-expired">منتهية</strong></li>)}
+          {expiryGroups.upcoming.map(row=><li key={`${row.id}-${row.identity_holder}`}><div><Link to={`/cases/${row.id}`}>{caseFileLabel(row)} <span className="family-code">{row.code}</span></Link><small>بطاقة {row.identity_holder} هتنتهي يوم {formatDate(row.national_id_expires_on)}</small></div><strong className="expiry-status">{row.daysLeft===0?'هتنتهي النهارده':`هتنتهي خلال ${new Intl.NumberFormat('ar-EG').format(row.daysLeft)} يوم`}</strong></li>)}
         </ul>}
       </section>
       <section className="home-followup-card member-age-alerts" aria-labelledby="member-age-title">
         <div className="section-heading"><h2 id="member-age-title">متابعة السن</h2><span>قبل السن المحدد بـ٣٠ يوم</span></div>
         <p className="form-help">لما تاريخ الميلاد والنوع يكونوا متسجلين في ملف الفرد.</p>
-        {loadingMemberAgeAlerts&&<p role="status">جاري مراجعة أعمار أفراد الأسر…</p>}
-        {memberAgeError&&<p className="error-message" role="alert">تعذّر تحميل أعمار الأفراد. حاول تحدّث الصفحة.</p>}
+        {loadingMemberAgeAlerts&&<p role="status">بنراجع أعمار أفراد الحالات…</p>}
+        {memberAgeError&&<p className="error-message" role="alert">ماقدرناش نحمّل أعمار الأفراد. حدّث الصفحة وجرب تاني.</p>}
         {!loadingMemberAgeAlerts&&!memberAgeError&&!memberAgeAlerts.length&&<div className="empty-state home-followup-empty">مفيش أفراد هيكملوا السن المحدد خلال ٣٠ يوم من بيانات الميلاد المسجلة.</div>}
         {!loadingMemberAgeAlerts&&!memberAgeError&&memberAgeAlerts.length>0&&<ul className="record-list">{memberAgeAlerts.map(alert=><li key={alert.personId}><div><Link to={`/cases/${alert.caseFileId}`}>{alert.name} · {alert.caseFileLabel} <span className="family-code">{alert.caseFileCode}</span></Link><small>العمر الحالي {new Intl.NumberFormat('ar-EG').format(alert.age)} سنة · هيكمل {new Intl.NumberFormat('ar-EG').format(alert.targetAge)} سنة يوم {formatDate(alert.thresholdDate)}</small></div><strong className="expiry-status">{alert.daysUntilThreshold===0?'النهارده':`خلال ${new Intl.NumberFormat('ar-EG').format(alert.daysUntilThreshold)} يوم`}</strong></li>)}</ul>}
       </section>
       <section className="home-followup-card case-review-alerts" aria-labelledby="case-review-title">
         <div className="section-heading"><h2 id="case-review-title">حالات محتاجة إعادة بحث</h2><span>خلال ٣٠ يوم أو متأخرة</span></div>
         <p className="form-help">حدد ميعاد إعادة البحث في ملف الحالة عشان تتابعها هنا.</p>
-        {loadingReviews&&<p role="status">جاري تحميل مواعيد إعادة البحث…</p>}
-        {reviewError&&<p className="error-message" role="alert">تعذّر تحميل مواعيد إعادة البحث. حاول تحدّث الصفحة.</p>}
+        {loadingReviews&&<p role="status">بنحمّل مواعيد إعادة البحث…</p>}
+        {reviewError&&<p className="error-message" role="alert">ماقدرناش نحمّل مواعيد إعادة البحث. حدّث الصفحة وجرب تاني.</p>}
         {!loadingReviews&&!reviewError&&!reviewGroups.overdue.length&&!reviewGroups.upcoming.length&&<div className="empty-state home-followup-empty">مفيش حالات ميعاد إعادة بحثها خلال ٣٠ يوم أو متأخر.</div>}
         {!loadingReviews&&!reviewError&&reviewReminders.length>0&&<ul className="record-list">{reviewReminders.map(row=><li key={row.id}><div><Link to={`/cases/${row.id}`}>{caseFileLabel(row)} <span className="family-code">{row.code}</span></Link><small>ميعاد إعادة البحث {formatDate(row.next_review_date)}</small></div><strong className={`expiry-status${row.overdue?' expiry-status-expired':''}`}>{row.overdue?`متأخرة ${new Intl.NumberFormat('ar-EG').format(row.daysUntil)} يوم`:row.daysUntil===0?'ميعادها النهارده':`خلال ${new Intl.NumberFormat('ar-EG').format(row.daysUntil)} يوم`}</strong></li>)}</ul>}
       </section>
       {canReadDonations&&<section className="home-followup-card sponsorship-alerts" aria-labelledby="sponsorship-followup-title">
         <div className="section-heading"><h2 id="sponsorship-followup-title">متابعة الكفالات الشهرية</h2><span>المتأخر واللي ميعاده خلال ٣٠ يوم</span></div>
-        {loadingSponsorshipFollowups&&<p role="status">جاري تحميل دفعات الكفالات…</p>}
-        {sponsorshipFollowupError&&<p className="error-message" role="alert">تعذّر تحميل دفعات الكفالات. حاول تحدّث الصفحة.</p>}
+        {loadingSponsorshipFollowups&&<p role="status">بنحمّل دفعات الكفالات…</p>}
+        {sponsorshipFollowupError&&<p className="error-message" role="alert">ماقدرناش نحمّل دفعات الكفالات. حدّث الصفحة وجرب تاني.</p>}
         {!loadingSponsorshipFollowups&&!sponsorshipFollowupError&&!sponsorshipFollowups.length&&<div className="empty-state home-followup-empty">مفيش دفعات كفالة متأخرة أو مستحقة خلال ٣٠ يوم.</div>}
         {!loadingSponsorshipFollowups&&!sponsorshipFollowupError&&sponsorshipFollowups.length>0&&<ul className="record-list">{sponsorshipFollowups.map(row=><li key={row.paymentId}><div><Link to="/donations">{row.caseCode} — {[row.fatherName&&`الأب: ${row.fatherName}`,row.motherName&&`الأم: ${row.motherName}`].filter(Boolean).join(' · ')||'ملف حالة'}</Link><small>استحقاق {formatDate(row.dueDate)} · {new Intl.NumberFormat('ar-EG').format(row.amount)} جنيه</small></div><strong className={`expiry-status${row.status==='late'?' expiry-status-expired':''}`}>{row.status==='late'?`متأخرة ${new Intl.NumberFormat('ar-EG').format(-row.daysUntilDue)} يوم`:row.daysUntilDue===0?'ميعادها النهارده':`خلال ${new Intl.NumberFormat('ar-EG').format(row.daysUntilDue)} يوم`}</strong></li>)}</ul>}
       </section>}

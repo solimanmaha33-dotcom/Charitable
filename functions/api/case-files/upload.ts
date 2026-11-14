@@ -12,6 +12,8 @@ export async function onRequestPost(context:Context):Promise<Response> {
   const staff=await staffContext(context); if(!staff) return json({error:'Access denied'},401);
   const permission=await staff.client.rpc('has_permission',{permission:'casesWrite'}); if(permission.error || !permission.data) return json({error:'Access denied'},403);
   const caseFileId=context.request.headers.get('x-case-file-id') ?? context.request.headers.get('x-family-id') ?? ''; const encoded=context.request.headers.get('x-file-name') ?? '';
+  const documentType=context.request.headers.get('x-document-type') ?? 'general';
+  if(documentType!=='general' && documentType!=='social_research') return json({error:'Invalid document type'},400);
   let name='';try{name=decodeURIComponent(encoded);}catch{return json({error:'Invalid file'},400);}
   const mime=context.request.headers.get('content-type') ?? '';
   if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(caseFileId) || !name || name.length>255 || /[\u0000-\u001f\u007f]/.test(name)) return json({error:'Invalid file'},400);
@@ -21,7 +23,7 @@ export async function onRequestPost(context:Context):Promise<Response> {
   const again=await staff.client.rpc('has_permission',{permission:'casesWrite'});if(again.error || !again.data) return json({error:'Access denied'},403);
   const admin=adminClient(context.env); const path=`${caseFileId}/${crypto.randomUUID()}`; const bucket=admin.storage.from('case-files');
   const uploaded=await bucket.upload(path,bytes,{contentType:mime,upsert:false});if(uploaded.error) return json({error:'Upload failed'},503);
-  const metadata=await admin.from('case_attachments').insert({family_id:caseFileId,storage_path:path,file_name:name,mime_type:mime,size_bytes:bytes.byteLength,uploaded_by:user.id}).select().single();
+  const metadata=await admin.from('case_attachments').insert({family_id:caseFileId,storage_path:path,file_name:name,mime_type:mime,size_bytes:bytes.byteLength,uploaded_by:user.id,document_type:documentType}).select().single();
   if(metadata.error || !metadata.data){await bucket.remove([path]);return json({error:'Upload failed'},503);}
   return json(metadata.data,201);
  } catch {return json({error:'Upload failed'},503);}

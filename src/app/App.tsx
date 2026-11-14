@@ -10,7 +10,7 @@ export function App() {
   const [logoutError, setLogoutError] = useState('');
   async function logout() {
     try { await signOut(); setStaff(null); setLogoutError(''); }
-    catch { setLogoutError('تعذّر تسجيل الخروج. حاول تاني.'); }
+    catch { setLogoutError('ماعرفناش نكمّل تسجيل الخروج. حاول تاني.'); }
   }
   return <BrowserRouter><AppShell staff={staff ?? null} onSignOut={logout} logoutError={logoutError}><Router session={staff} onStaffChange={setStaff} /></AppShell></BrowserRouter>;
 }

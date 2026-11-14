@@ -85,7 +85,7 @@ test('manager creates an employee who signs in and creates a searchable family c
     await page.getByLabel('اسم الأم (مطلوب)').fill(motherName);
     await page.getByLabel('الرقم القومي للأم').fill('29001011234567');
     await expect(page.getByLabel('تاريخ ميلاد الأم')).toHaveValue('1990-01-01');
-    await expect(page.getByLabel('نوع الأم')).toHaveValue('female');
+    await expect(page.getByLabel('النوع للأم (ذكر أو أنثى)')).toHaveValue('female');
     await page.getByLabel('حالة الملف').selectOption('موقوف');
     await page.getByLabel('سبب الإيقاف').fill('استكمال مستند تجريبي');
     await page.getByLabel('رقم الموبايل 1').fill('01012345678');
@@ -94,12 +94,13 @@ test('manager creates an employee who signs in and creates a searchable family c
     const row = await admin.from('families').select('code,file_status,status_reason,mother_date_of_birth,mother_gender').eq('id', caseFile).single(); if (row.error) throw row.error;
     expect(row.data.code).toMatch(/^F-\d{4,}$/); expect(row.data.file_status).toBe('موقوف'); expect(row.data.status_reason).toBe('استكمال مستند تجريبي'); expect(row.data.mother_date_of_birth).toBe('1990-01-01'); expect(row.data.mother_gender).toBe('female');
     await expect(page.getByText(row.data.code).first()).toBeVisible();
+    await page.getByRole('button',{name:'عرض أفراد الأسرة'}).click();
     await page.getByRole('button',{name:'إضافة فرد للأسرة'}).click();
     await page.getByLabel('اسم الفرد').fill(childName);
     await page.getByLabel('صلة القرابة').fill('ابن');
     await page.getByLabel('الرقم القومي للفرد').fill('32402291234577');
     await expect(page.getByLabel('تاريخ الميلاد')).toHaveValue('2024-02-29');
-    await expect(page.getByLabel('النوع')).toHaveValue('male');
+    await expect(page.locator('.member-demographics').getByLabel('النوع')).toHaveValue('male');
     await page.getByRole('button',{name:'إضافة الفرد'}).click();
     await expect(page.getByText(childName).first()).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth), 'case details should fit a 360px viewport').toBeLessThanOrEqual(360);

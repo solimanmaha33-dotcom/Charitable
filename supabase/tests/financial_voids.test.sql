@@ -30,7 +30,7 @@ insert into public.employee_permissions(employee_id,donations_read,donations_wri
  ('b5000000-0000-0000-0000-000000000001',true,true,true,false),
  ('b5000000-0000-0000-0000-000000000002',true,true,false,false),
  ('b5000000-0000-0000-0000-000000000003',false,false,true,true);
-insert into public.families(id,name,phone) values ('b6000000-0000-0000-0000-000000000001','ملف اختبار الإلغاء','01012345678');
+insert into public.families(id,name,phone,mother_national_id) values ('b6000000-0000-0000-0000-000000000001','ملف اختبار الإلغاء','01012345678','29001011234567');
 insert into public.donors(id,name) values ('b7000000-0000-0000-0000-000000000001','متبرع اختبار الإلغاء');
 insert into public.donations(id,donor_id,donation_type,kind,amount,received_on) values
  ('b7100000-0000-0000-0000-000000000001','b7000000-0000-0000-0000-000000000001','cash','cash',150,'2026-01-01'),
@@ -81,11 +81,11 @@ reset role;
 select set_config('request.jwt.claims','{"sub":"b3000000-0000-0000-0000-000000000003","session_id":"b4000000-0000-0000-0000-000000000003","role":"authenticated"}',true);
 set local role authenticated;
 select throws_ok($$select public.cancel_donation('b7100000-0000-0000-0000-000000000002','سبب كافي')$$,'42501',null,'case permissions alone cannot cancel donations');
-select set_config('test.review_case_id',public.save_case_file(null,'{"mother_name":"أم ميعاد المتابعة","phone":"01012345670","next_review_date":"2026-12-01"}'::jsonb,array[]::text[])::text,true);
+select set_config('test.review_case_id',public.save_case_file(null,'{"mother_name":"أم ميعاد المتابعة","phone":"01012345670","mother_national_id":"29001011234567","mother_date_of_birth":"1990-01-01","next_review_date":"2026-12-01"}'::jsonb,array[]::text[])::text,true);
 select is((select next_review_date::text from public.families where id=current_setting('test.review_case_id')::uuid),'2026-12-01','new case stores its review date');
-select lives_ok($$select public.save_case_file(current_setting('test.review_case_id')::uuid,'{"mother_name":"أم ميعاد المتابعة","phone":"01012345670"}'::jsonb,null)$$,'an older client that omits the date preserves the saved review date');
+select lives_ok($$select public.save_case_file(current_setting('test.review_case_id')::uuid,'{"mother_name":"أم ميعاد المتابعة","phone":"01012345670","mother_national_id":"29001011234567","mother_date_of_birth":"1990-01-01"}'::jsonb,null)$$,'an older client that omits the date preserves the saved review date');
 select is((select next_review_date::text from public.families where id=current_setting('test.review_case_id')::uuid),'2026-12-01','omitted review date is preserved');
-select lives_ok($$select public.save_case_file(current_setting('test.review_case_id')::uuid,'{"mother_name":"أم ميعاد المتابعة","phone":"01012345670","next_review_date":""}'::jsonb,null)$$,'staff can clear the review date explicitly');
+select lives_ok($$select public.save_case_file(current_setting('test.review_case_id')::uuid,'{"mother_name":"أم ميعاد المتابعة","phone":"01012345670","mother_national_id":"29001011234567","mother_date_of_birth":"1990-01-01","next_review_date":""}'::jsonb,null)$$,'staff can clear the review date explicitly');
 select is((select next_review_date from public.families where id=current_setting('test.review_case_id')::uuid),null::date,'cleared review date stays empty');
 
 select lives_ok($$select public.record_case_disbursement(

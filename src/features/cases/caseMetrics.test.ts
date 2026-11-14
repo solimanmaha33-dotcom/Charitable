@@ -4,7 +4,7 @@ import { calculatePerCapitaNetIncome, countCaseMembers, matchesCaseDirectoryFilt
 
 function file(id:string,categories:string[]=[]):CaseFile{return {id,code:`F-${id}`,archived_at:null,phone:null,phone_2:null,phone_3:null,father_name:null,mother_name:null,contact_name:null,contact_relationship:null,contact_age:null,notes:'',address:null,monthly_income:null,health_condition:null,branch_area:null,file_status:'نشط',status_reason:null,national_id_expires_on:null,case_file_categories:categories.map(category=>({category:category as CaseFile['case_file_categories'][number]['category']}))};}
 const files=[file('f1',['يتيم الأم','أرملة']),file('f2',['كبار السن (٦٠ سنة فأكثر)'])];
-const fatherOrphanFile = file('f3',['يتيم الأب']);
+const otherFile = file('f3',['أخرى']);
 const members:CaseFileMember[]=[
  {family_id:'f1',person_id:'p1',relationship:'ابن',people:{name:'كريم',gender:'male',date_of_birth:'2008-11-09'}},
  {family_id:'f1',person_id:'p2',relationship:'بنت',people:{name:'مريم',gender:'female',date_of_birth:'2018-02-01'}},
@@ -31,11 +31,12 @@ describe('case file metrics',()=>{
   expect(matchesCaseDirectoryFilter('f1',files,members,'orphans','2026-11-08')).toBe(false);
   expect(matchesCaseDirectoryFilter('f2',files,members,'orphans','2026-11-08')).toBe(false);
  });
- it('does not count the retired maternal orphan category but still counts paternal orphans',()=>{
-  const testMembers=[...members,{family_id:'f3',person_id:'p7',relationship:'ابن',people:{name:'عمر',gender:'male' as const,date_of_birth:'2018-02-01'}}];
-  expect(countCaseMembers([...files,fatherOrphanFile],testMembers,'2026-11-08').orphans).toBe(1);
+ it('counts orphan status on the individual, not an old case category',()=>{
+  const child={family_id:'f3',person_id:'p7',relationship:'ابن',father_status:'يتيم الأب' as const,people:{name:'عمر',gender:'male' as const,date_of_birth:'2018-02-01'}};
+  const testMembers=[...members,child,{...child,person_id:'p8',relationship:'أخ',father_status:null}];
+  expect(countCaseMembers([...files,otherFile],testMembers,'2026-11-08').orphans).toBe(1);
   expect(matchesCaseDirectoryFilter('f1',files,testMembers,'orphans','2026-11-08')).toBe(false);
-  expect(matchesCaseDirectoryFilter('f3',[fatherOrphanFile],testMembers,'orphans','2026-11-08')).toBe(true);
+  expect(matchesCaseDirectoryFilter('f3',[otherFile],testMembers,'orphans','2026-11-08')).toBe(true);
  });
  it('handles exact ages 18, 21, 59, 60 and missing birthdays',()=>{
   const edgeFiles=['18','21','59','60','missing','future'].map(id=>file(id));

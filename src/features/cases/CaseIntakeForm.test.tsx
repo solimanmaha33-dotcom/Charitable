@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 import { CaseIntakeForm } from './CaseIntakeForm';
-import { saveCaseFile } from '../../services/cases';
+import { saveCaseFile, uploadCaseAttachment } from '../../services/cases';
 import { ageOn } from './memberAge';
 import { cairoToday } from './idExpiry';
 
@@ -15,9 +15,10 @@ const branchState = vi.hoisted(() => ({
   reactivateBranch: vi.fn(async (id: string) => { const branch = branchState.inactiveBranches.find((item) => item.id === id); if (branch) { branchState.inactiveBranches = branchState.inactiveBranches.filter((item) => item.id !== id); branchState.branches.push(branch); } }),
 }));
 vi.mock('../../services/cases', () => ({ saveCaseFile: vi.fn().mockResolvedValue('file-1'), uploadCaseAttachment: vi.fn() }));
-vi.mock('../files/FilePicker', () => ({ FilePicker: ({ onText }: { onText: (text:string)=>void }) => <button type="button" onClick={() => onText('الرقم القومي: ٣٢٤٠٢٢٩١٢٣٤٥٧٧')}>قراءة رقم قومي تجريبي</button> }));
+vi.mock('../files/FilePicker', () => ({ FilePicker: ({ onText,files=[],onChange,label='اختيار صور أو PDF',legend='مرفقات الحالة' }: { onText?: (text:string)=>void;files?:File[];onChange?:(files:File[])=>void;label?:string;legend?:string }) => <fieldset><legend>{legend}</legend><label>{label}<input type="file" onChange={event=>{const file=event.currentTarget.files?.[0];if(file)onChange?.([...files,file]);}} /></label>{onText&&<><button type="button" onClick={() => onText('الرقم القومي: ٣٢٤٠٢٢٩١٢٣٤٥٧٧')}>قراءة رقم قومي تجريبي</button><button type="button" onClick={() => onText('الرقم القومي: ٢٩٠٠١٠١١٢٣٤٥٦٧ — تاريخ الانتهاء: ٠١/١٢/٢٠٢٧')}>قراءة رقم قومي وانتهاء تجريبي</button></>}</fieldset> }));
 vi.mock('../../services/branches', () => ({ listBranches: branchState.listBranches, listInactiveBranches: branchState.listInactiveBranches, addBranch: branchState.addBranch, deactivateBranch: branchState.deactivateBranch, reactivateBranch: branchState.reactivateBranch }));
 beforeEach(() => { vi.clearAllMocks(); branchState.branches = [{id:'branch-cairo',name:'القاهرة - المرج'}, {id:'branch-fayoum',name:'الفيوم - جبل النجار'}]; branchState.inactiveBranches = [{id:'branch-old',name:'فرع قديم'}]; });
+function enterAdultMotherId(){const input=screen.getByLabelText('الرقم القومي للأم') as HTMLInputElement;if(!input.value)fireEvent.change(input,{target:{value:'29001011234567'}});}
 
 it('creates one file without a family-name field and saves status, reason and profile in one call', async () => {
   const onSaved = vi.fn(); render(<CaseIntakeForm onSaved={onSaved} />);
@@ -28,11 +29,21 @@ it('creates one file without a family-name field and saves status, reason and pr
   fireEvent.change(screen.getByLabelText('سبب الإيقاف'), { target: { value: 'مراجعة الأوراق' } });
   fireEvent.change(screen.getByLabelText('العنوان'), { target: { value: 'شارع النيل' } });
   fireEvent.change(screen.getByLabelText('الدخل الشهري بالجنيه'), { target: { value: '2500' } });
-  fireEvent.change(screen.getByLabelText('الحالة الصحية العامة للأسرة'), { target: { value: 'تحتاج متابعة' } });
+  fireEvent.change(screen.getByLabelText('ملاحظات صحية عامة للأسرة'), { target: { value: 'تحتاج متابعة' } });
   fireEvent.change(screen.getByLabelText('رقم الموبايل 2'), { target: { value: '01000000002' } });
+  enterAdultMotherId();
  fireEvent.click(screen.getByRole('button', { name: 'حفظ ملف الحالة' }));
   await waitFor(() => expect(onSaved).toHaveBeenCalledWith('file-1'));
   expect(saveCaseFile).toHaveBeenCalledWith(null, expect.objectContaining({ motherName: 'منى', fatherName: '', address: 'شارع النيل', monthlyIncome: 2500, healthCondition: 'تحتاج متابعة', phones: ['', '01000000002', ''], fileStatus: 'موقوف', statusReason: 'مراجعة الأوراق', categories: ['أرملة'] }));
+});
+
+it('uploads social research separately and keeps its type when creating a case',async()=>{
+ const onSaved=vi.fn();render(<CaseIntakeForm onSaved={onSaved}/>);
+ fireEvent.click(screen.getByLabelText('أرملة'));fireEvent.change(screen.getByLabelText('اسم الأم (مطلوب)'),{target:{value:'منى'}});fireEvent.change(screen.getByLabelText('رقم الموبايل 1'),{target:{value:'01012345678'}});enterAdultMotherId();
+ const file=new File(['بحث'],'بحث اجتماعي.pdf',{type:'application/pdf'});fireEvent.change(screen.getByLabelText('اختار البحث الاجتماعي (صورة أو PDF)'),{target:{files:[file]}});
+ fireEvent.click(screen.getByRole('button',{name:'حفظ ملف الحالة'}));
+ await waitFor(()=>expect(onSaved).toHaveBeenCalledWith('file-1'));
+ expect(uploadCaseAttachment).toHaveBeenCalledWith('file-1',file,'social_research');
 });
 
 it('offers another case type and makes abandonment, widowhood and divorce mutually exclusive',()=>{
@@ -64,40 +75,97 @@ it('hides father fields for a widow and saves both parent national IDs and indiv
  fireEvent.change(screen.getByLabelText('الرقم القومي للأم'),{target:{value:'٢٩٠٠١٠١١٢٣٤٥٦٧'}});
  fireEvent.change(screen.getByLabelText('الحالة الصحية للأم'),{target:{value:'مرض'}});
  fireEvent.change(screen.getByLabelText('نوع العجز أو الإعاقة أو المرض للأم'),{target:{value:'ضغط'}});
- fireEvent.change(screen.getByLabelText('الحالة الصحية العامة للأسرة'),{target:{value:'متابعة دورية'}});
+ fireEvent.change(screen.getByLabelText('ملاحظات صحية عامة للأسرة'),{target:{value:'متابعة دورية'}});
  fireEvent.change(screen.getByLabelText('رقم الموبايل 1'),{target:{value:'01012345678'}});
  fireEvent.click(screen.getByRole('button',{name:'حفظ ملف الحالة'}));
  await waitFor(()=>expect(saveCaseFile).toHaveBeenCalledWith(null,expect.objectContaining({motherName:'منى',motherNationalId:'29001011234567',motherHealthStatus:'مرض',motherHealthCondition:'ضغط',fatherName:'',fatherNationalId:'',healthCondition:'متابعة دورية'})));
+});
+
+it('requires a visible adult ID after changing an existing file to widow',async()=>{
+ const initial={id:'f1',code:'F-0001',archived_at:null,phone:'01012345678',phone_2:null,phone_3:null,father_name:'أب',mother_name:'منى',father_national_id:'29001011234567',mother_national_id:null,father_date_of_birth:'1990-01-01',father_gender:'male' as const,mother_date_of_birth:null,mother_gender:null,contact_name:'خال',contact_relationship:'خال',contact_age:40,national_id:'29001011234577',national_id_expires_on:'2027-01-01',contact_date_of_birth:'1990-01-01',contact_gender:'male' as const,notes:'',address:null,monthly_income:null,health_condition:null,branch_area:null,file_status:'نشط' as const,status_reason:null,case_file_categories:[{category:'أخرى' as const}]};
+ render(<CaseIntakeForm initial={initial} onSaved={vi.fn()}/>);
+ fireEvent.click(screen.getByLabelText('أرملة'));
+ fireEvent.click(screen.getByRole('button',{name:'حفظ التعديلات'}));
+ expect(await screen.findByRole('alert')).toHaveTextContent('عمره ١٨ سنة');
+ expect(saveCaseFile).not.toHaveBeenCalled();
+});
+
+it('omits stored father and guardian details when saving an existing case as widow',async()=>{
+ const initial={id:'f1',code:'F-0001',archived_at:null,phone:'01012345678',phone_2:null,phone_3:null,father_name:'أب',mother_name:'منى',father_national_id:'29001011234567',mother_national_id:null,father_date_of_birth:'1990-01-01',father_gender:'male' as const,mother_date_of_birth:null,mother_gender:null,contact_name:'خال',contact_relationship:'خال',contact_age:40,national_id:'29001011234577',national_id_expires_on:'2027-01-01',contact_date_of_birth:'1990-01-01',contact_gender:'male' as const,notes:'',address:null,monthly_income:null,health_condition:null,branch_area:null,file_status:'نشط' as const,status_reason:null,case_file_categories:[{category:'أخرى' as const}]};
+ render(<CaseIntakeForm initial={initial} onSaved={vi.fn()}/>);
+ fireEvent.click(screen.getByLabelText('أرملة'));
+ fireEvent.change(screen.getByLabelText('الرقم القومي للأم'),{target:{value:'29001011234567'}});
+ fireEvent.click(screen.getByRole('button',{name:'حفظ التعديلات'}));
+ await waitFor(()=>expect(saveCaseFile).toHaveBeenCalled());
+ expect(saveCaseFile).toHaveBeenCalledWith('f1',expect.objectContaining({fatherName:'',fatherNationalId:'',fatherDateOfBirth:'',contactName:'',contactRelationship:'',nationalId:'',nationalIdExpiresOn:''}));
 });
 
 it('fills the mother birth date and gender from a valid typed national ID',()=>{
  render(<CaseIntakeForm onSaved={vi.fn()}/>);
  fireEvent.change(screen.getByLabelText('الرقم القومي للأم'),{target:{value:'٣٢٠٠١٠٢٢١٣٤٥٦٨'}});
  expect(screen.getByLabelText('تاريخ ميلاد الأم')).toHaveValue('2020-01-02');
- expect(screen.getByLabelText('نوع الأم')).toHaveValue('female');
- expect(screen.getByText('المحافظة الظاهرة في الرقم: الجيزة (للمراجعة بس)')).toBeVisible();
- expect(screen.getByText(new RegExp(`العمر: ${new Intl.NumberFormat('ar-EG').format(ageOn('2020-01-02',cairoToday()))} سنة`))).toBeVisible();
- fireEvent.change(screen.getByLabelText('نوع الأم'),{target:{value:'male'}});
- expect(screen.getByLabelText('نوع الأم')).toHaveValue('male');
+ expect(screen.getByLabelText('النوع للأم (ذكر أو أنثى)')).toHaveValue('female');
+ expect(screen.getByText('المحافظة اللي باينة من الرقم القومي: الجيزة (للمراجعة بس)')).toBeVisible();
+ expect(screen.getByText(new RegExp(`سن الأم: ${new Intl.NumberFormat('ar-EG').format(ageOn('2020-01-02',cairoToday()))} سنة`))).toBeVisible();
+ fireEvent.change(screen.getByLabelText('النوع للأم (ذكر أو أنثى)'),{target:{value:'male'}});
+ expect(screen.getByLabelText('النوع للأم (ذكر أو أنثى)')).toHaveValue('male');
+});
+
+it('saves a scanned mothers card expiry beside her national ID',async()=>{
+ render(<CaseIntakeForm onSaved={vi.fn()}/>);
+ fireEvent.click(screen.getByLabelText('أرملة'));
+ fireEvent.change(screen.getByLabelText('اسم الأم (مطلوب)'),{target:{value:'منى'}});
+ fireEvent.change(screen.getByLabelText('رقم الموبايل 1'),{target:{value:'01012345678'}});
+ fireEvent.click(screen.getByRole('button',{name:'قراءة رقم قومي وانتهاء تجريبي'}));
+ fireEvent.change(screen.getByLabelText('دي بطاقة مين؟'),{target:{value:'mother'}});
+ fireEvent.click(screen.getByRole('button',{name:'استخدم البيانات المقروءة'}));
+ expect(screen.getByLabelText('الرقم القومي للأم')).toHaveValue('29001011234567');
+ expect(screen.getByLabelText('انتهاء بطاقة الأم')).toHaveValue('2027-12-01');
+ fireEvent.click(screen.getByRole('button',{name:'حفظ ملف الحالة'}));
+ await waitFor(()=>expect(saveCaseFile).toHaveBeenCalledWith(null,expect.objectContaining({motherNationalId:'29001011234567',motherNationalIdExpiresOn:'2027-12-01'})));
+});
+
+it('requires the matching National ID before saving a mothers card expiry date',async()=>{
+ render(<CaseIntakeForm onSaved={vi.fn()}/>);
+ fireEvent.click(screen.getByLabelText('أرملة'));
+ fireEvent.change(screen.getByLabelText('اسم الأم (مطلوب)'),{target:{value:'منى'}});
+ fireEvent.change(screen.getByLabelText('رقم الموبايل 1'),{target:{value:'01012345678'}});
+ fireEvent.change(screen.getByLabelText('انتهاء بطاقة الأم'),{target:{value:'2027-12-01'}});
+ fireEvent.click(screen.getByRole('button',{name:'حفظ ملف الحالة'}));
+ expect(await screen.findByRole('alert')).toHaveTextContent('سجّل رقم قومي صحيح قبل تاريخ انتهاء البطاقة لكل شخص.');
+ expect(saveCaseFile).not.toHaveBeenCalled();
+});
+
+it('clears saved expiry dates when a parent or guardian National ID changes',()=>{
+ const initial={id:'expiry-edit',code:'F-0001',archived_at:null,phone:'01012345678',phone_2:null,phone_3:null,
+  father_name:null,mother_name:'منى',contact_name:'مسؤولة',contact_relationship:'الأم',contact_age:40,
+  national_id:'28001011234567',national_id_expires_on:'2027-02-01',mother_national_id:'29001011234567',mother_national_id_expires_on:'2027-01-01',
+  notes:'',address:null,monthly_income:null,health_condition:null,branch_area:null,file_status:'نشط' as const,status_reason:null,
+  case_file_categories:[{category:'أخرى' as const}]};
+ render(<CaseIntakeForm initial={initial} onSaved={vi.fn()}/>);
+ fireEvent.change(screen.getByLabelText('الرقم القومي للأم'),{target:{value:'29001011234568'}});
+ fireEvent.change(screen.getByLabelText('الرقم القومي للمسؤول'),{target:{value:'28001011234568'}});
+ expect(screen.getByLabelText('انتهاء بطاقة الأم')).toHaveValue('');
+ expect(screen.getByLabelText('انتهاء البطاقة (اختياري)')).toHaveValue('');
 });
 
 it('keeps corrected parent demographics when the saved ID is entered again',()=>{
  const initial={id:'f1',code:'F-0001',archived_at:null,phone:'01012345678',phone_2:null,phone_3:null,father_name:null,mother_name:'منى',father_national_id:null,mother_national_id:'29001011234567',father_date_of_birth:null,father_gender:null,mother_date_of_birth:'1990-01-01',mother_gender:'female' as const,contact_name:null,contact_relationship:null,contact_age:null,national_id:null,national_id_expires_on:null,notes:'',address:null,monthly_income:null,health_condition:null,branch_area:null,file_status:'نشط' as const,status_reason:null,case_file_categories:[{category:'أرملة' as const}]};
  render(<CaseIntakeForm initial={initial} onSaved={vi.fn()}/>);
  fireEvent.change(screen.getByLabelText('تاريخ ميلاد الأم'),{target:{value:'2001-02-03'}});
- fireEvent.change(screen.getByLabelText('نوع الأم'),{target:{value:'male'}});
+ fireEvent.change(screen.getByLabelText('النوع للأم (ذكر أو أنثى)'),{target:{value:'male'}});
  fireEvent.change(screen.getByLabelText('الرقم القومي للأم'),{target:{value:'290'}});
  fireEvent.change(screen.getByLabelText('الرقم القومي للأم'),{target:{value:'29001011234567'}});
  expect(screen.getByLabelText('تاريخ ميلاد الأم')).toHaveValue('2001-02-03');
- expect(screen.getByLabelText('نوع الأم')).toHaveValue('male');
+ expect(screen.getByLabelText('النوع للأم (ذكر أو أنثى)')).toHaveValue('male');
 });
 
-it('fills the guardian age, birth date, and gender from the case ID',()=>{
+it('fills the responsible adult birth date, age, and gender from the case ID',()=>{
  render(<CaseIntakeForm onSaved={vi.fn()}/>);
- fireEvent.change(screen.getByLabelText('الرقم القومي (اختياري)'),{target:{value:'29001011234577'}});
+ fireEvent.change(screen.getByLabelText('الرقم القومي للمسؤول'),{target:{value:'29001011234577'}});
  expect(screen.getByLabelText('تاريخ ميلاد المسؤول')).toHaveValue('1990-01-01');
- expect(screen.getByLabelText('نوع المسؤول')).toHaveValue('male');
- expect(screen.getByLabelText('سن المسؤول (اختياري)')).toHaveValue(ageOn('1990-01-01',cairoToday()));
+ expect(screen.getByLabelText('النوع للمسؤول (ذكر أو أنثى)')).toHaveValue('male');
+ expect(screen.getByText(new RegExp(`سن المسؤول: ${new Intl.NumberFormat('ar-EG').format(ageOn('1990-01-01',cairoToday()))} سنة`))).toBeVisible();
 });
 
 it('lets staff assign a scanned ID to a household person before applying it',()=>{
@@ -106,34 +174,34 @@ it('lets staff assign a scanned ID to a household person before applying it',()=
  expect(screen.getByLabelText('دي بطاقة مين؟')).toBeVisible();
  fireEvent.change(screen.getByLabelText('دي بطاقة مين؟'),{target:{value:'guardian'}});
  fireEvent.click(screen.getByRole('button',{name:'استخدم البيانات المقروءة'}));
- expect(screen.getByLabelText('الرقم القومي (اختياري)')).toHaveValue('32402291234577');
+ expect(screen.getByLabelText('الرقم القومي للمسؤول')).toHaveValue('32402291234577');
  expect(screen.getByLabelText('تاريخ ميلاد المسؤول')).toHaveValue('2024-02-29');
- expect(screen.getByLabelText('نوع المسؤول')).toHaveValue('male');
+ expect(screen.getByLabelText('النوع للمسؤول (ذكر أو أنثى)')).toHaveValue('male');
 });
 
-it('restores father name and national ID fields when widow category is removed without losing their values',()=>{
+it('clears hidden father details when a file is switched to widow',()=>{
  render(<CaseIntakeForm onSaved={vi.fn()}/>);
  fireEvent.change(screen.getByLabelText('اسم الأب (اختياري)'),{target:{value:'محمود'}});
  fireEvent.change(screen.getByLabelText('الرقم القومي للأب'),{target:{value:'٢٨٠٠١٠١١٢٣٤٥٦٧'}});
  fireEvent.click(screen.getByLabelText('أرملة'));
  expect(screen.queryByLabelText('اسم الأب (اختياري)')).not.toBeInTheDocument();
  fireEvent.click(screen.getByLabelText('أرملة'));
- expect(screen.getByLabelText('اسم الأب (اختياري)')).toHaveValue('محمود');
- expect(screen.getByLabelText('الرقم القومي للأب')).toHaveValue('28001011234567');
+ expect(screen.getByLabelText('اسم الأب (اختياري)')).toHaveValue('');
+ expect(screen.getByLabelText('الرقم القومي للأب')).toHaveValue('');
 });
 
-it.each(['أرملة', 'هجر', 'مطلقة'])('hides the whole guardian section for %s and restores entered values when removed', (category) => {
+it.each(['أرملة', 'هجر', 'مطلقة'])('hides and clears the guardian section for %s', (category) => {
  render(<CaseIntakeForm onSaved={vi.fn()}/>);
  fireEvent.change(screen.getByLabelText('اسم المسؤول'), {target:{value:'الجدة'}});
  fireEvent.change(screen.getByLabelText('صلة القرابة'), {target:{value:'الجدة'}});
  fireEvent.click(screen.getByLabelText(category));
  expect(screen.queryByLabelText('اسم المسؤول')).not.toBeInTheDocument();
  expect(screen.queryByLabelText('صلة القرابة')).not.toBeInTheDocument();
- expect(screen.queryByLabelText('سن المسؤول (اختياري)')).not.toBeInTheDocument();
- expect(screen.queryByLabelText('الرقم القومي (اختياري)')).not.toBeInTheDocument();
+ expect(screen.queryByLabelText('تاريخ ميلاد المسؤول')).not.toBeInTheDocument();
+ expect(screen.queryByLabelText('الرقم القومي للمسؤول')).not.toBeInTheDocument();
  fireEvent.click(screen.getByLabelText(category));
- expect(screen.getByLabelText('اسم المسؤول')).toHaveValue('الجدة');
- expect(screen.getByLabelText('صلة القرابة')).toHaveValue('الجدة');
+ expect(screen.getByLabelText('اسم المسؤول')).toHaveValue('');
+ expect(screen.getByLabelText('صلة القرابة')).toHaveValue('');
 });
 
 it('saves employment status and shows work type only for employed parents',async()=>{
@@ -144,6 +212,7 @@ it('saves employment status and shows work type only for employed parents',async
  expect(screen.getByLabelText('نوع عمل الأم')).toBeVisible();
  fireEvent.change(screen.getByLabelText('نوع عمل الأم'),{target:{value:'خياطة'}});
  fireEvent.change(screen.getByLabelText('رقم الموبايل 1'),{target:{value:'01012345678'}});
+ enterAdultMotherId();
  fireEvent.click(screen.getByRole('button',{name:'حفظ ملف الحالة'}));
  await waitFor(()=>expect(saveCaseFile).toHaveBeenCalledWith(null,expect.objectContaining({motherEmploymentStatus:'يعمل',motherOccupation:'خياطة'})));
  fireEvent.change(screen.getByLabelText('حالة عمل الأم'),{target:{value:'طفلة'}});
@@ -164,6 +233,7 @@ it('requires at least one phone and accepts digits only with the correct lengths
  expect(await screen.findByRole('alert')).toHaveTextContent('رقم الموبايل لازم يكون ١١ رقم');
  fireEvent.change(screen.getByLabelText('رقم المنزل'),{target:{value:'2233445566'}});
  fireEvent.change(screen.getByLabelText('رقم الموبايل 2'),{target:{value:''}});
+ enterAdultMotherId();
  fireEvent.click(screen.getByRole('button',{name:'حفظ ملف الحالة'}));
  await waitFor(()=>expect(saveCaseFile).toHaveBeenCalledWith(null,expect.objectContaining({phones:['01012345678','','2233445566']})));
 });
@@ -206,6 +276,16 @@ it('preserves a saved branch missing from the shared branch list',async()=>{
  expect(select).toHaveTextContent('فرع قديم (فرع محفوظ)');
 });
 
+it('requires one adult national ID before it saves a case',async()=>{
+ render(<CaseIntakeForm onSaved={vi.fn()} />);
+ fireEvent.click(screen.getByLabelText('عجز أو مرض'));
+ fireEvent.change(screen.getByLabelText('اسم الأم (مطلوب)'),{target:{value:'منى'}});
+ fireEvent.change(screen.getByLabelText('رقم الموبايل 1'),{target:{value:'01012345678'}});
+ fireEvent.click(screen.getByRole('button',{name:'حفظ ملف الحالة'}));
+ expect(await screen.findByRole('alert')).toHaveTextContent('لازم تسجل رقم قومي صحيح لحد بالغ');
+ expect(vi.mocked(saveCaseFile)).not.toHaveBeenCalled();
+});
+
 it('allows digits only in monthly income',async()=>{
  render(<CaseIntakeForm onSaved={vi.fn()}/>);
  const income=screen.getByLabelText('الدخل الشهري بالجنيه');
@@ -225,6 +305,7 @@ it('saves a case review date and only calculates temporary per-person net income
  expect(screen.getByText(/سجّل أفراد الأسرة الأول/)).toBeVisible();
  expect(screen.getByText(/مش بتتسجل/)).toBeVisible();
  fireEvent.change(screen.getByLabelText('رقم الموبايل 1'),{target:{value:'01012345678'}});
+ enterAdultMotherId();
  fireEvent.click(screen.getByRole('button',{name:'حفظ ملف الحالة'}));
  await waitFor(()=>expect(saveCaseFile).toHaveBeenCalledWith(null,expect.objectContaining({nextReviewDate:'2026-12-01',monthlyIncome:5000})));
  expect(vi.mocked(saveCaseFile).mock.calls[0]?.[1]).not.toHaveProperty('fixedExpenses');
@@ -263,6 +344,7 @@ it('requires a category and makes a reason mandatory for hold or rejection', asy
   expect(screen.getByLabelText('سبب الرفض')).toBeRequired();
   fireEvent.change(screen.getByLabelText('سبب الرفض'), { target: { value: 'بيانات ناقصة' } });
   fireEvent.change(screen.getByLabelText('رقم الموبايل 1'), { target: { value: '01012345678' } });
+  enterAdultMotherId();
   fireEvent.click(screen.getByRole('button', { name: 'حفظ ملف الحالة' }));
   await waitFor(() => expect(saveCaseFile).toHaveBeenCalledWith(null, expect.objectContaining({ fileStatus:'مرفوض',statusReason:'بيانات ناقصة' })));
 });
@@ -273,15 +355,17 @@ it('edits the current file instead of creating a second one', async () => {
   fireEvent.change(screen.getByLabelText('حالة الملف'), { target: { value: 'مرفوض' } });
   fireEvent.change(screen.getByLabelText('سبب الرفض'), { target: { value: 'مستند ناقص' } });
   fireEvent.change(screen.getByLabelText('رقم الموبايل 1'), { target: { value: '01012345678' } });
+  enterAdultMotherId();
   fireEvent.click(screen.getByRole('button', { name: 'حفظ التعديلات' }));
-  await waitFor(() => expect(saveCaseFile).toHaveBeenCalledWith('f1', expect.objectContaining({ fileStatus:'مرفوض',statusReason:'مستند ناقص',categories:['يتيم الأب'] })));
+  await waitFor(() => expect(saveCaseFile).toHaveBeenCalledWith('f1', expect.objectContaining({ fileStatus:'مرفوض',statusReason:'مستند ناقص',categories:[] })));
   expect(onSaved).toHaveBeenCalledWith('file-1');
 });
 
 it('shows the retired maternal orphan label as historical and does not submit it as a new choice', async () => {
   const initial = { id:'f1',code:'F-0001',archived_at:null,phone:'01012345678',phone_2:null,phone_3:null,father_name:null,mother_name:'منى',contact_name:null,contact_relationship:null,contact_age:null,national_id:null,national_id_expires_on:null,notes:'',address:null,monthly_income:null,health_condition:null,branch_area:null,file_status:'نشط' as const,status_reason:null,case_file_categories:[{category:'يتيم الأم' as const}] };
   render(<CaseIntakeForm initial={initial} onSaved={vi.fn()} />);
-  expect(screen.getByText('تصنيف قديم محفوظ: يتيم الأم')).toBeVisible();
+  expect(screen.getByText('نوع حالة قديم محفوظ: يتيم الأم')).toBeVisible();
+  enterAdultMotherId();
   fireEvent.click(screen.getByRole('button', {name:'حفظ التعديلات'}));
   await waitFor(() => expect(saveCaseFile).toHaveBeenCalledWith('f1', expect.objectContaining({categories:[]})));
 });
@@ -289,8 +373,9 @@ it('shows the retired maternal orphan label as historical and does not submit it
 it('keeps removed historical categories visible but never resubmits them as new choices', async () => {
   const initial = { id:'f1',code:'F-0001',archived_at:null,phone:null,phone_2:null,phone_3:null,father_name:null,mother_name:'منى',contact_name:null,contact_relationship:null,contact_age:null,national_id:null,national_id_expires_on:null,notes:'',address:null,monthly_income:null,health_condition:null,branch_area:null,file_status:'نشط' as const,status_reason:null,case_file_categories:[{category:'وفاة' as const},{category:'أرملة' as const}] };
   render(<CaseIntakeForm initial={initial} onSaved={vi.fn()} />);
-  expect(screen.getByText('تصنيف قديم محفوظ: وفاة')).toBeVisible();
+  expect(screen.getByText('نوع حالة قديم محفوظ: وفاة')).toBeVisible();
   fireEvent.change(screen.getByLabelText('رقم الموبايل 1'),{target:{value:'01012345678'}});
+  enterAdultMotherId();
   fireEvent.click(screen.getByRole('button', { name: 'حفظ التعديلات' }));
   await waitFor(() => expect(saveCaseFile).toHaveBeenCalledWith('f1', expect.objectContaining({ categories:['أرملة'] })));
 });

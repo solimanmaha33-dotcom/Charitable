@@ -17,11 +17,11 @@ const staff: StaffProfile = {
 beforeEach(() => {
   counts.caseFiles.mockResolvedValue(3);
   counts.fileRows.mockResolvedValue([
-    { id:'f1',code:'F-1',father_name:'أب',mother_name:'أم',case_file_categories:[{category:'يتيم الأب'}] },
+    { id:'f1',code:'F-1',father_name:'أب',mother_name:'أم',case_file_categories:[] },
     { id:'f2',code:'F-2',father_name:'أب آخر',mother_name:'أم أخرى',case_file_categories:[{category:'أرملة'}] },
   ]);
   counts.members.mockResolvedValue([
-    { family_id: 'f1', person_id: 'p1', relationship: 'ابن', people: { name: 'علي', gender: 'male', date_of_birth: '2018-01-01' } },
+    { family_id: 'f1', person_id: 'p1', relationship: 'ابن', father_status:'يتيم الأب', people: { name: 'علي', gender: 'male', date_of_birth: '2018-01-01' } },
     { family_id: 'f2', person_id: 'p2', relationship: 'بنت', people: { name: 'سلمى', gender: 'female', date_of_birth: '2019-01-01' } },
   ]);
   counts.donations.mockResolvedValue(2);
@@ -94,7 +94,7 @@ describe('home workspace', () => {
   it('does not turn a failed count request into a zero total', async () => {
     counts.caseFiles.mockRejectedValueOnce(new Error('offline'));
     render(<MemoryRouter><HomePage staff={staff} /></MemoryRouter>);
-    expect(await screen.findByTestId('summary-cases')).toHaveTextContent('تعذّر التحميل');
+    expect(await screen.findByTestId('summary-cases')).toHaveTextContent('ماقدرناش نحمّل');
   });
 
   it('shows only donation actions when the employee can only manage donations', () => {

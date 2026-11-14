@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
+import { createSyntheticCaseFile } from './caseFixtures';
 
 test('general manager archives and restores a case without losing its records or sponsorship history', async ({ page }) => {
   const status=JSON.parse(execFileSync('npx',['supabase','status','-o','json'],{encoding:'utf8',stdio:['pipe','pipe','pipe']}));
@@ -14,9 +15,9 @@ test('general manager archives and restores a case without losing its records or
   try {
     const created=await admin.auth.admin.createUser({email,password,email_confirm:true});if(created.error||!created.data.user)throw created.error;employee=created.data.user.id;
     sql(`insert into public.employees(id,employee_code,display_name,role) values ('${employee}','${employeeCode}','Synthetic general manager','general_manager'); insert into private.employee_auth(employee_id,auth_user_id) values ('${employee}','${employee}');`);
-    const saved=await admin.from('families').insert({name:'',phone:'01010000001',father_name:'أب أرشيف',mother_name:`أم أرشيف ${id.slice(0,8)}`,notes:'سجل محفوظ للاختبار'}).select('id,code').single();if(saved.error)throw saved.error;caseFile=saved.data.id;
+    const saved=await createSyntheticCaseFile((fileId)=>admin.from('families').select('id,code').eq('id',fileId).single(),sql,{name:'',phone:'01010000001',motherName:`أم أرشيف ${id.slice(0,8)}`});caseFile=saved.id;
     const personRow=await admin.from('people').insert({id:person,name:'طفل للاختبار',gender:'male',date_of_birth:'2018-01-01'});if(personRow.error)throw personRow.error;
-    const memberRow=await admin.from('family_members').insert({family_id:caseFile,person_id:person,relationship:'ابن'});if(memberRow.error)throw memberRow.error;
+    const memberRow=await admin.from('family_members').insert({family_id:caseFile,person_id:person,relationship:'ابن',father_status:'الأب موجود'});if(memberRow.error)throw memberRow.error;
     const historyRow=await admin.from('case_file_history').insert({family_id:caseFile,legacy_case_id:history,notes:'تاريخ محفوظ للاختبار',created_at:'2025-01-01T00:00:00Z'});if(historyRow.error)throw historyRow.error;
     storagePath=`${caseFile}/${attachment}`;
     const uploaded=await admin.storage.from('case-files').upload(storagePath,readFileSync('tests/fixtures/arabic-sample.png'),{contentType:'image/png'});if(uploaded.error)throw uploaded.error;
@@ -32,21 +33,21 @@ test('general manager archives and restores a case without losing its records or
     await page.route('**/api/auth/login',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({session:signedIn.data.session})}));
     await page.goto('/login');await page.getByLabel('كود الموظف').fill(employeeCode);await page.getByLabel('كلمة السر').fill(password);await page.getByRole('button',{name:'دخول',exact:true}).click();
     await expect(page.getByRole('button',{name:'تسجيل الخروج'})).toBeVisible();
-    await page.goto(`/cases/${caseFile}`);await expect(page.getByRole('heading',{name:new RegExp(saved.data.code)})).toBeVisible();
+    await page.goto(`/cases/${caseFile}`);await expect(page.getByRole('heading',{name:new RegExp(saved.code)})).toBeVisible();
     await page.getByRole('button',{name:'حذف الحالة'}).click();
-    const confirmation=page.getByRole('alertdialog');await expect(confirmation).toContainText(saved.data.code);await expect(confirmation).toContainText('يقدر يسترجعها');
+    const confirmation=page.getByRole('alertdialog');await expect(confirmation).toContainText(saved.code);await expect(confirmation).toContainText('يقدر يسترجعها');
     await confirmation.getByRole('button',{name:'تأكيد الأرشفة'}).click();await expect(page).toHaveURL(/\/cases$/);
-    await expect(page.getByRole('link',{name:new RegExp(saved.data.code)})).toHaveCount(0);
-    await page.goto('/donations');const sponsoredCase=page.locator('.sponsorship-record').filter({hasText:saved.data.code});
+    await expect(page.getByRole('link',{name:new RegExp(saved.code)})).toHaveCount(0);
+    await page.goto('/donations');const sponsoredCase=page.locator('.sponsorship-record').filter({hasText:saved.code});
     await expect(sponsoredCase.first().getByText('ملف الحالة مؤرشف')).toBeVisible();
     await expect(sponsoredCase.getByTestId('installment-2026-01-01')).toContainText('مستلمة');
 
     await page.setViewportSize({width:360,height:800});await page.goto('/cases/archive');
-    await expect(page.getByRole('heading',{name:'الحالات المؤرشفة'})).toBeVisible();await expect(page.getByText(saved.data.code)).toBeVisible();
+    await expect(page.getByRole('heading',{name:'الحالات المؤرشفة'})).toBeVisible();await expect(page.getByText(saved.code)).toBeVisible();
     expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(360);
-    await page.getByRole('button',{name:`استعادة الحالة ${saved.data.code}`}).click();
-    await expect(page.getByText(`تم استرجاع الحالة ${saved.data.code}.`)).toBeVisible();
-    await page.goto('/cases');await expect(page.getByRole('link',{name:new RegExp(saved.data.code)})).toBeVisible();
+    await page.getByRole('button',{name:`استعادة الحالة ${saved.code}`}).click();
+    await expect(page.getByText(`رجّعنا الحالة ${saved.code} لقائمة الحالات.`)).toBeVisible();
+    await page.goto('/cases');await expect(page.getByRole('link',{name:new RegExp(saved.code)})).toBeVisible();
 
     const root=await admin.from('families').select('archived_at').eq('id',caseFile).single();expect(root.data?.archived_at).toBeNull();
     expect((await admin.from('family_members').select('person_id').eq('family_id',caseFile)).data).toHaveLength(1);

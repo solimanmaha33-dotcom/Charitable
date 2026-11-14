@@ -6,7 +6,7 @@ const state = vi.hoisted(() => ({
   rpc: [] as Array<{ name: string; args: Record<string, unknown> }>,
   rows: {
     families: [{ id: 'file-1', code: 'F-0001', archived_at: null, father_name: 'أب', mother_name: 'أم', phone: '0100', phone_2: '0101', phone_3: null, address: 'عنوان', monthly_income: 1200, health_condition: 'متابعة', branch_area: 'الفرع', file_status: 'تحت المراجعة', status_reason: null, case_file_categories: [{ category: 'هجر' }] }],
-    case_attachments: [{ id: 'att-1', family_id: 'file-1', storage_path: 'file-1/path', file_name: 'مستند.pdf', mime_type: 'application/pdf', size_bytes: 10, uploaded_by: 'staff-1', extracted_text: 'نص عربي', created_at: '2026-11-09' }],
+    case_attachments: [{ id: 'att-1', family_id: 'file-1', storage_path: 'file-1/path', file_name: 'مستند.pdf', mime_type: 'application/pdf', size_bytes: 10, uploaded_by: 'staff-1', extracted_text: 'نص عربي', created_at: '2026-11-09',document_type:'general' }],
   } as Record<string, Array<Record<string, unknown>>>,
 }));
 
@@ -42,7 +42,7 @@ it('lists and loads a single case file with categories and no legacy family name
 it('saves the complete profile and categories through one atomic RPC', async () => {
   const id = await saveCaseFile(null, {
     fatherName: 'أب', motherName: 'أم', contactName: 'المسؤولة', contactRelationship: 'الأم', contactAge: 40,
-    nationalId: '29001011234567', nationalIdExpiresOn: '2027-01-01', phones: ['01012345678', '01098765432', '1234567890'], notes: 'ملاحظات',
+    nationalId: '29001011234567', nationalIdExpiresOn: '2027-01-01', fatherNationalId: '28001011234567', phones: ['01012345678', '01098765432', '1234567890'], notes: 'ملاحظات',
     address: 'عنوان', monthlyIncome: 1200, healthCondition: 'متابعة', branchArea: 'الفرع',
     fileStatus: 'موقوف', statusReason: 'مراجعة الأوراق', categories: ['هجر'],motherEmploymentStatus:'يعمل',motherOccupation:'خياطة',
   });
@@ -50,11 +50,11 @@ it('saves the complete profile and categories through one atomic RPC', async () 
   expect(state.rpc).toEqual([{ name: 'save_case_file', args: {
     p_id: null,
     p_profile: {
-      father_name: 'أب', mother_name: 'أم', contact_name: 'المسؤولة', contact_relationship: 'الأم', contact_age: 40,
-      national_id: '29001011234567', national_id_expires_on: '2027-01-01', phone: '01012345678', phone_2: '01098765432', phone_3: '1234567890',
+      father_name: 'أب', mother_name: 'أم', contact_name: null, contact_relationship: null, contact_age: null,
+      national_id: null, national_id_expires_on: null, phone: '01012345678', phone_2: '01098765432', phone_3: '1234567890',
       notes: 'ملاحظات', address: 'عنوان', monthly_income: 1200, health_condition: 'متابعة', branch_area: 'الفرع',
       file_status: 'موقوف', status_reason: 'مراجعة الأوراق', next_review_date: null,
-      father_national_id: null, mother_national_id: null, father_health_condition: null, mother_health_condition: null,
+      father_national_id: '28001011234567', mother_national_id: null, father_national_id_expires_on: null, mother_national_id_expires_on: null, father_health_condition: null, mother_health_condition: null,
       father_health_status: null, mother_health_status: null,
       father_employment_status: null, mother_employment_status: 'يعمل', father_occupation: null, mother_occupation: 'خياطة',
       father_date_of_birth: null, father_gender: null, mother_date_of_birth: null, mother_gender: null, contact_date_of_birth: null, contact_gender: null,
@@ -63,13 +63,23 @@ it('saves the complete profile and categories through one atomic RPC', async () 
   } }]);
 });
 
+it('does not save a card expiry without a valid matching identity', async () => {
+  await expect(saveCaseFile(null, {
+    fatherName: '', motherName: 'أم', contactName: '', contactRelationship: '', contactAge: null,
+    nationalId: '29001011234567', nationalIdExpiresOn: '', phones: ['01012345678'], notes: '', address: '',
+    monthlyIncome: null, healthCondition: '', branchArea: '', fileStatus: 'نشط', statusReason: '', categories: ['أخرى'],
+    motherNationalIdExpiresOn: '2027-01-01',
+  })).rejects.toThrow('سجّل رقم قومي صحيح قبل تاريخ انتهاء البطاقة لكل شخص.');
+  expect(state.rpc).toHaveLength(0);
+});
+
 it('requires a reason for a held or rejected file before saving', async () => {
   const input = {
     fatherName: '', motherName: 'أم', contactName: '', contactRelationship: '', contactAge: null,
     nationalId: '', nationalIdExpiresOn: '', phones: [], notes: '', address: '', monthlyIncome: null,
     healthCondition: '', branchArea: '', fileStatus: 'مرفوض' as const, statusReason: '   ', categories: [],
   };
-  await expect(saveCaseFile(null, input)).rejects.toThrow('سبب الإيقاف أو الرفض مطلوب');
+  await expect(saveCaseFile(null, input)).rejects.toThrow('اكتب سبب الإيقاف أو الرفض');
   expect(state.rpc).toHaveLength(0);
 });
 

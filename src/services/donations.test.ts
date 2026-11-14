@@ -15,7 +15,7 @@ it('counts only active donations without loading donation records', async () => 
 it('fails rather than reporting zero when the database omits the count', async () => {
   query.select.mockImplementationOnce(() => query);
   query.is.mockResolvedValueOnce({ count: null, error: null });
-  await expect(countDonations()).rejects.toThrow('تعذّر تحميل العدد');
+  await expect(countDonations()).rejects.toThrow('ماقدرناش نحمّل العدد');
 });
 
 it('records cancellations and voids only with a clear reason', async () => {

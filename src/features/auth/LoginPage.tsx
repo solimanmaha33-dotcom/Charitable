@@ -18,7 +18,7 @@ export function LoginPage({ onSignedIn }: { onSignedIn: () => void }) {
       onSignedIn();
       navigate('/');
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'تعذّر تسجيل الدخول. راجع الكود وكلمة السر وحاول تاني.');
+      setError(caught instanceof Error ? caught.message : 'الكود أو كلمة السر مش مظبوطين. راجعهم وجرب تاني.');
     } finally {
       setPending(false);
     }

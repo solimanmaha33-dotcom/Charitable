@@ -22,7 +22,8 @@ insert into public.employee_permissions(employee_id,cases_read,cases_write) valu
  ('ac000000-0000-0000-0000-000000000002',true,true),
  ('ac000000-0000-0000-0000-000000000003',true,true);
 
-insert into public.families(id,name,mother_name,phone) values ('ad000000-0000-0000-0000-000000000001','','أم أرشيف','01012345678');
+select set_config('request.jwt.claims','{"sub":"aa000000-0000-0000-0000-000000000002","session_id":"ab000000-0000-0000-0000-000000000002","role":"authenticated"}',true);
+insert into public.families(id,name,mother_name,phone,mother_national_id,mother_date_of_birth) values ('ad000000-0000-0000-0000-000000000001','','أم أرشيف','01012345678','29001011234567','1990-01-01');
 insert into public.people(id,name) values ('ae000000-0000-0000-0000-000000000001','طفل أرشيف');
 insert into public.family_members(family_id,person_id,relationship) values
  ('ad000000-0000-0000-0000-000000000001','ae000000-0000-0000-0000-000000000001','ابن');
@@ -78,7 +79,7 @@ select is((select count(*)::int from private.case_archive_audit where family_id=
 
 select set_config('request.jwt.claims','{"sub":"aa000000-0000-0000-0000-000000000002","session_id":"ab000000-0000-0000-0000-000000000002","role":"authenticated"}',true);
 set local role authenticated;
-select throws_ok($$select public.save_case_file('ad000000-0000-0000-0000-000000000001','{"mother_name":"تعديل بعد الأرشفة"}'::jsonb,array['هجر'])$$,'42501',null,'archived case profile cannot be edited');
+select throws_ok($$select public.save_case_file('ad000000-0000-0000-0000-000000000001','{"mother_name":"تعديل بعد الأرشفة","mother_national_id":"29001011234567","mother_date_of_birth":"1990-01-01"}'::jsonb,array['هجر'])$$,'42501',null,'archived case profile cannot be edited');
 select throws_ok($$select public.add_family_member_profile('ad000000-0000-0000-0000-000000000001','فرد بعد الأرشفة','ابن',null,null)$$,'42501',null,'archived case cannot receive new members');
 select throws_ok($$update public.people set date_of_birth='2010-01-01' where id='ae000000-0000-0000-0000-000000000001'$$,'42501',null,'members of archived cases cannot be edited');
 reset role;

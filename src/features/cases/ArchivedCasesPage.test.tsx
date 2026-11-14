@@ -21,10 +21,10 @@ it('shows archived case files and restores a selected file', async () => {
   render(<MemoryRouter><ArchivedCasesPage /></MemoryRouter>);
   expect(await screen.findByRole('heading',{name:'الحالات المؤرشفة'})).toBeVisible();
   expect(screen.getByText('F-0042')).toBeVisible();
-  expect(screen.getByText(/تم الأرشفة/)).toBeVisible();
+  expect(screen.getByText(/اتحفظت في الأرشيف يوم/)).toBeVisible();
   fireEvent.click(screen.getByRole('button',{name:'استعادة الحالة F-0042'}));
   await waitFor(()=>expect(restoreCaseFile).toHaveBeenCalledWith('f-archive'));
-  expect(await screen.findByText('تم استرجاع الحالة F-0042.')).toBeVisible();
+  expect(await screen.findByText('رجّعنا الحالة F-0042 لقائمة الحالات.')).toBeVisible();
   expect(screen.queryByText('F-0042')).not.toBeInTheDocument();
 });
 

@@ -36,13 +36,13 @@ export async function signIn(
       if (result && typeof result === 'object' && 'error' in result && typeof result.error === 'string')
         throw new Error(result.error);
     }
-    throw new Error('تعذّر تسجيل الدخول. راجع الكود وكلمة السر وحاول تاني.');
+    throw new Error('الكود أو كلمة السر مش مظبوطين. راجعهم وجرب تاني.');
   }
   const { session } = await response.json();
   const supabase = getSupabase();
-  if (!supabase) throw new Error('تعذّر تسجيل الدخول.');
+  if (!supabase) throw new Error('فيه مشكلة في تسجيل الدخول. حاول تاني.');
   const { error } = await supabase.auth.setSession(session);
-  if (error) throw new Error('تعذّر تسجيل الدخول.');
+  if (error) throw new Error('فيه مشكلة في تسجيل الدخول. حاول تاني.');
 }
 export async function signOut(): Promise<void> {
   const supabase = getSupabase();
@@ -68,5 +68,5 @@ export async function signOut(): Promise<void> {
       // The local session is removed before the SDK tries to contact Auth.
     }
   }
-  if (requestFailed) throw new Error('تعذّر تسجيل الخروج من الخادم. تم إغلاق الجلسة على هذا الجهاز.');
+  if (requestFailed) throw new Error('خرجت من الجهاز ده، بس حصلت مشكلة في تسجيل الخروج من النظام.');
 }

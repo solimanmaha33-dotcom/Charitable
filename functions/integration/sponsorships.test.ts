@@ -1,6 +1,7 @@
 import {beforeAll,afterAll,it,expect,vi} from 'vitest';
 import {createClient,type SupabaseClient} from '@supabase/supabase-js';
 import {execFileSync} from 'node:child_process';
+import {createSyntheticCaseFile} from '../../tests/e2e/caseFixtures';
 import {receivePayment} from '../../src/services/donations';
 let admin:SupabaseClient,writer:SupabaseClient,reader:SupabaseClient;
 let familyId='',donorId='',sponsorshipId='',paymentId='';const users:string[]=[];
@@ -14,12 +15,12 @@ beforeAll(async()=>{
   sql(`insert into public.employees(id,employee_code,display_name) values('${id}','R${id.slice(0,8)}','Synthetic receipts'); insert into private.employee_auth values('${id}','${id}');insert into public.employee_permissions(employee_id,donations_read,donations_write,cases_read) values('${id}',true,${writable},true);`);
   const client=createClient(s.API_URL,s.ANON_KEY,{auth:{persistSession:false,autoRefreshToken:false}});const signed=await client.auth.signInWithPassword({email,password});if(signed.error)throw signed.error;if(writable)writer=client;else reader=client;
  }
- const f=await admin.from('families').insert({name:'أسرة اختبار استلام وهمية',mother_name:'أم وهمية',phone:'01012345678'}).select('id').single();if(f.error)throw f.error;familyId=f.data.id;
+ const f=await createSyntheticCaseFile((id)=>admin.from('families').select('id,code').eq('id',id).single(),sql,{name:'أسرة اختبار استلام وهمية',motherName:'أم وهمية',phone:'01012345678'});familyId=f.id;
  const d=await admin.from('donors').insert({name:'متبرع اختبار استلام وهمي'}).select('id').single();if(d.error)throw d.error;donorId=d.data.id;
  const sp=await admin.from('sponsorships').insert({family_id:familyId,donor_id:donorId,monthly_amount:450,start_date:'2024-01-31'}).select('id').single();if(sp.error)throw sp.error;sponsorshipId=sp.data.id;
 });
 afterAll(async()=>{
- if(sponsorshipId){await admin.from('sponsorship_payments').delete().eq('sponsorship_id',sponsorshipId);await admin.from('sponsorships').delete().eq('id',sponsorshipId);}if(donorId)await admin.from('donors').delete().eq('id',donorId);if(familyId)await admin.from('families').delete().eq('id',familyId);
+ if(familyId)sql(`begin; delete from public.sponsorship_payments where sponsorship_id in(select id from public.sponsorships where family_id='${familyId}'); delete from public.sponsorships where family_id='${familyId}'; delete from public.case_file_categories where family_id='${familyId}'; delete from public.families where id='${familyId}'; commit;`);if(donorId)await admin.from('donors').delete().eq('id',donorId);
  for(const id of users){sql(`delete from private.employee_auth where employee_id='${id}';delete from public.employees where id='${id}';`);await admin.auth.admin.deleteUser(id);}
 });
 it('read-only staff materialize January and February without a writer visit',async()=>{

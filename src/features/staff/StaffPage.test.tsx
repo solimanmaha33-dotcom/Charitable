@@ -42,7 +42,7 @@ it('on a conflict reloads current permissions and asks the manager to review',as
  vi.mocked(service.listStaff).mockResolvedValueOnce([row]).mockResolvedValue([{...row,permissions:{...permissions}}]);
  vi.mocked(service.updateStaffPermissions).mockRejectedValue(new service.StaffPermissionsConflict());
  render(<StaffPage role="manager"/>);const group=await screen.findByRole('group',{name:'موظف تجريبي'});fireEvent.click(within(group).getByLabelText('قراءة التبرعات'));fireEvent.click(within(group).getByRole('button',{name:'حفظ الصلاحيات'}));
- await waitFor(()=>expect(within(group).getByLabelText('قراءة الحالات')).not.toBeChecked());expect(within(group).getByLabelText('قراءة التبرعات')).not.toBeChecked();expect(within(group).getByRole('alert')).toHaveTextContent('تغيّرت الصلاحيات بواسطة شخص آخر');
+ await waitFor(()=>expect(within(group).getByLabelText('قراءة الحالات')).not.toBeChecked());expect(within(group).getByLabelText('قراءة التبرعات')).not.toBeChecked();expect(within(group).getByRole('alert')).toHaveTextContent('الصلاحيات اتغيّرت بواسطة شخص تاني');
 });
 
 it('disables permission edits until the save and refresh complete',async()=>{

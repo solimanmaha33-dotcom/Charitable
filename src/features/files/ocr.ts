@@ -15,7 +15,7 @@ export async function extractDocumentText(file: File): Promise<Extracted> {
  }
  try {
   if (file.type !== 'application/pdf') {
-   let dimensions; try { dimensions=imageSize(new Uint8Array(await file.arrayBuffer())); } catch { throw new Error('تعذّر قراءة أبعاد الصورة'); }
+   let dimensions; try { dimensions=imageSize(new Uint8Array(await file.arrayBuffer())); } catch { throw new Error('ماقدرناش نقرأ الصورة. جرّب صورة تانية.'); }
    if (!dimensions.width || !dimensions.height || dimensions.width*dimensions.height>20_000_000) throw new Error('أبعاد الصورة كبيرة جداً');
    return {pages:[{page:1,...await recognize(file)}],source:'ocr'};
   }
@@ -30,9 +30,9 @@ export async function extractDocumentText(file: File): Promise<Extracted> {
     if (text && !hasImage) pages.push({page:i,text,confidence:100});
     else {
      usedOcr=true; const viewport=page.getViewport({scale:2});
-     if (viewport.width * viewport.height > 20_000_000) throw new Error('أبعاد الصفحة كبيرة جداً');
+     if (viewport.width * viewport.height > 20_000_000) throw new Error('صفحة الـPDF كبيرة أوي. جرّب ملف تاني.');
      const canvas=document.createElement('canvas'); canvas.width=viewport.width; canvas.height=viewport.height;
-     const context=canvas.getContext('2d'); if(!context) throw new Error('تعذّر عرض الصفحة');
+     const context=canvas.getContext('2d'); if(!context) throw new Error('ماقدرناش نعرض الصفحة. جرّب ملف تاني.');
      await page.render({canvas,canvasContext:context,viewport}).promise;
      const result=await recognize(canvas); pages.push({page:i,text:text ? `${text}\n\n${result.text}` : result.text,confidence:result.confidence}); canvas.width=0; canvas.height=0;
     }

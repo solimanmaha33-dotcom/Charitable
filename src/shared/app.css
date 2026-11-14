@@ -272,6 +272,17 @@ fieldset label { display: inline-flex; align-items: center; gap: 8px; margin: 5p
 .family-contact-summary p, .family-detail-phones p { margin: 3px 0; }
 .family-notes { white-space: pre-wrap; overflow-wrap: anywhere; }
 .family-files-panel .form-help { color: var(--muted); }
+.social-research-status { display: flex; align-items: center; gap: 10px; margin-block: 12px; padding: 11px 13px; border: 1px solid var(--border); border-radius: 9px; }
+.social-research-missing { color: var(--warning-text); background: var(--warning-bg); }
+.social-research-present { color: var(--success-text); background: var(--success-bg); }
+.social-research-light { flex: 0 0 auto; width: 10px; height: 10px; border-radius: 50%; background: var(--warning-text); animation: social-research-pulse 2.4s ease-in-out infinite; }
+.social-research-present .social-research-light { background: var(--success-text); animation: none; }
+@keyframes social-research-pulse { 0%,100% { opacity: .45; box-shadow: 0 0 0 0 currentColor; } 50% { opacity: 1; box-shadow: 0 0 0 5px transparent; } }
+.monthly-aid-summary { display: grid; gap: 4px; margin-block: 12px; padding: 14px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface-soft); }
+.monthly-aid-summary span { font-size: 1.1rem; font-weight: 700; }
+.monthly-aid-summary small { color: var(--muted); }
+.print-signature-line { display: inline-block; width: min(150px,100%); min-height: 22px; border-bottom: 1px solid #52665a; }
+.member-edit-button { margin-block-start: 10px; }
 .family-file-row small { display: block; color: var(--muted); }
 .family-file-actions { display: inline-flex; flex-wrap: wrap; gap: 8px; }
 .family-file-upload { margin-block-start: 14px; }
@@ -412,5 +423,5 @@ img, iframe { max-width: 100%; }
   .association-stamp { display: grid; place-items: center; min-height: 112px; border: 1px dashed #728579; color: #50685a; text-align: center; }
 }
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
+  *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
 }

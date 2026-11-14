@@ -28,7 +28,7 @@ describe('Arabic application shell', () => {
   it('gives its content Arabic language, RTL direction, and a named navigation', () => {
     render(<MemoryRouter><AppShell><p>محتوى الصفحة</p></AppShell></MemoryRouter>);
     const main = screen.getByRole('main');
-    expect(main.closest('[lang="ar"][dir="rtl"]')).not.toBeNull();
+    expect(main.closest('[lang="ar-EG"][dir="rtl"]')).not.toBeNull();
     expect(screen.getByText('مرام الخير')).toBeVisible();
     expect(within(main).getByText('محتوى الصفحة')).toBeVisible();
     expect(screen.getByRole('img', { name: 'شعار جمعية مرام الخير' })).toHaveAttribute('src', '/brand/maram-logo.png');

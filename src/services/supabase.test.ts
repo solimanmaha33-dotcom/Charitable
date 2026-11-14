@@ -41,7 +41,7 @@ it.each(['network error', 'server error'] as const)(
       vi.stubGlobal('fetch', async () => Response.json({ error: 'failed' }, { status: 503 }));
     }
 
-    await expect(logout()).rejects.toThrow('تعذّر تسجيل الخروج');
+    await expect(logout()).rejects.toThrow('حصلت مشكلة في تسجيل الخروج من النظام');
     expect(localStorage.getItem(storageKey)).toBeNull();
     expect((await supabase.auth.getSession()).data.session).toBeNull();
   },

@@ -6,6 +6,8 @@ import { FilePicker } from '../files/FilePicker';
 import { CASE_CATEGORIES, hasConflictingCaseCategories, isCaseCategory, updateCaseCategorySelection, type CaseCategory } from './categories';
 import { HEALTH_STATUSES, type HealthStatus } from './healthStatus';
 import { normalizeEgyptianNationalIdInput, parseEgyptianNationalId, parseNationalIdScan } from './nationalIdScan';
+import { hasAdultCaseIdentity, hasValidNationalIdForExpiry } from './caseIdentity';
+import { hidesFatherFields, hidesGuardianFields as categoryHidesGuardianFields, sanitizeCaseFileInput, visibleCaseIdentityCandidates } from './caseProfileVisibility';
 import { ageOn } from './memberAge';
 import { cairoToday } from './idExpiry';
 import { calculatePerCapitaNetIncome } from './caseMetrics';
@@ -24,13 +26,16 @@ const statuses: CaseFileStatus[] = ['نشط', 'موقوف', 'تحت المراج
 const employmentOptions = ['يعمل', 'لا يعمل', 'طفل', 'طفلة'];
 
 export function CaseIntakeForm({ onSaved, initial, initialMembers = [] }: { onSaved: (caseFileId: string) => void; initial?: CaseFile; initialMembers?: Member[] }) {
+  const today = cairoToday();
   const [fatherName, setFatherName] = useState(initial?.father_name ?? '');
   const [motherName, setMotherName] = useState(initial?.mother_name ?? '');
   const [fatherNationalId, setFatherNationalId] = useState(initial?.father_national_id ?? '');
   const [motherNationalId, setMotherNationalId] = useState(initial?.mother_national_id ?? '');
-  const [fatherDateOfBirth, setFatherDateOfBirth] = useState(initial?.father_date_of_birth ?? '');
+  const [fatherNationalIdExpiresOn, setFatherNationalIdExpiresOn] = useState(initial?.father_national_id_expires_on ?? '');
+  const [motherNationalIdExpiresOn, setMotherNationalIdExpiresOn] = useState(initial?.mother_national_id_expires_on ?? '');
+  const [fatherDateOfBirth, setFatherDateOfBirth] = useState(initial?.father_date_of_birth ?? parseEgyptianNationalId(initial?.father_national_id ?? '', today)?.birthDate ?? '');
   const [fatherGender, setFatherGender] = useState<MemberGender | null>(initial?.father_gender ?? null);
-  const [motherDateOfBirth, setMotherDateOfBirth] = useState(initial?.mother_date_of_birth ?? '');
+  const [motherDateOfBirth, setMotherDateOfBirth] = useState(initial?.mother_date_of_birth ?? parseEgyptianNationalId(initial?.mother_national_id ?? '', today)?.birthDate ?? '');
   const [motherGender, setMotherGender] = useState<MemberGender | null>(initial?.mother_gender ?? null);
   const [fatherHealthCondition, setFatherHealthCondition] = useState(initial?.father_health_condition ?? '');
   const [motherHealthCondition, setMotherHealthCondition] = useState(initial?.mother_health_condition ?? '');
@@ -42,8 +47,7 @@ export function CaseIntakeForm({ onSaved, initial, initialMembers = [] }: { onSa
   const [motherOccupation, setMotherOccupation] = useState(initial?.mother_occupation ?? '');
   const [guardianName, setGuardianName] = useState(initial?.contact_name ?? '');
   const [guardianRelationship, setGuardianRelationship] = useState(initial?.contact_relationship ?? '');
-  const [guardianAge, setGuardianAge] = useState(initial?.contact_age?.toString() ?? '');
-  const [guardianDateOfBirth, setGuardianDateOfBirth] = useState(initial?.contact_date_of_birth ?? '');
+  const [guardianDateOfBirth, setGuardianDateOfBirth] = useState(initial?.contact_date_of_birth ?? parseEgyptianNationalId(initial?.national_id ?? '', today)?.birthDate ?? '');
   const [guardianGender, setGuardianGender] = useState<MemberGender | null>(initial?.contact_gender ?? null);
   const [nationalId, setNationalId] = useState(initial?.national_id ?? '');
   const [nationalIdExpiresOn, setNationalIdExpiresOn] = useState(initial?.national_id_expires_on ?? '');
@@ -66,14 +70,14 @@ export function CaseIntakeForm({ onSaved, initial, initialMembers = [] }: { onSa
   const [categories, setCategories] = useState<CaseCategory[]>(initial?.case_file_categories.map(({ category }) => category).filter(isCaseCategory) ?? []);
   const preservedCategories = initial?.case_file_categories.map(({ category }) => category).filter((category) => !isCaseCategory(category)) ?? [];
   const [files, setFiles] = useState<File[]>([]);
+  const [socialResearchFiles,setSocialResearchFiles]=useState<File[]>([]);
   const [savedFileId, setSavedFileId] = useState(initial?.id ?? null);
   const [draft, setDraft] = useState('');
   const [scanTarget, setScanTarget] = useState<'father'|'mother'|'guardian'>('mother');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const widowCase = categories.includes('أرملة');
-  const hideGuardianFields = categories.some((category) => ['أرملة', 'هجر', 'مطلقة'].includes(category));
-  const today = cairoToday();
+  const hideGuardianFields = categoryHidesGuardianFields(categories);
   const householdPeople = [
     ...(!widowCase ? [{ name: fatherName, nationalId: initial?.father_national_id }] : []),
     { name: motherName, nationalId: initial?.mother_national_id },
@@ -95,8 +99,28 @@ export function CaseIntakeForm({ onSaved, initial, initialMembers = [] }: { onSa
   const motherIdDetails = parseEgyptianNationalId(motherNationalId, today);
   const guardianIdDetails = parseEgyptianNationalId(nationalId, today);
 
+  function changeCategory(category: CaseCategory, checked: boolean) {
+    const next = updateCaseCategorySelection(categories, category, checked);
+    setCategories(next);
+    if (hidesFatherFields(next)) {
+      setFatherName(''); setFatherNationalId(''); setFatherNationalIdExpiresOn('');
+      setFatherDateOfBirth(''); setFatherGender(null); setFatherHealthCondition(''); setFatherHealthStatus('');
+      setFatherEmploymentStatus(null); setFatherOccupation('');
+      if (scanTarget === 'father') setScanTarget('mother');
+    }
+    if (categoryHidesGuardianFields(next)) {
+      setGuardianName(''); setGuardianRelationship(''); setNationalId(''); setNationalIdExpiresOn('');
+      setGuardianDateOfBirth(''); setGuardianGender(null);
+      if (scanTarget === 'guardian') setScanTarget('mother');
+    }
+  }
+
   function updateParentId(parent: 'father'|'mother', value: string) {
     const id = normalizeEgyptianNationalIdInput(value);
+    const previousId = parent === 'father' ? fatherNationalId : motherNationalId;
+    if (id !== normalizeEgyptianNationalIdInput(previousId)) {
+      if (parent === 'father') setFatherNationalIdExpiresOn(''); else setMotherNationalIdExpiresOn('');
+    }
     if (parent === 'father') setFatherNationalId(id); else setMotherNationalId(id);
     const parsed = parseEgyptianNationalId(id, today);
     if (!parsed) return;
@@ -109,19 +133,21 @@ export function CaseIntakeForm({ onSaved, initial, initialMembers = [] }: { onSa
 
   function updateGuardianId(value: string) {
     const id = normalizeEgyptianNationalIdInput(value);
+    if (id !== normalizeEgyptianNationalIdInput(nationalId)) setNationalIdExpiresOn('');
     setNationalId(id);
     const parsed = parseEgyptianNationalId(id, today);
     if (!parsed || parsed.nationalId === lastAppliedGuardianId.current) return;
     lastAppliedGuardianId.current = parsed.nationalId;
-    setGuardianDateOfBirth(parsed.birthDate); setGuardianGender(parsed.gender); setGuardianAge(String(parsed.age));
+    setGuardianDateOfBirth(parsed.birthDate); setGuardianGender(parsed.gender);
   }
 
   function useScannedIdentity() {
-    const scannedId = parseNationalIdScan(draft).nationalId;
+    const scanned = parseNationalIdScan(draft);
+    const scannedId = scanned.nationalId;
     if (!scannedId || !parseEgyptianNationalId(scannedId, today)) return;
-    if (scanTarget === 'father') updateParentId('father', scannedId);
-    else if (scanTarget === 'mother') updateParentId('mother', scannedId);
-    else updateGuardianId(scannedId);
+    if (scanTarget === 'father') { updateParentId('father', scannedId); if (scanned.expiresOn) setFatherNationalIdExpiresOn(scanned.expiresOn); }
+    else if (scanTarget === 'mother') { updateParentId('mother', scannedId); if (scanned.expiresOn) setMotherNationalIdExpiresOn(scanned.expiresOn); }
+    else { updateGuardianId(scannedId); if (scanned.expiresOn) setNationalIdExpiresOn(scanned.expiresOn); }
   }
 
   async function refreshBranchOptions() {
@@ -132,7 +158,7 @@ export function CaseIntakeForm({ onSaved, initial, initialMembers = [] }: { onSa
 
   useEffect(() => {
     let active = true;
-    void Promise.all([listBranches(), listInactiveBranches()]).then(([options, inactive]) => { if (active) { setBranchOptions(options); setInactiveBranchOptions(inactive); } }).catch(() => { if (active) setBranchError('تعذّر تحميل الفروع. حدّث الصفحة وحاول تاني.'); });
+    void Promise.all([listBranches(), listInactiveBranches()]).then(([options, inactive]) => { if (active) { setBranchOptions(options); setInactiveBranchOptions(inactive); } }).catch(() => { if (active) setBranchError('مش قادرين نحمّل الفروع. حدّث الصفحة وجرب تاني.'); });
     return () => { active = false; };
   }, []);
 
@@ -142,7 +168,7 @@ export function CaseIntakeForm({ onSaved, initial, initialMembers = [] }: { onSa
       await addBranch(newBranchName);
       await refreshBranchOptions();
       setBranchArea(newBranchName.trim()); setNewBranchName('');
-    } catch (caught) { setBranchError(caught instanceof Error ? caught.message : 'تعذّر إضافة الفرع.'); }
+    } catch { setBranchError('ماقدرناش نضيف الفرع. اتأكد من صلاحيتك وجرب تاني.'); }
     finally { setBranchBusy(false); }
   }
 
@@ -152,7 +178,7 @@ export function CaseIntakeForm({ onSaved, initial, initialMembers = [] }: { onSa
       await deactivateCaseBranch(branch.id);
       await refreshBranchOptions();
       if (!initial && branchArea === branch.name) setBranchArea('');
-    } catch { setBranchError('تعذّر إيقاف الفرع. تأكد من صلاحيتك وحاول تاني.'); }
+    } catch { setBranchError('ماعرفناش نوقف الفرع. اتأكد من صلاحيتك وجرب تاني.'); }
     finally { setBranchBusy(false); }
   }
 
@@ -162,7 +188,7 @@ export function CaseIntakeForm({ onSaved, initial, initialMembers = [] }: { onSa
       await reactivateCaseBranch(branch.id);
       await refreshBranchOptions();
       if (!initial) setBranchArea(branch.name);
-    } catch { setBranchError('تعذّر إعادة تشغيل الفرع. تأكد من صلاحيتك وحاول تاني.'); }
+    } catch { setBranchError('ماعرفناش نشغّل الفرع تاني. اتأكد من صلاحيتك وجرب تاني.'); }
     finally { setBranchBusy(false); }
   }
 
@@ -171,43 +197,50 @@ export function CaseIntakeForm({ onSaved, initial, initialMembers = [] }: { onSa
     if (!motherName.trim() && !initial) { setError('اسم الأم مطلوب.'); return; }
     if (!categories.length && !preservedCategories.length) { setError('اختار نوع حالة واحد على الأقل.'); return; }
     if (hasConflictingCaseCategories(categories)) { setError('اختار نوع واحد بس من هجر أو أرملة أو مطلقة.'); return; }
-    const normalizedAge = latinDigits(guardianAge.trim());
     const normalizedId = digitsOnly(nationalId.trim());
     const normalizedFatherId = digitsOnly(fatherNationalId.trim());
     const normalizedMotherId = digitsOnly(motherNationalId.trim());
     const normalizedIncome = latinDigits(monthlyIncome.trim());
     const normalizedExpenses = latinDigits(fixedExpenses.trim());
-    if (normalizedAge && (!/^\d{1,3}$/.test(normalizedAge) || Number(normalizedAge) > 120)) { setError('سن المسؤول لازم يكون من ٠ لحد ١٢٠ سنة.'); return; }
-    if (normalizedId && !/^\d{14}$/.test(normalizedId)) { setError('الرقم القومي لازم يكون ١٤ رقم.'); return; }
-    if ((normalizedFatherId && !/^\d{14}$/.test(normalizedFatherId)) || (normalizedMotherId && !/^\d{14}$/.test(normalizedMotherId))) { setError('الرقم القومي للأب والأم لازم يكون ١٤ رقم.'); return; }
-    if ((fatherDateOfBirth && fatherDateOfBirth > today) || (motherDateOfBirth && motherDateOfBirth > today) || (guardianDateOfBirth && guardianDateOfBirth > today)) { setError('تاريخ الميلاد ماينفعش يكون في المستقبل.'); return; }
+    if ((!widowCase && fatherDateOfBirth && fatherDateOfBirth > today) || (motherDateOfBirth && motherDateOfBirth > today) || (!hideGuardianFields && guardianDateOfBirth && guardianDateOfBirth > today)) { setError('تاريخ الميلاد ماينفعش يكون في المستقبل.'); return; }
     if (!phones.some((phone) => phone.trim())) { setError('اكتب رقم موبايل أو رقم منزل واحد على الأقل.'); return; }
     if (phones.slice(0, 2).some((phone) => phone.trim() && !/^\d{11}$/.test(phone.trim()))) { setError('رقم الموبايل لازم يكون ١١ رقم.'); return; }
     if (phones[2]?.trim() && !/^\d{10}$/.test(phones[2].trim())) { setError('رقم المنزل لازم يكون ١٠ أرقام.'); return; }
-    if ((fatherHealthStatus && fatherHealthStatus !== 'حالة مستقرة' && !fatherHealthCondition.trim()) || (motherHealthStatus && motherHealthStatus !== 'حالة مستقرة' && !motherHealthCondition.trim())) { setError('اكتب نوع العجز أو المرض للشخص اللي اخترت له الحالة الصحية.'); return; }
+    if ((!widowCase && fatherHealthStatus && fatherHealthStatus !== 'حالة مستقرة' && !fatherHealthCondition.trim()) || (motherHealthStatus && motherHealthStatus !== 'حالة مستقرة' && !motherHealthCondition.trim())) { setError('اكتب نوع العجز أو المرض للشخص اللي اخترت له الحالة الصحية.'); return; }
     if (normalizedIncome && !/^\d+$/.test(normalizedIncome)) { setError('الدخل الشهري اكتب فيه أرقام بس من غير فواصل.'); return; }
     if (normalizedExpenses && !/^\d+$/.test(normalizedExpenses)) { setError('المصروفات اكتب فيها أرقام بس من غير فواصل.'); return; }
     if ((fileStatus === 'موقوف' || fileStatus === 'مرفوض') && !statusReason.trim()) { setError('اكتب سبب إيقاف أو رفض الملف.'); return; }
 
-    const input: CaseFileInput = {
+    const input = sanitizeCaseFileInput({
       fatherName: fatherName.trim(), motherName: motherName.trim(), contactName: guardianName.trim(), contactRelationship: guardianRelationship.trim(),
-      contactAge: normalizedAge ? Number(normalizedAge) : null, nationalId: normalizedId, nationalIdExpiresOn,
+      contactAge: guardianDateOfBirth && guardianDateOfBirth <= today ? ageOn(guardianDateOfBirth,today) : null, nationalId: normalizedId, nationalIdExpiresOn,
       phones: phones.map((phone) => phone.trim()), notes: familyNotes.trim(), address: address.trim(),
       monthlyIncome: normalizedIncome ? Number(normalizedIncome) : null, healthCondition: healthCondition.trim(), branchArea: branchArea.trim(),
       fileStatus, statusReason: statusReason.trim(), categories, fatherNationalId: normalizedFatherId, motherNationalId: normalizedMotherId,nextReviewDate,
+      fatherNationalIdExpiresOn, motherNationalIdExpiresOn,
       fatherHealthCondition: fatherHealthCondition.trim(), motherHealthCondition: motherHealthCondition.trim(),
       fatherHealthStatus: fatherHealthStatus || undefined, motherHealthStatus: motherHealthStatus || undefined,
       fatherEmploymentStatus, motherEmploymentStatus, fatherOccupation, motherOccupation,
       fatherDateOfBirth, fatherGender, motherDateOfBirth, motherGender, contactDateOfBirth: guardianDateOfBirth, contactGender: guardianGender,
-    };
+    } satisfies CaseFileInput);
+    for (const candidate of [input.nationalId, input.fatherNationalId ?? '', input.motherNationalId ?? '']) {
+      if (candidate && !parseEgyptianNationalId(candidate, today)) { setError('اتأكد إن كل رقم قومي ١٤ رقم وتاريخ الميلاد والمحافظة فيه صحيحين.'); return; }
+    }
+    if (!hasValidNationalIdForExpiry(input.nationalId, input.nationalIdExpiresOn, today)
+      || !hasValidNationalIdForExpiry(input.fatherNationalId, input.fatherNationalIdExpiresOn, today)
+      || !hasValidNationalIdForExpiry(input.motherNationalId, input.motherNationalIdExpiresOn, today)) {
+      setError('سجّل رقم قومي صحيح قبل تاريخ انتهاء البطاقة لكل شخص.'); return;
+    }
+    if (!hasAdultCaseIdentity(visibleCaseIdentityCandidates(input),today)) { setError('لازم تسجل رقم قومي صحيح لحد بالغ، عمره ١٨ سنة أو أكتر: الأب أو الأم أو المسؤول.'); return; }
     setBusy(true);
     try {
       const id = await saveCaseFile(savedFileId, input);
       setSavedFileId(id);
       for (const file of files) { await uploadCaseAttachment(id, file); setFiles((current) => current.filter((item) => item !== file)); }
+      for (const file of socialResearchFiles) { await uploadCaseAttachment(id,file,'social_research'); setSocialResearchFiles((current)=>current.filter(item=>item!==file)); }
       onSaved(id);
     } catch {
-      setError('تعذّر حفظ كل البيانات أو المرفقات. البيانات المحفوظة هتفضل موجودة؛ اضغط حفظ تاني لإكمال الباقي.');
+      setError('ماعرفناش نحفظ كل البيانات أو المرفقات. البيانات اللي اتحفظت هتفضل موجودة؛ اضغط حفظ تاني عشان نكمل الباقي.');
     } finally { setBusy(false); }
   }
 
@@ -215,7 +248,7 @@ export function CaseIntakeForm({ onSaved, initial, initialMembers = [] }: { onSa
     <p className="form-help">كل البيانات دي بتتسجل في ملف واحد له كود ثابت. الأب ممكن تسيبه فاضي.</p>
     <section className="form-section">
       <h2>١. نوع الحالة وحالة الملف</h2>
-      <fieldset><legend>اختار نوع الحالة</legend>{CASE_CATEGORIES.map((category) => <label key={category}><input type="checkbox" checked={categories.includes(category)} onChange={(event) => setCategories((current) => updateCaseCategorySelection(current, category, event.target.checked))} /> {category}</label>)}{preservedCategories.map((category) => <span className="category-label" key={category}>تصنيف قديم محفوظ: {category}</span>)}</fieldset>
+      <fieldset><legend>اختار نوع الحالة</legend>{CASE_CATEGORIES.map((category) => <label key={category}><input type="checkbox" checked={categories.includes(category)} onChange={(event) => changeCategory(category, event.target.checked)} /> {category}</label>)}{preservedCategories.map((category) => <span className="category-label" key={category}>نوع حالة قديم محفوظ: {category}</span>)}</fieldset>
       <div className="form-grid">
         <label>حالة الملف<select value={fileStatus} onChange={(event) => setFileStatus(event.target.value as CaseFileStatus)}>{statuses.map((status) => <option key={status} value={status}>{status}</option>)}</select></label>
         {(fileStatus === 'موقوف' || fileStatus === 'مرفوض') && <label>سبب {fileStatus === 'موقوف' ? 'الإيقاف' : 'الرفض'}<textarea required maxLength={1000} value={statusReason} onChange={(event) => setStatusReason(event.target.value)} /></label>}
@@ -224,17 +257,19 @@ export function CaseIntakeForm({ onSaved, initial, initialMembers = [] }: { onSa
     <section className="form-section">
       <h2>٢. بيانات الأب والأم</h2>
       <p className="form-help">عدد أفراد الأسرة المسجلين حاليًا: {new Intl.NumberFormat('ar-EG').format(householdCount)}. لو نفس الرقم القومي متكرر بيتحسب الشخص مرة واحدة.</p>
+      <p className="form-help">سجّل رقم قومي صحيح لبالغ عمره ١٨ سنة أو أكتر: الأب أو الأم أو المسؤول. رقم الطفل اختياري.</p>
       <div className="form-grid">
         {!widowCase && <label>اسم الأب <span className="muted-cell">(اختياري)</span><input maxLength={200} value={fatherName} onChange={(event) => setFatherName(event.target.value)} /></label>}
         <label>اسم الأم {!initial && <span className="muted-cell">(مطلوب)</span>}<input required={!initial} maxLength={200} value={motherName} onChange={(event) => setMotherName(event.target.value)} /></label>
-        {!widowCase && <><label>الرقم القومي للأب <span className="muted-cell">(اختياري)</span><input aria-label="الرقم القومي للأب" inputMode="numeric" maxLength={14} value={fatherNationalId} onChange={(event) => updateParentId('father', event.target.value)} />{fatherIdDetails&&<small className="form-help">المحافظة الظاهرة في الرقم: {fatherIdDetails.governorate} (للمراجعة بس)</small>}</label>
+        {!widowCase && <><label>الرقم القومي للأب <span className="muted-cell">(لو الأب هو البالغ المسؤول)</span><input aria-label="الرقم القومي للأب" inputMode="numeric" maxLength={14} value={fatherNationalId} onChange={(event) => updateParentId('father', event.target.value)} />{fatherDateOfBirth&&fatherDateOfBirth<=today&&<small className="member-age-preview" role="status">سن الأب: {new Intl.NumberFormat('ar-EG').format(ageOn(fatherDateOfBirth,today))} سنة</small>}{fatherIdDetails&&<small className="form-help">المحافظة اللي باينة من الرقم القومي: {fatherIdDetails.governorate} (للمراجعة بس)</small>}</label>
+        <label>انتهاء بطاقة الأب<input aria-label="انتهاء بطاقة الأب" type="date" value={fatherNationalIdExpiresOn} onChange={(event) => setFatherNationalIdExpiresOn(event.target.value)} /></label>
         <label>تاريخ ميلاد الأب<input aria-label="تاريخ ميلاد الأب" type="date" max={today} value={fatherDateOfBirth} onChange={(event) => setFatherDateOfBirth(event.target.value)} /></label>
-        <label>نوع الأب<select aria-label="نوع الأب" value={fatherGender ?? ''} onChange={(event) => setFatherGender((event.target.value || null) as MemberGender | null)}><option value="">اختار النوع</option><option value="male">ذكر</option><option value="female">أنثى</option></select></label>
-        {fatherDateOfBirth && fatherDateOfBirth <= today && <p className="member-age-preview" role="status">العمر: {new Intl.NumberFormat('ar-EG').format(ageOn(fatherDateOfBirth, today))} سنة</p>}</>}
-        <label>الرقم القومي للأم <span className="muted-cell">(اختياري)</span><input aria-label="الرقم القومي للأم" inputMode="numeric" maxLength={14} value={motherNationalId} onChange={(event) => updateParentId('mother', event.target.value)} />{motherIdDetails&&<small className="form-help">المحافظة الظاهرة في الرقم: {motherIdDetails.governorate} (للمراجعة بس)</small>}</label>
+        <label>النوع للأب (ذكر أو أنثى)<select aria-label="النوع للأب (ذكر أو أنثى)" value={fatherGender ?? ''} onChange={(event) => setFatherGender((event.target.value || null) as MemberGender | null)}><option value="">اختار النوع</option><option value="male">ذكر</option><option value="female">أنثى</option></select></label>
+        </>}
+        <label>الرقم القومي للأم <span className="muted-cell">(لو الأم هي البالغة المسؤولة)</span><input aria-label="الرقم القومي للأم" inputMode="numeric" maxLength={14} value={motherNationalId} onChange={(event) => updateParentId('mother', event.target.value)} />{motherDateOfBirth&&motherDateOfBirth<=today&&<small className="member-age-preview" role="status">سن الأم: {new Intl.NumberFormat('ar-EG').format(ageOn(motherDateOfBirth,today))} سنة</small>}{motherIdDetails&&<small className="form-help">المحافظة اللي باينة من الرقم القومي: {motherIdDetails.governorate} (للمراجعة بس)</small>}</label>
+        <label>انتهاء بطاقة الأم<input aria-label="انتهاء بطاقة الأم" type="date" value={motherNationalIdExpiresOn} onChange={(event) => setMotherNationalIdExpiresOn(event.target.value)} /></label>
         <label>تاريخ ميلاد الأم<input aria-label="تاريخ ميلاد الأم" type="date" max={today} value={motherDateOfBirth} onChange={(event) => setMotherDateOfBirth(event.target.value)} /></label>
-        <label>نوع الأم<select aria-label="نوع الأم" value={motherGender ?? ''} onChange={(event) => setMotherGender((event.target.value || null) as MemberGender | null)}><option value="">اختار النوع</option><option value="male">ذكر</option><option value="female">أنثى</option></select></label>
-        {motherDateOfBirth && motherDateOfBirth <= today && <p className="member-age-preview" role="status">العمر: {new Intl.NumberFormat('ar-EG').format(ageOn(motherDateOfBirth, today))} سنة</p>}
+        <label>النوع للأم (ذكر أو أنثى)<select aria-label="النوع للأم (ذكر أو أنثى)" value={motherGender ?? ''} onChange={(event) => setMotherGender((event.target.value || null) as MemberGender | null)}><option value="">اختار النوع</option><option value="male">ذكر</option><option value="female">أنثى</option></select></label>
         {!widowCase && <><label>الحالة الصحية للأب<select aria-label="الحالة الصحية للأب" value={fatherHealthStatus} onChange={(event) => setFatherHealthStatus((event.target.value || '') as HealthStatus | '')}><option value="">اختار الحالة الصحية</option>{HEALTH_STATUSES.map((status) => <option key={status} value={status}>{status}</option>)}</select></label>{fatherHealthStatus && fatherHealthStatus !== 'حالة مستقرة' && <label>نوع العجز أو الإعاقة أو المرض للأب<textarea maxLength={2000} value={fatherHealthCondition} onChange={(event) => setFatherHealthCondition(event.target.value)} /></label>}</>}
         <label>الحالة الصحية للأم<select aria-label="الحالة الصحية للأم" value={motherHealthStatus} onChange={(event) => setMotherHealthStatus((event.target.value || '') as HealthStatus | '')}><option value="">اختار الحالة الصحية</option>{HEALTH_STATUSES.map((status) => <option key={status} value={status}>{status}</option>)}</select></label>
         {motherHealthStatus && motherHealthStatus !== 'حالة مستقرة' && <label>نوع العجز أو الإعاقة أو المرض للأم<textarea maxLength={2000} value={motherHealthCondition} onChange={(event) => setMotherHealthCondition(event.target.value)} /></label>}
@@ -249,10 +284,9 @@ export function CaseIntakeForm({ onSaved, initial, initialMembers = [] }: { onSa
       <div className="form-grid">
         <label>اسم المسؤول<input maxLength={200} value={guardianName} onChange={(event) => setGuardianName(event.target.value)} /></label>
         <label>صلة القرابة<input maxLength={100} placeholder="مثال: الأم، الجد، الخالة" value={guardianRelationship} onChange={(event) => setGuardianRelationship(event.target.value)} /></label>
-        <label>تاريخ ميلاد المسؤول<input aria-label="تاريخ ميلاد المسؤول" type="date" max={today} value={guardianDateOfBirth} onChange={(event) => { setGuardianDateOfBirth(event.target.value); setGuardianAge(event.target.value ? String(ageOn(event.target.value, today)) : ''); }} /></label>
-        <label>نوع المسؤول<select aria-label="نوع المسؤول" value={guardianGender ?? ''} onChange={(event) => setGuardianGender((event.target.value || null) as MemberGender | null)}><option value="">اختار النوع</option><option value="male">ذكر</option><option value="female">أنثى</option></select></label>
-        <label>سن المسؤول <span className="muted-cell">(اختياري)</span><input aria-label="سن المسؤول (اختياري)" type="number" min="0" max="120" value={guardianAge} onChange={(event) => setGuardianAge(latinDigits(event.target.value))} /></label>
-        <label>الرقم القومي <span className="muted-cell">(اختياري)</span><input aria-label="الرقم القومي (اختياري)" inputMode="numeric" maxLength={14} value={nationalId} onChange={(event) => updateGuardianId(event.target.value)} />{guardianIdDetails&&<small className="form-help">المحافظة الظاهرة في الرقم: {guardianIdDetails.governorate} (للمراجعة بس)</small>}</label>
+        <label>الرقم القومي للمسؤول <span className="muted-cell">(لو مش متسجل للأب أو الأم)</span><input aria-label="الرقم القومي للمسؤول" inputMode="numeric" maxLength={14} value={nationalId} onChange={(event) => updateGuardianId(event.target.value)} />{guardianDateOfBirth&&guardianDateOfBirth<=today&&<small className="member-age-preview" role="status">سن المسؤول: {new Intl.NumberFormat('ar-EG').format(ageOn(guardianDateOfBirth,today))} سنة</small>}{guardianIdDetails&&<small className="form-help">المحافظة اللي باينة من الرقم القومي: {guardianIdDetails.governorate} (للمراجعة بس)</small>}</label>
+        <label>تاريخ ميلاد المسؤول<input aria-label="تاريخ ميلاد المسؤول" type="date" max={today} value={guardianDateOfBirth} onChange={(event) => setGuardianDateOfBirth(event.target.value)} /></label>
+        <label>النوع للمسؤول (ذكر أو أنثى)<select aria-label="النوع للمسؤول (ذكر أو أنثى)" value={guardianGender ?? ''} onChange={(event) => setGuardianGender((event.target.value || null) as MemberGender | null)}><option value="">اختار النوع</option><option value="male">ذكر</option><option value="female">أنثى</option></select></label>
         <label>انتهاء البطاقة <span className="muted-cell">(اختياري)</span><input type="date" value={nationalIdExpiresOn} onChange={(event) => setNationalIdExpiresOn(event.target.value)} /></label>
       </div>
     </section>}
@@ -267,7 +301,7 @@ export function CaseIntakeForm({ onSaved, initial, initialMembers = [] }: { onSa
       })}</div>
       <div className="form-grid">
         <label>الدخل الشهري بالجنيه<input inputMode="numeric" value={monthlyIncome} onChange={(event) => setMonthlyIncome(digitsOnly(event.target.value))} /></label>
-        <label>الحالة الصحية العامة للأسرة<textarea maxLength={2000} value={healthCondition} onChange={(event) => setHealthCondition(event.target.value)} /></label>
+        <label>ملاحظات صحية عامة للأسرة<textarea maxLength={2000} value={healthCondition} onChange={(event) => setHealthCondition(event.target.value)} /></label>
         <label>الفرع أو المنطقة<select value={branchArea} onChange={(event) => event.target.value === '__manage_branches__' ? (setBranchError(''), setBranchDialogOpen(true)) : setBranchArea(event.target.value)}>
           <option value="">اختار الفرع أو المنطقة</option>
           {!branchOptions.some((branch) => branch.name === branchArea) && branchArea && <option value={branchArea}>{branchArea} (فرع محفوظ)</option>}
@@ -300,13 +334,15 @@ export function CaseIntakeForm({ onSaved, initial, initialMembers = [] }: { onSa
     </section>
     <section className="form-section">
       <h2>٦. صور ومستندات الملف</h2>
-      <p className="form-help">ارفع صور أو ملفات PDF؛ راجع النص المستخرج قبل استخدامه.</p>
-      <FilePicker files={files} onChange={setFiles} onText={setDraft} />
+      <p className="form-help">ارفع صور أو ملفات PDF، وراجع أي بيانات مقروءة قبل ما تستخدمها.</p>
+      {!initial&&!socialResearchFiles.length&&<div className="social-research-status social-research-missing" role="status"><span className="social-research-light" aria-hidden="true"/>لسه ما اخترتش ملف البحث الاجتماعي. تقدر تضيفه دلوقتي أو ترفعه بعدين؛ ده مش هيمنع حفظ الحالة.</div>}
+      <FilePicker legend="البحث الاجتماعي للحالة" label="اختار البحث الاجتماعي (صورة أو PDF)" files={socialResearchFiles} onChange={files=>setSocialResearchFiles(files.slice(-1))} />
+      <FilePicker legend="مرفقات تانية" label="اختار صور أو PDF للحالة" files={files} onChange={setFiles} onText={setDraft} />
     </section>
     {draft && parseEgyptianNationalId(parseNationalIdScan(draft).nationalId ?? '', today) && <div className="ocr-id-review"><p className="ocr-review-guidance">دي البيانات اللي اتقرت من المستند.. راجعها وعدل أي حاجة غلط قبل الحفظ</p><label>دي بطاقة مين؟<select aria-label="دي بطاقة مين؟" value={scanTarget} onChange={(event) => setScanTarget(event.target.value as 'father'|'mother'|'guardian')}><option value="mother">الأم</option>{!widowCase && <option value="father">الأب</option>}{!hideGuardianFields && <option value="guardian">المسؤول عن التربية</option>}</select></label><button type="button" className="secondary" onClick={useScannedIdentity}>استخدم البيانات المقروءة</button></div>}
     {draft && <FieldSuggestions text={draft} onApply={(field, value) => {
       if (field === 'notes' && value.trim()) { setFamilyNotes(value); return true; }
-      if (field === 'case_categories' && CASE_CATEGORIES.includes(value as CaseCategory)) { setCategories((current) => current.includes(value as CaseCategory) ? current : [...current, value as CaseCategory]); return true; }
+      if (field === 'case_categories' && CASE_CATEGORIES.includes(value as CaseCategory)) { changeCategory(value as CaseCategory, true); return true; }
       return false;
     }} />}
     <div className="form-actions"><button disabled={busy}>{busy ? 'جاري الحفظ…' : initial ? 'حفظ التعديلات' : 'حفظ ملف الحالة'}</button></div>

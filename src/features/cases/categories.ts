@@ -3,13 +3,12 @@ export const CASE_CATEGORIES = [
   'أرملة',
   'مطلقة',
   'عجز أو مرض',
-  'يتيم الأب',
   'كبار السن (٦٠ سنة فأكثر)',
   'أسرة مسجون',
   'أخرى',
 ] as const;
 export type CaseCategory = typeof CASE_CATEGORIES[number];
-export type StoredCaseCategory = CaseCategory | 'يتيم الأم' | 'وفاة' | 'أيتام';
+export type StoredCaseCategory = CaseCategory | 'يتيم الأم' | 'يتيم الأب' | 'وفاة' | 'أيتام';
 export const isCaseCategory = (value: string): value is CaseCategory =>
   CASE_CATEGORIES.includes(value as CaseCategory);
 

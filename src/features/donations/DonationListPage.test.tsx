@@ -48,7 +48,7 @@ describe('donation workspace', () => {
 
   it('does not report zero or empty records when data could not be loaded', async () => {
     render(<MemoryRouter><DonationListPage canWrite={false} canReadCases /></MemoryRouter>);
-    expect(await screen.findByRole('alert')).toHaveTextContent('تعذّر تحميل التبرعات والكفالات');
+    expect(await screen.findByRole('alert')).toHaveTextContent('ماقدرناش نحمّل التبرعات والكفالات');
     expect(screen.queryByText('0 متبرعين')).not.toBeInTheDocument();
     expect(screen.queryByText('0 تبرعات')).not.toBeInTheDocument();
     expect(screen.queryByText('0 كفالات')).not.toBeInTheDocument();

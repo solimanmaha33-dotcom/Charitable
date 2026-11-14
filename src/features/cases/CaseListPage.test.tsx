@@ -8,11 +8,11 @@ vi.mock('../../services/cases', () => service);
 beforeEach(() => {
   service.listCaseFiles.mockResolvedValue([
     { id:'f1',code:'F-1001',phone:'0100 111 2222',phone_2:null,phone_3:null,father_name:'أحمد',father_national_id:'28001011234567',mother_name:'منى',mother_national_id:'29001011234567',contact_name:null,address:'شارع النيل',branch_area:'فرع الجيزة',file_status:'نشط',status_reason:null,case_file_categories:[{category:'أرملة'}] },
-    { id:'f2',code:'F-1002',phone:'0100 333 4444',phone_2:null,phone_3:'0100 555 6666',father_name:'محمود',mother_name:'سعاد',contact_name:null,address:'شارع آخر',branch_area:'فرع القاهرة',file_status:'موقوف',status_reason:'مراجعة',case_file_categories:[{category:'يتيم الأب'},{category:'كبار السن (٦٠ سنة فأكثر)'}] },
+    { id:'f2',code:'F-1002',phone:'0100 333 4444',phone_2:null,phone_3:'0100 555 6666',father_name:'محمود',mother_name:'سعاد',contact_name:null,address:'شارع آخر',branch_area:'فرع القاهرة',file_status:'موقوف',status_reason:'مراجعة',case_file_categories:[{category:'كبار السن (٦٠ سنة فأكثر)'}] },
   ]);
   service.listAllMembers.mockResolvedValue([
     {family_id:'f1',person_id:'p1',relationship:'ابن',people:{name:'كريم',national_id:'32402291234577',gender:'male',date_of_birth:'2010-01-01'}},
-    {family_id:'f2',person_id:'p2',relationship:'بنت',people:{name:'مريم',gender:'female',date_of_birth:'2012-01-01'}},
+    {family_id:'f2',person_id:'p2',relationship:'بنت',father_status:'يتيم الأب',people:{name:'مريم',gender:'female',date_of_birth:'2012-01-01'}},
     {family_id:'f2',person_id:'p3',relationship:'أب',people:{name:'محمود',gender:'male',date_of_birth:'1960-01-01'}},
   ]);
 });
@@ -58,7 +58,7 @@ describe('one-file case directory', () => {
   });
   it('filters by profile category and file status', async () => {
     render(<MemoryRouter><CaseListPage canWrite /></MemoryRouter>);
-    fireEvent.change(await screen.findByRole('combobox',{name:'نوع الحالة'}),{target:{value:'يتيم الأب'}});
+    fireEvent.change(await screen.findByRole('combobox',{name:'نوع الحالة'}),{target:{value:'كبار السن (٦٠ سنة فأكثر)'}});
     expect(screen.getByRole('link',{name:/F-1002/})).toBeVisible();
     fireEvent.change(screen.getByRole('combobox',{name:'حالة الملف'}),{target:{value:'نشط'}});
     await waitFor(()=>expect(screen.getByText('ملقيناش حالات مطابقة')).toBeVisible());

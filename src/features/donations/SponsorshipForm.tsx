@@ -8,7 +8,7 @@ export function SponsorshipForm({donors,families,onSaved}:{donors:Donor[];famili
  async function submit(e:FormEvent) {
   e.preventDefault();setBusy(true);setError('');
   try {await saveSponsorship({donor_id:donor,family_id:family,monthly_amount:Number(amount),start_date:start,end_date:end||null});setAmount('');await onSaved();}
-  catch {setError('تعذّر حفظ الكفالة. راجع البيانات وصلاحية التبرعات وقراءة الحالات.');}finally{setBusy(false);}
+  catch {setError('ماقدرناش نحفظ الكفالة. اتأكد إن بياناتها مظبوطة، وإن عندك صلاحية تسجل تبرعات وتشوف الحالات، وجرب تاني.');}finally{setBusy(false);}
  }
  return <form className="domain-form" onSubmit={submit}><h2>إضافة كفالة شهرية</h2>
   <label>متبرع الكفالة<select required value={donor} onChange={e=>setDonor(e.target.value)}><option value="">اختار المتبرع</option>{donors.map(d=><option key={d.id} value={d.id}>{d.name}</option>)}</select></label>

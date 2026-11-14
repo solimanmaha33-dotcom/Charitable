@@ -9,10 +9,10 @@ export function DonationForm({donors,onSaved}:{donors:Donor[];onSaved:()=>Promis
  async function submit(e:FormEvent) {
   e.preventDefault();setBusy(true);setError('');
   try {await saveDonation({donor_id:donor||null,donation_type:type,kind,amount:kind==='cash'?Number(amount):null,quantity:kind==='in_kind'?Number(quantity):null,unit:kind==='in_kind'?unit.trim():null,description:description.trim(),received_on:date});setAmount('');setQuantity('');setDescription('');await onSaved();}
-  catch {setError('تعذّر حفظ التبرع. راجع البيانات والصلاحيات وحاول تاني.');}finally{setBusy(false);}
+  catch {setError('ماقدرناش نحفظ التبرع. راجع البيانات وصلاحيتك وجرب تاني.');}finally{setBusy(false);}
  }
  return <form className="domain-form" onSubmit={submit}><h2>تسجيل تبرع</h2>
-  <label>متبرع التبرع<select value={donor} onChange={e=>setDonor(e.target.value)}><option value="">غير محدد</option>{donors.map(d=><option key={d.id} value={d.id}>{d.name}</option>)}</select></label>
+  <label>المتبرع<select value={donor} onChange={e=>setDonor(e.target.value)}><option value="">من غير متبرع محدد</option>{donors.map(d=><option key={d.id} value={d.id}>{d.name}</option>)}</select></label>
   <label>نوع التبرع<select value={type} onChange={e=>setType(e.target.value)}>{donationTypes.map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label>
   <label>شكل التبرع<select value={kind} onChange={e=>setKind(e.target.value as 'cash'|'in_kind')}><option value="cash">نقدي</option><option value="in_kind">عيني</option></select></label>
   {kind==='cash'?<label>مبلغ التبرع (جنيه مصري)<input required type="number" min="0.01" max="9999999999.99" step="0.01" value={amount} onChange={e=>setAmount(e.target.value)}/></label>:<>

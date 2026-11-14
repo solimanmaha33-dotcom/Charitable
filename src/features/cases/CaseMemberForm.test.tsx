@@ -4,11 +4,11 @@ import {CaseMemberForm} from './CaseMemberForm';
 import {ageOn} from './memberAge';
 import {cairoToday} from './idExpiry';
 
-const service=vi.hoisted(()=>({addMember:vi.fn(),updateMemberDemographics:vi.fn(),uploadCaseAttachment:vi.fn()}));
+const service=vi.hoisted(()=>({saveCaseMemberProfile:vi.fn(),uploadCaseAttachment:vi.fn()}));
 vi.mock('../../services/cases',()=>service);
 vi.mock('../files/FilePreview',()=>({FilePreview:({onText}:{onText:(text:string)=>void})=><><button type="button" onClick={()=>onText('الرقم القومي ٢٩٠٠١٠١١٢٣٤٥٦٧')}>قراءة بيانات تجريبية</button><button type="button" onClick={()=>onText('الرقم القومي ٢٩٠٠١٠١١٢٣٤٥٦٧ — مراجعة النص')}>تعديل نص OCR</button></>}));
 
-beforeEach(()=>{service.addMember.mockReset().mockResolvedValue(undefined);service.updateMemberDemographics.mockReset().mockResolvedValue(undefined);service.uploadCaseAttachment.mockReset().mockResolvedValue({id:'file-1'});});
+beforeEach(()=>{service.saveCaseMemberProfile.mockReset().mockResolvedValue(undefined);service.uploadCaseAttachment.mockReset().mockResolvedValue({id:'file-1'});});
 
 it('suggests member birth date and gender from a local card scan and waits for staff confirmation',async()=>{
  const onAdded=vi.fn();render(<CaseMemberForm caseFileId="family-1" onAdded={onAdded}/>);
@@ -20,14 +20,14 @@ it('suggests member birth date and gender from a local card scan and waits for s
  expect(screen.getByLabelText('الرقم القومي للفرد')).toHaveValue('29001011234567');
  expect(screen.getByLabelText('تاريخ الميلاد')).toHaveValue('1990-01-01');
  expect(screen.getByLabelText('النوع')).toHaveValue('female');
- expect(screen.getByText('المحافظة الظاهرة في الرقم: الدقهلية (للمراجعة بس)')).toBeVisible();
+ expect(screen.getByText('المحافظة اللي باينة من الرقم القومي: الدقهلية (للمراجعة بس)')).toBeVisible();
  expect(screen.getByText(new RegExp(`العمر: ${new Intl.NumberFormat('ar-EG').format(ageOn('1990-01-01',cairoToday()))} سنة`))).toBeVisible();
- expect(service.addMember).not.toHaveBeenCalled();
+ expect(service.saveCaseMemberProfile).not.toHaveBeenCalled();
  fireEvent.click(screen.getByRole('button',{name:'إضافة الفرد'}));
- await waitFor(()=>expect(service.addMember).toHaveBeenCalledWith('family-1','ريم','بنت','female','1990-01-01',null,null,null,null,'29001011234567'));
+ await waitFor(()=>expect(service.saveCaseMemberProfile).toHaveBeenCalledWith('family-1',null,{name:'ريم',relationship:'بنت',gender:'female',dateOfBirth:'1990-01-01',healthStatus:null,healthDetails:null,employmentStatus:null,occupation:null,nationalId:'29001011234567',fatherStatus:null}));
  expect(service.uploadCaseAttachment).toHaveBeenCalledWith('family-1',file);
  await waitFor(()=>expect(onAdded).toHaveBeenCalledOnce());
- expect(service.addMember.mock.calls[0]).toContain('29001011234567');
+ expect(service.saveCaseMemberProfile.mock.calls[0]?.[2]).toMatchObject({ nationalId: '29001011234567' });
 });
 
 it('fills demographics from a typed valid ID and lets staff correct the suggestions',()=>{
@@ -94,7 +94,7 @@ it('keeps an invalid ID from being saved as a member profile',async()=>{
  fireEvent.change(screen.getByLabelText('الرقم القومي للفرد'),{target:{value:'12345678901234'}});
  fireEvent.click(screen.getByRole('button',{name:'إضافة الفرد'}));
  expect(await screen.findByRole('alert')).toHaveTextContent('اتأكد إن الرقم القومي ١٤ رقم وتاريخ الميلاد صحيح');
- expect(service.addMember).not.toHaveBeenCalled();
+ expect(service.saveCaseMemberProfile).not.toHaveBeenCalled();
 });
 
 it('lets staff enter demographics manually and calculates age immediately',()=>{
@@ -113,7 +113,7 @@ it('saves a health status and condition details for each family member',async()=
  fireEvent.change(screen.getByLabelText('الحالة الصحية للفرد'),{target:{value:'مرض'}});
  fireEvent.change(screen.getByLabelText('نوع المرض'),{target:{value:'حساسية صدر'}});
  fireEvent.click(screen.getByRole('button',{name:'إضافة الفرد'}));
- await waitFor(()=>expect(service.addMember).toHaveBeenCalledWith('family-1','ريم','بنت',null,null,'مرض','حساسية صدر',null,null,null));
+ await waitFor(()=>expect(service.saveCaseMemberProfile).toHaveBeenCalledWith('family-1',null,{name:'ريم',relationship:'بنت',gender:null,dateOfBirth:null,healthStatus:'مرض',healthDetails:'حساسية صدر',employmentStatus:null,occupation:null,nationalId:null,fatherStatus:null}));
 });
 
 it('loads and updates the health condition and national ID when editing a member',async()=>{
@@ -123,7 +123,19 @@ it('loads and updates the health condition and national ID when editing a member
  expect(screen.getByLabelText('الحالة الصحية للفرد')).toHaveValue('مرض');
  fireEvent.change(screen.getByLabelText('نوع المرض'),{target:{value:'حساسية صدر'}});
  fireEvent.click(screen.getByRole('button',{name:'حفظ بيانات الفرد'}));
- await waitFor(()=>expect(service.updateMemberDemographics).toHaveBeenCalledWith('person-2','female','2010-01-01','مرض','حساسية صدر',null,null,'29001011234567'));
+ await waitFor(()=>expect(service.saveCaseMemberProfile).toHaveBeenCalledWith('family-1','person-2',{name:'ريم',relationship:'ابنة',gender:'female',dateOfBirth:'2010-01-01',healthStatus:'مرض',healthDetails:'حساسية صدر',employmentStatus:null,occupation:null,nationalId:'29001011234567',fatherStatus:null}));
+});
+
+it('does not upload the same selected member card again after it was saved',async()=>{
+ const member={person_id:'person-3',relationship:'ابنة',people:{name:'ريم',national_id:null,gender:'female' as const,date_of_birth:'2010-01-01'}};
+ render(<CaseMemberForm caseFileId="family-1" onAdded={vi.fn()} member={member}/>);
+ fireEvent.change(screen.getByLabelText('صورة البطاقة أو PDF'),{target:{files:[new File(['image'],'بطاقة ريم.png',{type:'image/png'})]}});
+ fireEvent.click(await screen.findByRole('button',{name:'قراءة بيانات تجريبية'}));
+ fireEvent.click(screen.getByRole('button',{name:'حفظ بيانات الفرد'}));
+ await waitFor(()=>expect(service.uploadCaseAttachment).toHaveBeenCalledTimes(1));
+ fireEvent.click(screen.getByRole('button',{name:'حفظ بيانات الفرد'}));
+ await waitFor(()=>expect(service.saveCaseMemberProfile).toHaveBeenCalledTimes(2));
+ expect(service.uploadCaseAttachment).toHaveBeenCalledTimes(1);
 });
 
 it('shows and saves the work type when a member is employed',async()=>{
@@ -134,5 +146,16 @@ it('shows and saves the work type when a member is employed',async()=>{
  expect(screen.getByLabelText('نوع عمل الفرد')).toBeVisible();
  fireEvent.change(screen.getByLabelText('نوع عمل الفرد'),{target:{value:'مدرسة'}});
  fireEvent.click(screen.getByRole('button',{name:'إضافة الفرد'}));
- await waitFor(()=>expect(service.addMember).toHaveBeenCalledWith('family-1','ريم','بنت',null,null,null,null,'يعمل','مدرسة',null));
+ await waitFor(()=>expect(service.saveCaseMemberProfile).toHaveBeenCalledWith('family-1',null,{name:'ريم',relationship:'بنت',gender:null,dateOfBirth:null,healthStatus:null,healthDetails:null,employmentStatus:'يعمل',occupation:'مدرسة',nationalId:null,fatherStatus:null}));
+});
+
+it('asks for a child father status only when the case type is other',async()=>{
+ render(<CaseMemberForm caseFileId="family-1" onAdded={vi.fn()} showFatherStatus/>);
+ fireEvent.change(screen.getByLabelText('اسم الفرد'),{target:{value:'ريم'}});fireEvent.change(screen.getByLabelText('صلة القرابة'),{target:{value:'بنت'}});
+ expect(screen.getByLabelText('حالة الأب للطفل')).toBeRequired();
+ fireEvent.click(screen.getByRole('button',{name:'إضافة الفرد'}));
+ expect(service.saveCaseMemberProfile).not.toHaveBeenCalled();
+ fireEvent.change(screen.getByLabelText('حالة الأب للطفل'),{target:{value:'يتيم الأب'}});
+ fireEvent.click(screen.getByRole('button',{name:'إضافة الفرد'}));
+ await waitFor(()=>expect(service.saveCaseMemberProfile).toHaveBeenCalledWith('family-1',null,expect.objectContaining({fatherStatus:'يتيم الأب'})));
 });

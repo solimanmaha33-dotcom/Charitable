@@ -23,7 +23,7 @@ insert into auth.sessions(id,user_id,created_at,updated_at) values ('73000000-00
 insert into public.employees(id,employee_code,display_name,role) values ('83000000-0000-0000-0000-000000000001','AGEW','Writer','employee'),('83000000-0000-0000-0000-000000000002','AGER','Reader','employee');
 insert into private.employee_auth(employee_id,auth_user_id) values ('83000000-0000-0000-0000-000000000001','63000000-0000-0000-0000-000000000001'),('83000000-0000-0000-0000-000000000002','63000000-0000-0000-0000-000000000002');
 insert into public.employee_permissions(employee_id,cases_read,cases_write) values ('83000000-0000-0000-0000-000000000001',true,true),('83000000-0000-0000-0000-000000000002',true,false);
-insert into public.families(id,name,phone) values ('94000000-0000-0000-0000-000000000001','أسرة اختبار بيانات السن','01012345678');
+insert into public.families(id,name,phone,mother_national_id) values ('94000000-0000-0000-0000-000000000001','أسرة اختبار بيانات السن','01012345678','29001011234567');
 select set_config('request.jwt.claims','{"sub":"63000000-0000-0000-0000-000000000001","session_id":"73000000-0000-0000-0000-000000000001","role":"authenticated"}',true);
 set local role authenticated;
 select lives_ok($$select public.add_family_member_profile('94000000-0000-0000-0000-000000000001','ريم','بنت','female','2008-12-31')$$,'writer adds member with gender and date of birth');

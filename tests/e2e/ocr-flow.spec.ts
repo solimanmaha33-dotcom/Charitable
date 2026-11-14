@@ -44,19 +44,21 @@ test('case attachment: staged image is uploaded and protected', async ({page}) =
   await page.getByLabel('أرملة').check();
   await page.getByLabel('اسم الأم (مطلوب)').fill(`أم مرفقات ${userId.slice(0,8)}`);
   await page.getByLabel('رقم الموبايل 1').fill('01012345678');
-  await page.getByLabel('اختيار صور أو PDF').setInputFiles('tests/fixtures/arabic-sample.png');
+  await page.getByLabel('الرقم القومي للأم').fill('29001011234567');
+  await page.getByLabel('اختار البحث الاجتماعي (صورة أو PDF)').setInputFiles('tests/fixtures/arabic-sample.png');
   await expect(page.getByAltText('معاينة arabic-sample.png')).toBeVisible();
   await page.getByRole('button',{name:'استخراج النص'}).click();
   await expect(page.getByLabel('النص المستخرج للمراجعة')).toContainText('تجريبية',{timeout:60000});
   await expect(page.getByLabel('ملاحظات الملف')).toHaveValue('');
   let failOnce=true; await page.route('**/api/case-files/upload',async route=>{if(failOnce){failOnce=false;await route.fulfill({status:503,body:'temporary failure'});}else await route.continue();});
   await page.getByRole('button',{name:'حفظ ملف الحالة'}).click();
-  await expect(page.getByRole('alert')).toContainText('تعذّر حفظ كل البيانات أو المرفقات');
+  await expect(page.getByRole('alert')).toContainText('ماعرفناش نحفظ كل البيانات أو المرفقات');
   const savedBeforeRetry=await admin.from('families').select('id').eq('mother_name',`أم مرفقات ${userId.slice(0,8)}`).single();if(savedBeforeRetry.error)throw savedBeforeRetry.error;caseFileId=savedBeforeRetry.data.id;
   expect((await admin.from('case_attachments').select('id').eq('family_id',caseFileId)).data).toHaveLength(0);
   await page.getByRole('button',{name:'حفظ ملف الحالة'}).click(); await expect(page).toHaveURL(/\/cases\/[0-9a-f-]+$/, {timeout:30000});
   caseFileId=page.url().split('/').pop()!;
-  const files=await admin.from('case_attachments').select('*').eq('family_id',caseFileId);if(files.error)throw files.error;expect(files.data).toHaveLength(1);path=files.data[0].storage_path;
+  await expect(page.getByText('ملف البحث الاجتماعي مرفوع.',{exact:true})).toBeVisible();
+  const files=await admin.from('case_attachments').select('*').eq('family_id',caseFileId);if(files.error)throw files.error;expect(files.data).toHaveLength(1);expect(files.data[0].document_type).toBe('social_research');path=files.data[0].storage_path;
   expect((await admin.from('families').select('notes').eq('id',caseFileId).single()).data?.notes).toBe('');
   await page.getByRole('button',{name:'arabic-sample.png',exact:true}).click(); await expect(page.getByAltText('معاينة arabic-sample.png')).toBeVisible();
   const otherEmail=`${crypto.randomUUID()}@staff.invalid`; const other=await admin.auth.admin.createUser({email:otherEmail,password,email_confirm:true}); if(other.error || !other.data.user) throw other.error; deniedId=other.data.user.id;
@@ -66,7 +68,7 @@ test('case attachment: staged image is uploaded and protected', async ({page}) =
   await page.screenshot({path:'/tmp/case-attachment.png'});
  } finally {
   if(path) await admin.storage.from('case-files').remove([path]);
-  if(caseFileId) {sql(`delete from public.case_attachments where family_id='${caseFileId}'; delete from public.case_file_categories where family_id='${caseFileId}'; delete from public.families where id='${caseFileId}';`);}
+  if(caseFileId) {sql(`begin; delete from public.case_attachments where family_id='${caseFileId}'; delete from public.case_file_categories where family_id='${caseFileId}'; delete from public.families where id='${caseFileId}'; commit;`);}
   if(deniedId){sql(`delete from private.employee_auth where employee_id='${deniedId}'; delete from public.employees where id='${deniedId}';`);await admin.auth.admin.deleteUser(deniedId);}
   if(userId){sql(`delete from private.employee_auth where employee_id='${userId}'; delete from public.employee_permissions where employee_id='${userId}'; delete from public.employees where id='${userId}';`);await admin.auth.admin.deleteUser(userId);}
  }

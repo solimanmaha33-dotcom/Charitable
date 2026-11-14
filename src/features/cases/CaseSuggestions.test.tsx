@@ -6,9 +6,9 @@ vi.mock('../../services/cases', () => ({ saveCaseFile: vi.fn(), uploadCaseAttach
 import { CaseIntakeForm } from './CaseIntakeForm';
 it('applies a reviewed category suggestion to the one-file intake form', async () => {
   render(<CaseIntakeForm onSaved={vi.fn()} />);
-  fireEvent.click(screen.getByRole('button', { name: 'نص للمراجعة' }));
-  fireEvent.click(screen.getByRole('button', { name: 'اقتراح حقول' }));
-  expect(await screen.findByRole('combobox', { name: 'القيمة المقترحة' })).toHaveValue('عجز أو مرض');
+  fireEvent.click(screen.getAllByRole('button', { name: 'نص للمراجعة' })[1]);
+  fireEvent.click(screen.getByRole('button', { name: 'اقترح بيانات' }));
+  expect(await screen.findByRole('combobox', { name: 'البيانات المقترحة' })).toHaveValue('عجز أو مرض');
   const category = screen.getByRole('checkbox', { name: 'عجز أو مرض' }); expect(category).not.toBeChecked();
   fireEvent.click(screen.getByRole('button', { name: 'استخدم في النموذج' })); expect(category).toBeChecked();
 });

@@ -5,7 +5,7 @@ export const DISBURSEMENT_TYPES=['كفالة شهرية','مساعدة موسم�
 export type DisbursementType=typeof DISBURSEMENT_TYPES[number];
 export type CaseDisbursement={id:string;case_id:string;branch_id:string;disbursement_type:DisbursementType;amount:number;items_summary:string|null;disbursed_on:string;created_by:string;created_at:string;notes:string|null;is_voided:boolean;void_reason:string|null;voided_at:string|null};
 export type NewDisbursement={caseId:string;branchId:string;type:DisbursementType;amount:number;itemsSummary:string;disbursedOn:string;notes:string};
-function db(){const client=getSupabase();if(!client)throw new Error('تعذّر الاتصال بقاعدة البيانات');return client;}
+function db(){const client=getSupabase();if(!client)throw new Error('مش قادرين نتصل بقاعدة البيانات. اتأكد من الاتصال وجرب تاني.');return client;}
 function check(error:{message:string}|null){if(error)throw new Error(error.message);}
 function validDate(value:string){if(!/^\d{4}-\d{2}-\d{2}$/.test(value))return false;const date=new Date(`${value}T00:00:00Z`);return Number.isFinite(date.getTime())&&date.toISOString().slice(0,10)===value;}
 
@@ -19,13 +19,13 @@ export async function listCaseDisbursements(caseId:string):Promise<CaseDisbursem
 
 export async function recordDisbursement(input:NewDisbursement):Promise<string>{
  if(!input.caseId.trim()||!input.branchId.trim())throw new Error('اختار الحالة والفرع');
- if(!DISBURSEMENT_TYPES.includes(input.type))throw new Error('نوع المساعدة غير صحيح');
+ if(!DISBURSEMENT_TYPES.includes(input.type))throw new Error('اختار نوع مساعدة من الاختيارات.');
  if(!Number.isFinite(input.amount)||input.amount<=0||input.amount>999999999999)throw new Error('المبلغ لازم يكون أكبر من صفر');
  const itemsSummary=input.itemsSummary.trim();if(input.type==='عيني'&&!itemsSummary)throw new Error('اكتب وصف المساعدة العينية');
- const disbursedOn=input.disbursedOn||cairoToday();if(!validDate(disbursedOn))throw new Error('تاريخ الصرف غير صحيح');
+ const disbursedOn=input.disbursedOn||cairoToday();if(!validDate(disbursedOn))throw new Error('اختار تاريخ صرف صحيح.');
  if(input.notes.length>2000||itemsSummary.length>2000)throw new Error('الوصف لازم يكون ٢٠٠٠ حرف أو أقل');
  const {data,error}=await db().rpc('record_case_disbursement',{p_case_id:input.caseId,p_branch_id:input.branchId,p_type:input.type,p_amount:input.amount,p_items_summary:itemsSummary||null,p_disbursed_on:disbursedOn,p_notes:input.notes.trim()||null});
- check(error);if(typeof data!=='string')throw new Error('تعذّر تسجيل المساعدة');return data;
+ check(error);if(typeof data!=='string')throw new Error('ماقدرناش نسجّل المساعدة. جرّب تاني.');return data;
 }
 
 export async function voidDisbursement(id:string,reason:string):Promise<void>{

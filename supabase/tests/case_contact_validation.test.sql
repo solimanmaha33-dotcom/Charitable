@@ -17,12 +17,12 @@ insert into public.employee_permissions(employee_id,cases_read,cases_write) valu
 
 select set_config('request.jwt.claims','{"sub":"32000000-0000-0000-0000-000000000001","session_id":"42000000-0000-0000-0000-000000000001","role":"authenticated"}',true);
 set local role authenticated;
-select lives_ok($$select public.save_case_file(null,'{"mother_name":"أم اختبار","phone":"01012345678","address":"عنوان الاختبار"}'::jsonb,null)$$,'direct RPC saves a profile with one valid mobile');
-select throws_ok($$select public.save_case_file(null,'{"mother_name":"أم بدون هاتف"}'::jsonb,null)$$,'23514',null,'direct RPC rejects an empty phone set');
-select throws_ok($$select public.save_case_file(null,'{"mother_name":"أم","phone":"0101234567"}'::jsonb,null)$$,'23514',null,'direct RPC rejects a short mobile');
-select throws_ok($$select public.save_case_file(null,'{"mother_name":"أم","phone_2":"01012345678","phone_3":"123456789"}'::jsonb,null)$$,'23514',null,'direct RPC rejects a short home phone');
-select throws_ok($$select public.save_case_file(null,'{"mother_name":"أم","phone":"01012345678","national_id":"123"}'::jsonb,null)$$,'23514',null,'direct RPC rejects an invalid guardian national ID');
-select throws_ok($$select public.save_case_file(null,'{"mother_name":"أم","phone":"01012345678","monthly_income":1000.5}'::jsonb,null)$$,'23514',null,'direct RPC rejects fractional monthly income');
+select lives_ok($$select public.save_case_file(null,'{"mother_name":"أم اختبار","phone":"01012345678","address":"عنوان الاختبار","mother_national_id":"29001011234567","mother_date_of_birth":"1990-01-01"}'::jsonb,null)$$,'direct RPC saves a profile with one valid mobile');
+select throws_ok($$select public.save_case_file(null,'{"mother_name":"أم بدون هاتف","mother_national_id":"29001011234567","mother_date_of_birth":"1990-01-01"}'::jsonb,null)$$,'23514',null,'direct RPC rejects an empty phone set');
+select throws_ok($$select public.save_case_file(null,'{"mother_name":"أم","phone":"0101234567","mother_national_id":"29001011234567","mother_date_of_birth":"1990-01-01"}'::jsonb,null)$$,'23514',null,'direct RPC rejects a short mobile');
+select throws_ok($$select public.save_case_file(null,'{"mother_name":"أم","phone_2":"01012345678","phone_3":"123456789","mother_national_id":"29001011234567","mother_date_of_birth":"1990-01-01"}'::jsonb,null)$$,'23514',null,'direct RPC rejects a short home phone');
+select throws_ok($$select public.save_case_file(null,'{"mother_name":"أم","phone":"01012345678","national_id":"123","mother_national_id":"29001011234567","mother_date_of_birth":"1990-01-01"}'::jsonb,null)$$,'23514',null,'direct RPC rejects an invalid guardian national ID');
+select throws_ok($$select public.save_case_file(null,'{"mother_name":"أم","phone":"01012345678","monthly_income":1000.5,"mother_national_id":"29001011234567","mother_date_of_birth":"1990-01-01"}'::jsonb,null)$$,'23514',null,'direct RPC rejects fractional monthly income');
 select throws_ok($$insert into public.families(name,phone) values ('direct insert without contact',null)$$,'23514',null,'direct table insert cannot bypass the phone requirement');
 select set_config('test.case_id',public.save_case_file(null,'{"mother_name":"أم بياناتها محفوظة","phone":"01098765432","national_id":"29001011234567","address":"عنوان أصلي"}'::jsonb,null)::text,true);
 select lives_ok($$select public.update_case_file_identity(current_setting('test.case_id')::uuid,'29001011234568','2027-01-01')$$,'identity scanner can update ID dates without resaving contact fields');

@@ -5,7 +5,7 @@ export type Donation = {id:string;donor_id:string|null;donation_type:string;kind
 export type NewDonation = Omit<Donation,'id'|'voided_at'|'voided_by'|'void_reason'>;
 export type Sponsorship = {id:string;donor_id:string;family_id:string;monthly_amount:number;start_date:string;end_date:string|null};
 export type SponsorshipPayment = {id:string;sponsorship_id:string;installment_month:string;due_date:string;amount_due:number;received_on:string|null;amount_received:number|null;voided_at:string|null;voided_by:string|null;void_reason:string|null};
-function db() { const client=getSupabase(); if(!client)throw new Error('تعذّر الاتصال بقاعدة البيانات');return client; }
+function db() { const client=getSupabase(); if(!client)throw new Error('مش قادرين نتصل بقاعدة البيانات. اتأكد من الاتصال وجرب تاني.');return client; }
 function check(error:{message:string}|null) {if(error)throw new Error(error.message);}
 async function list<T>(table:string,columns:string):Promise<T[]> {
  const rows:T[]=[];
@@ -19,7 +19,7 @@ export const listDonations=()=>list<Donation>('donations','id,donor_id,donation_
 export async function countDonations():Promise<number> {
  const {count,error}=await db().from('donations').select('id',{count:'exact',head:true}).is('voided_at',null);
  check(error);
- if(count===null) throw new Error('تعذّر تحميل العدد');
+ if(count===null) throw new Error('ماقدرناش نحمّل العدد. حدّث الصفحة وجرب تاني.');
  return count;
 }
 export const listSponsorships=()=>list<Sponsorship>('sponsorships','id,donor_id,family_id,monthly_amount,start_date,end_date');
@@ -46,11 +46,11 @@ export async function generateInstallments() {
 }
 export class PaymentAlreadyReceivedError extends Error {
  readonly code='PAYMENT_ALREADY_RECEIVED';
- constructor(){super('الدفعة اتسجل استلامها بالفعل. أعد تحميل الصفحة لعرض الاستلام المحفوظ.');}
+ constructor(){super('الدفعة دي اتسجل استلامها بالفعل. حدّث الصفحة عشان تشوف الاستلام.');}
 }
 export async function receivePayment(id:string,receivedOn:string,amount:number) {
  const {data,error}=await db().from('sponsorship_payments').update({received_on:receivedOn,amount_received:amount}).eq('id',id).is('received_on',null).is('voided_at',null).select('id').maybeSingle();check(error);if(!data)throw new PaymentAlreadyReceivedError();
 }
 export async function endSponsorship(id:string,endDate:string|null) {
- const {data,error}=await db().from('sponsorships').update({end_date:endDate}).eq('id',id).select('id').single();check(error);if(!data)throw new Error('تعذّر حفظ النهاية');
+ const {data,error}=await db().from('sponsorships').update({end_date:endDate}).eq('id',id).select('id').single();check(error);if(!data)throw new Error('ماقدرناش نحفظ نهاية الكفالة. جرّب تاني.');
 }

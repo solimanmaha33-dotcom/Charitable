@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 
 test('signed-out Arabic shell fits a 360px phone and links to sign-in', async ({ page }) => {
   await page.goto('/');
-  await expect(page.locator('html')).toHaveAttribute('lang', 'ar');
+  await expect(page.locator('html')).toHaveAttribute('lang', 'ar-EG');
   await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
   await expect(page.getByText('نظام إدارة الجمعية')).toBeVisible();
   await expect(page.getByRole('img', { name: 'شعار جمعية مرام الخير' })).toHaveAttribute('src', '/brand/maram-logo.png');

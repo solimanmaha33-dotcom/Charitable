@@ -26,7 +26,7 @@ export function CaseListPage({ canWrite, canArchive=false }: { canWrite: boolean
     let alive = true;
     Promise.all([listCaseFiles(), listAllMembers()])
       .then(([rows, memberRows]) => { if (alive) { setFiles(rows); setMembers(memberRows); setError(''); } })
-      .catch(() => { if (alive) setError('تعذّر تحميل الحالات. حاول تحدّث الصفحة.'); })
+      .catch(() => { if (alive) setError('ماعرفناش نحمّل الحالات. حدّث الصفحة وجرب تاني.'); })
       .finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
   }, []);
@@ -65,7 +65,7 @@ export function CaseListPage({ canWrite, canArchive=false }: { canWrite: boolean
 
   return <section className="page-card">
     <header className="page-heading">
-      <div><h1>الحالات</h1><p>كل ملف له كود واحد، ومنه تراجع بيانات الأسرة والأفراد والمرفقات.</p></div>
+      <div><h1>الحالات</h1><p>كل ملف له كود واحد، ومنه تراجع بيانات الأبوين والأفراد والمرفقات.</p></div>
       <div className="heading-actions">{canArchive&&<Link className="button secondary" to="/cases/archive">الحالات المؤرشفة</Link>}{canWrite && <Link className="primary-link" to="/cases/new">إضافة حالة جديدة</Link>}</div>
     </header>
     <aside className="staff-steps" aria-label="خطوات تسجيل الحالة"><strong>خطوات الشغل</strong><ol><li>اضغط «إضافة حالة جديدة».</li><li>اختار نوع الحالة وسجّل بيانات الأم والأب والعنوان.</li><li>حدد حالة الملف؛ واكتب السبب لو اخترت موقوف أو مرفوض.</li><li>ارفع الصور أو PDF، وبعدها افتح الملف للمراجعة والطباعة.</li></ol></aside>
@@ -77,7 +77,7 @@ export function CaseListPage({ canWrite, canArchive=false }: { canWrite: boolean
     </div>
     {!loading && !error && <div className="workspace-summary case-directory-summary" aria-label="ملخص الحالات"><article className="summary-card"><span>عدد الحالات</span><strong data-testid="case-directory-cases">{formatCount(files.length)}</strong></article><article className="summary-card"><span>عدد الأطفال أقل من ١٨</span><strong data-testid="case-directory-children">{formatCount(memberCounts.children)}</strong></article><article className="summary-card"><span>عدد الأيتام أقل من ١٨</span><strong data-testid="case-directory-orphans">{formatCount(memberCounts.orphans)}</strong></article></div>}
     {error && <p className="error-message" role="alert">{error}</p>}
-    {loading && <p className="empty-state" role="status">جاري تحميل الحالات…</p>}
+    {loading && <p className="empty-state" role="status">بنحمّل الحالات…</p>}
     {!loading && !error && files.length === 0 && <div className="empty-state"><strong>لسه مفيش ملفات حالات</strong>{canWrite ? 'ابدأ بإضافة ملف حالة جديد.' : 'الملفات الجديدة هتظهر هنا.'}</div>}
     {!loading && !error && files.length > 0 && matches.length === 0 && <div className="empty-state"><strong>ملقيناش حالات مطابقة</strong>جرّب كلمة تانية أو غيّر الفلاتر.</div>}
     {!loading && !error && matches.length > 0 && <><div className="table-caption">ملفات الحالات المعروضة: {formatCount(matches.length)}</div><p className="table-scroll-help">اسحب الجدول يمين وشمال لعرض باقي البيانات.</p><div className="data-table-wrap" ref={tableWrap}><table className="data-table" aria-label="قائمة الحالات">

@@ -4,7 +4,7 @@ import {postAssistant} from './api';
 type Result={coverage:{partial:boolean;explanation:string};answer:string;sources:{caseFileCode:string;caseId:string;fileName?:string}[]};
 const examples=['ابحث عن حالة فيها علاج','إيه الحالات المسجلة للأسرة بالكود؟','إيه التبرعات العينية المسجلة؟'];
 export function AssistantPanel(){const [question,setQuestion]=useState('');const [result,setResult]=useState<Result|null>(null);const [error,setError]=useState('');const [busy,setBusy]=useState(false);
- async function submit(e:FormEvent){e.preventDefault();setBusy(true);setError('');setResult(null);try{setResult(await postAssistant('/api/assistant',{question}) as Result)}catch{setError('تعذّر الحصول على إجابة. حاول تاني بعد شوية.')}finally{setBusy(false)}}
+ async function submit(e:FormEvent){e.preventDefault();setBusy(true);setError('');setResult(null);try{setResult(await postAssistant('/api/assistant',{question}) as Result)}catch{setError('ماقدرناش نجيب إجابة. جرّب تاني بعد شوية.')}finally{setBusy(false)}}
  return <section className="page-card assistant-page">
   <header className="page-heading"><div><h1>المساعد الذكي</h1><p>اسأل عن الحالات والتبرعات اللي مسموح لك تشوفها.</p></div></header>
   <aside className="assistant-guidance"><strong>خلي بالك</strong><p>الإجابة ممكن تكون ناقصة. راجع ملف الحالة قبل ما تعتمد على الإجابة، والمساعد مش بيحدد مين يستحق المساعدة.</p></aside>

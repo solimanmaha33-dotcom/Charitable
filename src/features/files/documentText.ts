@@ -2,7 +2,7 @@ export const MAX_BYTES = 20 * 1024 * 1024;
 export const MAX_PAGES = 20;
 export function validateDocument(file: File): void {
  if (!['application/pdf','image/png','image/jpeg','image/webp'].includes(file.type)) throw new Error('نوع الملف غير مدعوم');
- if (file.size > MAX_BYTES || file.size === 0) throw new Error('حجم الملف يجب أن يكون أقل من أو يساوي ٢٠ ميجابايت');
+ if (file.size > MAX_BYTES || file.size === 0) throw new Error('حجم الملف لازم يكون ٢٠ ميجابايت أو أقل.');
 }
 export async function openPdf(file: File) {
  const pdfjs = await import('pdfjs-dist');

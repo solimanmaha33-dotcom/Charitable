@@ -1,5 +1,5 @@
 import {useRef,useState,type FormEvent} from 'react';
-import {addMember,updateMemberDemographics,uploadCaseAttachment,type EmploymentStatus,type Member} from '../../services/cases';
+import {saveCaseMemberProfile,uploadCaseAttachment,type EmploymentStatus,type Member} from '../../services/cases';
 import {validateDocument,openPdf} from '../files/documentText';
 import {FilePreview} from '../files/FilePreview';
 import {cairoToday} from './idExpiry';
@@ -7,13 +7,15 @@ import {ageOn} from './memberAge';
 import {parseMemberIdText,type MemberGender} from './memberDemographics';
 import {normalizeEgyptianNationalIdInput,parseEgyptianNationalId} from './nationalIdScan';
 import {HEALTH_STATUSES,type HealthStatus} from './healthStatus';
+import {isChildRelationship} from './memberRelationship';
 
-export function CaseMemberForm({caseFileId,onAdded,member}:{caseFileId:string;onAdded:()=>void|Promise<void>;member?:Member}){
+export function CaseMemberForm({caseFileId,onAdded,member,showFatherStatus=false}:{caseFileId:string;onAdded:()=>void|Promise<void>;member?:Member;showFatherStatus?:boolean}){
  const editing=!!member;
  const [name,setName]=useState(member?.people.name??'');const [relationship,setRelationship]=useState(member?.relationship??'');
  const [nationalId,setNationalId]=useState(member?.people.national_id??'');const [birthDate,setBirthDate]=useState(member?.people.date_of_birth??'');const [gender,setGender]=useState<MemberGender|null>(member?.people.gender??null);
  const [healthStatus,setHealthStatus]=useState<HealthStatus|''>(member?.people.health_status??'');const [healthCondition,setHealthCondition]=useState(member?.people.health_details??member?.people.health_condition??'');
  const [employmentStatus,setEmploymentStatus]=useState<EmploymentStatus|null>(member?.people.employment_status??null);const [occupation,setOccupation]=useState(member?.people.occupation??'');
+ const [fatherStatus,setFatherStatus]=useState<'الأب موجود'|'يتيم الأب'|''>(member?.father_status??'');
  const [file,setFile]=useState<File|null>(null);const [busy,setBusy]=useState(false);const [error,setError]=useState('');const [message,setMessage]=useState('');
  const today=cairoToday();const lastAppliedNationalId=useRef<string|null>(parseEgyptianNationalId(member?.people.national_id??'',today)?.nationalId??null);const receivedOcrText=useRef(false);
  function applyIdText(text:string){
@@ -45,21 +47,24 @@ export function CaseMemberForm({caseFileId,onAdded,member}:{caseFileId:string;on
   event.preventDefault();setError('');setMessage('');
   if(birthDate>today){setError('تاريخ الميلاد ماينفعش يكون في المستقبل.');return;}
   if(nationalId.trim()&&!parseEgyptianNationalId(nationalId,today)){setError('اتأكد إن الرقم القومي ١٤ رقم وتاريخ الميلاد صحيح.');return;}
+  if(showFatherStatus&&isChildRelationship(relationship)&&!fatherStatus){setError('اختار حالة الأب للطفل.');return;}
   if(healthStatus&&healthStatus!=='حالة مستقرة'&&!healthCondition.trim()){setError('اكتب نوع العجز أو المرض.');return;}
   setBusy(true);
-  try{if(member)await updateMemberDemographics(member.person_id,gender,birthDate||null,healthStatus||null,healthCondition.trim()||null,employmentStatus||null,occupation.trim()||null,nationalId.trim()||null);else await addMember(caseFileId,name.trim(),relationship.trim(),gender,birthDate||null,healthStatus||null,healthCondition.trim()||null,employmentStatus||null,occupation.trim()||null,nationalId.trim()||null);}
-  catch{setError(editing?'تعذّر حفظ بيانات الفرد. راجع البيانات وحاول تاني.':'تعذّرت إضافة الفرد. راجع البيانات وحاول تاني.');setBusy(false);return;}
+  try{await saveCaseMemberProfile(caseFileId,member?.person_id??null,{name,relationship,gender,dateOfBirth:birthDate||null,healthStatus:healthStatus||null,healthDetails:healthCondition.trim()||null,employmentStatus,occupation:occupation.trim()||null,nationalId:nationalId.trim()||null,fatherStatus:showFatherStatus&&isChildRelationship(relationship)?fatherStatus||null:null});}
+  catch{setError(editing?'ماعرفناش نحفظ بيانات الفرد. راجعها وجرب تاني.':'ماعرفناش نضيف الفرد. راجع البيانات وجرب تاني.');setBusy(false);return;}
   let uploadFailed=false;try{if(file)await uploadCaseAttachment(caseFileId,file);}catch{uploadFailed=true;}
-  if(!editing){setName('');setRelationship('');setNationalId('');setBirthDate('');setGender(null);setFile(null);}
+  if(!uploadFailed)setFile(null);
+  if(!editing){setName('');setRelationship('');setNationalId('');setBirthDate('');setGender(null);setFatherStatus('');}
   try{await onAdded();}catch{/* The saved member stays saved even if refreshing its list fails. */}
-  setMessage(uploadFailed?(editing?'اتحفظت بيانات السن، لكن تعذّر رفع البطاقة. تقدر ترفعها من مرفقات الأسرة.':'اتضاف الفرد، لكن تعذّر رفع البطاقة. تقدر ترفعها من مرفقات الأسرة.'):(editing?'اتحفظت بيانات السن.':'اتضاف الفرد للأسرة.'));
+  setMessage(uploadFailed?(editing?'اتحفظت بيانات الفرد، بس ماعرفناش نرفع البطاقة. تقدر ترفعها من مرفقات الحالة.':'اتضاف الفرد، بس ماعرفناش نرفع البطاقة. تقدر ترفعها من مرفقات الحالة.'):(editing?'اتحفظت بيانات الفرد.':'اتضاف الفرد للأسرة.'));
   setBusy(false);
  }
  return <form className="domain-form member-form" onSubmit={event=>void submit(event)}>
   <h3>{editing?'تعديل بيانات الفرد':'إضافة فرد للأسرة'}</h3>
-  {!editing&&<div className="form-grid"><label>اسم الفرد<input required maxLength={200} value={name} onChange={event=>setName(event.target.value)} /></label><label>صلة القرابة<input required maxLength={100} value={relationship} onChange={event=>setRelationship(event.target.value)} /></label></div>}
+  <div className="form-grid"><label>اسم الفرد<input required maxLength={200} value={name} onChange={event=>setName(event.target.value)} /></label><label>صلة القرابة<input required maxLength={100} value={relationship} onChange={event=>setRelationship(event.target.value)} /></label></div>
+  {showFatherStatus&&isChildRelationship(relationship)&&<label>حالة الأب للطفل<select aria-label="حالة الأب للطفل" required value={fatherStatus} onChange={event=>setFatherStatus((event.target.value||'') as 'الأب موجود'|'يتيم الأب'|'')}><option value="">اختار حالة الأب</option><option value="الأب موجود">الأب موجود</option><option value="يتيم الأب">يتيم الأب</option></select></label>}
   <fieldset className="member-demographics"><legend>بيانات السن</legend>
-   <label>الرقم القومي للفرد<input aria-label="الرقم القومي للفرد" inputMode="numeric" maxLength={14} value={nationalId} onChange={event=>updateNationalId(event.target.value)} />{parseEgyptianNationalId(nationalId,today)&&<small className="form-help">المحافظة الظاهرة في الرقم: {parseEgyptianNationalId(nationalId,today)?.governorate} (للمراجعة بس)</small>}</label>
+   <label>الرقم القومي للفرد<input aria-label="الرقم القومي للفرد" inputMode="numeric" maxLength={14} value={nationalId} onChange={event=>updateNationalId(event.target.value)} />{parseEgyptianNationalId(nationalId,today)&&<small className="form-help">المحافظة اللي باينة من الرقم القومي: {parseEgyptianNationalId(nationalId,today)?.governorate} (للمراجعة بس)</small>}</label>
    <p className="form-help">لو الرقم سليم هنقترح تاريخ الميلاد والنوع. راجع البيانات قبل الحفظ؛ الرقم هيتسجل عشان البحث.</p>
    <label>صورة البطاقة أو PDF<input type="file" accept="image/png,image/jpeg,image/webp,application/pdf" onChange={event=>{void chooseFile(event.target.files?.[0]??null);event.currentTarget.value='';}} /></label>
    {file&&<FilePreview key={`${file.name}-${file.size}`} file={file} onText={applyIdText}/>}
