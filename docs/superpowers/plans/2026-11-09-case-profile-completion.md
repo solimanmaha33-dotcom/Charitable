@@ -145,4 +145,5 @@
 - [x] ثبّت التغييرات في commit محلي.
 - [x] ادفع فرع التنفيذ إلى GitHub.
 - [x] تأكد من مخرجات المالك أن migrations `032–035` اتطبقت على Supabase الصحيح.
-- [ ] حدّث فرع `preview` وتأكد من نجاح نشر Cloudflare.
+- [x] ادفع آخر commit إلى فرع `preview` لبدء النشر التلقائي.
+- [ ] تأكد من لوحة Cloudflare أن آخر Build حالته Success.
